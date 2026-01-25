@@ -11,6 +11,10 @@ export const CreateBoard = z.object({
     .max(50, "Title must be less than 50 characters"),
 });
 
+export const DeleteBoard = z.object({
+  id: z.string(),
+});
+
 // ============================================
 // LIST SCHEMAS
 // ============================================

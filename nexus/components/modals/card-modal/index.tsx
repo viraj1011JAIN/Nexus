@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, ElementRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, AuditLog, List } from "@prisma/client";
 import { Layout, AlignLeft, Check } from "lucide-react";
+import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -105,17 +106,30 @@ export const CardModal = () => {
       return;
     }
 
-    await updateCard({
+    // ⭐ OPTIMISTIC UPDATE: Change UI immediately (zero-latency UX)
+    const previousDescription = cardData.description;
+    setCardData({ ...cardData, description: currentDesc });
+    setIsDescEditing(false);
+    setSavedField("desc");
+
+    // 🔄 BACKGROUND SYNC: Perform actual database update
+    const result = await updateCard({
       boardId: params.boardId as string,
       id: cardData.id,
       description: currentDesc
     });
-    
-    setIsDescEditing(false);
-    router.refresh();
 
-    setCardData({ ...cardData, description: currentDesc });
-    setSavedField("desc");
+    if (result.error) {
+      // ❌ ROLLBACK: Revert to previous state if DB fails
+      setCardData({ ...cardData, description: previousDescription });
+      setDescription(previousDescription || "");
+      toast.error(`Failed to save: ${result.error}`);
+      return;
+    }
+
+    // ✅ SUCCESS: Refresh and show confirmation
+    toast.success("Description saved");
+    router.refresh();
     setTimeout(() => setSavedField(null), 2000);
   };
 

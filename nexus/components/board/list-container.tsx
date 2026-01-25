@@ -179,14 +179,15 @@ export const ListContainer = ({
         setOrderedData(newLists);
         
         // Trigger Server Action with proper lexorank ordering
-        const updates = newLists.map((list, index) => {
+        const updates = newLists.reduce((acc, list, index) => {
           // Generate proper lexorank: m, n, o, p, etc.
           let order = "m";
-          if (index > 0) {
-            order = generateNextOrder(updates[index - 1]?.order || "m");
+          if (index > 0 && acc[index - 1]) {
+            order = generateNextOrder(acc[index - 1].order);
           }
-          return { ...list, order };
-        });
+          acc.push({ ...list, order });
+          return acc;
+        }, [] as typeof newLists);
         updateListOrder(updates, boardId);
     }
 

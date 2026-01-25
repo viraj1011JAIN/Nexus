@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { ModalProvider } from "@/components/providers/modal-provider"; // [FIXED: Critical import]
+import { Toaster } from "@/components/ui/toaster";
+import { CommandPalette } from "@/components/command-palette";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -24,6 +26,8 @@ export default function RootLayout({
             to ensure that Dialogs and Modals can mount properly across the app.
         */}
         <ModalProvider />
+        <Toaster />
+        <CommandPalette />
 
         <div className="flex h-screen w-full overflow-hidden"> 
             

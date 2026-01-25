@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { createBoard } from "@/actions/create-board";
+import { deleteBoard } from "@/actions/delete-board";
+import { redirect } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default async function Home() {
   // 1. Fetch data directly from the DB
@@ -22,9 +26,16 @@ export default async function Home() {
         action={async (formData) => {
           "use server";
           const title = formData.get("title") as string;
-          const result = await createBoard({ title });
+          if (!title || title.trim().length === 0) {
+            console.error("Title is required");
+            return;
+          }
+          const result = await createBoard({ title: title.trim() });
           if (result.error) {
             console.error("Failed to create board:", result.error);
+          } else {
+            console.log("Board created successfully:", result.data);
+            redirect("/");
           }
         }} 
         className="flex gap-2"
@@ -43,14 +54,38 @@ export default async function Home() {
       {/* 3. List of Boards */}
       <div className="flex flex-col gap-3 w-full max-w-xs mt-4">
         {boards.map((board) => (
-          <Link 
-            key={board.id} 
-            href={`/board/${board.id}`} 
-            className="group relative p-4 bg-white shadow-sm rounded-lg border font-medium hover:bg-sky-50 hover:border-sky-200 transition-all flex items-center justify-between"
+          <div
+            key={board.id}
+            className="group relative p-4 bg-white shadow-sm rounded-lg border hover:border-sky-200 transition-all flex items-center justify-between"
           >
-            <span className="truncate pr-4">{board.title}</span>
-            <span className="text-slate-400 group-hover:text-sky-600 transition-colors">→</span>
-          </Link>
+            <Link 
+              href={`/board/${board.id}`}
+              className="flex-1 font-medium hover:text-sky-600 transition-colors truncate pr-4"
+            >
+              {board.title}
+            </Link>
+            
+            <form
+              action={async () => {
+                "use server";
+                const result = await deleteBoard({ id: board.id });
+                if (result.error) {
+                  console.error("Failed to delete board:", result.error);
+                } else {
+                  redirect("/");
+                }
+              }}
+            >
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
         ))}
         
         {boards.length === 0 && (

@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@prisma/client";
 import { MoreHorizontal, Trash2 } from "lucide-react"; 
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { deleteCard } from "@/actions/delete-card"; 
 import { useParams } from "next/navigation"; 
@@ -52,11 +53,17 @@ export const CardItem = ({
   };
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       // ONLY WAY TO EDIT: Click the card body
       onClick={() => cardModal.onOpen(data.id)}
       className="group relative border-2 border-transparent hover:border-black/5 py-2 px-3 text-sm bg-white rounded-md shadow-sm cursor-pointer min-h-[36px] flex items-center justify-between transition-colors"
@@ -91,6 +98,6 @@ export const CardItem = ({
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
-    </div>
+    </motion.div>
   );
 };
