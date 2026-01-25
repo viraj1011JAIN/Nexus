@@ -1,0 +1,128 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// ORGANIZATION & USER MODELS
+// ============================================
+
+model Organization {
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  imageUrl   String?
+
+  boards     Board[]
+  auditLogs  AuditLog[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+// ============================================
+// BOARD, LIST, CARD MODELS
+// ============================================
+
+model Board {
+  id             String       @id @default(uuid())
+  title          String
+  
+  // Link to Organization for Multi-tenancy
+  orgId          String       @map("org_id")
+  organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  lists          List[]
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([orgId])
+  @@map("boards")
+}
+
+model List {
+  id        String   @id @default(uuid())
+  title     String
+  
+  // Lexorank: String-based ordering is mandatory for Senior roles
+  order     String   @default("m") 
+  
+  boardId   String   @map("board_id")
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  
+  cards     Card[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([boardId])
+  @@map("lists")
+}
+
+model Card {
+  id          String   @id @default(uuid())
+  title       String
+  
+  // Lexorank: Prevents fractional indexing math bugs
+  order       String   @default("m")
+  description String?  @db.Text
+  
+  listId      String   @map("list_id")
+  list        List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([listId])
+  @@map("cards")
+}
+
+// ============================================
+// AUDIT LOGGING
+// ============================================
+
+enum ACTION {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum ENTITY_TYPE {
+  BOARD
+  LIST
+  CARD
+  ORGANIZATION
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  
+  // Multi-tenant audit trail
+  orgId       String      @map("org_id")
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  action      ACTION
+  entityId    String      @map("entity_id")
+  entityType  ENTITY_TYPE @map("entity_type")
+  entityTitle String      @map("entity_title")
+  
+  userId      String      @map("user_id")
+  userImage   String      @db.Text @map("user_image")
+  userName    String      @db.Text @map("user_name")
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([orgId])
+  @@map("audit_logs")
+}

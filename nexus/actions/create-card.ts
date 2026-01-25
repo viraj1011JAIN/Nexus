@@ -1,0 +1,46 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { db } from "@/lib/db";
+import { createSafeAction } from "@/lib/create-safe-action";
+import { CreateCard } from "./schema";
+import { ActionState } from "@/lib/create-safe-action";
+import { z } from "zod";
+import { Card } from "@prisma/client";
+import { generateNextOrder } from "@/lib/lexorank";
+
+type InputType = z.infer<typeof CreateCard>;
+type ReturnType = ActionState<InputType, Card>;
+
+const handler = async (data: InputType): Promise<ReturnType> => {
+  const { title, listId, boardId } = data;
+
+  try {
+    // 1. Calculate order (append to end of list)
+    const lastCard = await db.card.findFirst({
+      where: { listId },
+      orderBy: { order: "desc" },
+      select: { order: true },
+    });
+
+    const newOrder = generateNextOrder(lastCard?.order);
+
+    // 2. Create the card
+    const card = await db.card.create({
+      data: {
+        title,
+        listId,
+        order: newOrder,
+      },
+    });
+
+    // 3. Refresh the board page
+    revalidatePath(`/board/${boardId}`);
+    return { data: card };
+  } catch (error) {
+    console.error("[CREATE_CARD_ERROR]", error);
+    return { error: "Failed to create card. Please try again." };
+  }
+};
+
+export const createCard = createSafeAction(CreateCard, handler);
