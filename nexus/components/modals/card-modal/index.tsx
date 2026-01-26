@@ -34,6 +34,7 @@ export const CardModal = () => {
   const [description, setDescription] = useState("");
   const [isDescEditing, setIsDescEditing] = useState(false);
   const [savedField, setSavedField] = useState<"title" | "desc" | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const descInputRef = useRef<ElementRef<"textarea">>(null);
 
@@ -106,11 +107,11 @@ export const CardModal = () => {
       return;
     }
 
+    setIsSaving(true);
+
     // ⭐ OPTIMISTIC UPDATE: Change UI immediately (zero-latency UX)
     const previousDescription = cardData.description;
     setCardData({ ...cardData, description: currentDesc });
-    setIsDescEditing(false);
-    setSavedField("desc");
 
     // 🔄 BACKGROUND SYNC: Perform actual database update
     const result = await updateCard({
@@ -118,6 +119,8 @@ export const CardModal = () => {
       id: cardData.id,
       description: currentDesc
     });
+
+    setIsSaving(false);
 
     if (result.error) {
       // ❌ ROLLBACK: Revert to previous state if DB fails
@@ -128,6 +131,8 @@ export const CardModal = () => {
     }
 
     // ✅ SUCCESS: Refresh and show confirmation
+    setIsDescEditing(false);
+    setSavedField("desc");
     toast.success("Description saved");
     router.refresh();
     setTimeout(() => setSavedField(null), 2000);
@@ -174,13 +179,8 @@ export const CardModal = () => {
                 <div className="flex items-start gap-x-3 w-full mb-10">
                     <AlignLeft className="h-5 w-5 mt-1 text-neutral-700 shrink-0" />
                     <div className="w-full">
-                        <div className="flex items-center gap-x-2 mb-2">
+                        <div className="mb-2">
                             <p className="font-semibold text-neutral-700 text-lg">Description</p>
-                             {savedField === "desc" && (
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md font-medium flex items-center animate-in fade-in zoom-in">
-                                    <Check className="h-3 w-3 mr-1" /> Saved
-                                </span>
-                             )}
                         </div>
                         
                         {isDescEditing ? (
@@ -191,19 +191,39 @@ export const CardModal = () => {
                                     onChange={(e) => setDescription(e.target.value)}
                                     className="w-full mt-2 p-3 border-2 border-brand-500 rounded-md outline-none focus:ring-0 min-h-[150px] resize-none text-sm shadow-soft transition-all bg-white"
                                     placeholder="Add a more detailed description..."
+                                    disabled={isSaving}
                                 />
                                 <div className="flex items-center gap-x-2">
                                     <Button 
                                         onClick={onSaveDesc}
-                                        className="bg-brand-700 hover:bg-brand-900 text-white"
+                                        disabled={isSaving || (cardData && description.trim() === (cardData.description || "").trim())}
+                                        className={`${
+                                            cardData && description.trim() !== (cardData.description || "").trim()
+                                                ? "bg-black hover:bg-neutral-900 text-white"
+                                                : "bg-neutral-400 text-neutral-700 cursor-not-allowed"
+                                        } disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                                     >
-                                        Save
+                                        {isSaving ? (
+                                            <>
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            "Save"
+                                        )}
                                     </Button>
                                     <Button 
                                         variant="ghost" 
                                         size="sm"
-                                        onClick={() => setIsDescEditing(false)}
-                                        className="text-slate-500 hover:bg-slate-100"
+                                        onClick={() => {
+                                            setDescription(cardData?.description || "");
+                                            setIsDescEditing(false);
+                                        }}
+                                        disabled={isSaving}
+                                        className="text-slate-500 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Cancel
                                     </Button>

@@ -1,4 +1,6 @@
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
 
 interface Props {
@@ -12,15 +14,12 @@ export const createAuditLog = async (props: Props) => {
   try {
     const { entityId, entityType, entityTitle, action } = props;
 
-    // --- MOCK USER DATA (Replace this with Clerk later) ---
-    const orgId = "default-organization"; // Hardcoded Org
-    const user = {
-        id: "test-user-123",
-        firstName: "Test",
-        lastName: "User",
-        imageUrl: "https://github.com/shadcn.png" // Placeholder image
-    };
-    // ----------------------------------------------------
+    const { orgId } = await auth();
+    const user = await currentUser();
+    
+    if (!orgId || !user) {
+      throw new Error("Unauthorized");
+    }
 
     await db.auditLog.create({
       data: {
@@ -36,6 +35,6 @@ export const createAuditLog = async (props: Props) => {
     });
     
   } catch (error) {
-    console.log("[AUDIT_LOG_ERROR]", error);
+    logger.error("[AUDIT_LOG_ERROR]", error);
   }
 };

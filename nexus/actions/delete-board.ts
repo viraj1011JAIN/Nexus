@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { DeleteBoard } from "./schema";
@@ -12,8 +13,11 @@ type InputType = z.infer<typeof DeleteBoard>;
 type ReturnType = ActionState<InputType, Board>;
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  // MOCK AUTH: In production, verify user owns this board
-  const orgId = "default-organization";
+  const { orgId } = await auth();
+  
+  if (!orgId) {
+    return { error: "Unauthorized - Please sign in" };
+  }
 
   try {
     // Verify board belongs to organization before deleting

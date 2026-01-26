@@ -20,13 +20,64 @@ model Organization {
   slug       String   @unique
   imageUrl   String?
 
+  // Stripe Billing Fields
+  subscriptionPlan        String   @default("FREE") @map("subscription_plan") // FREE or PRO
+  stripeCustomerId        String?  @unique @map("stripe_customer_id")
+  stripeSubscriptionId    String?  @unique @map("stripe_subscription_id")
+  stripeSubscriptionStatus String? @map("stripe_subscription_status") // active, canceled, past_due, etc.
+  stripePriceId           String?  @map("stripe_price_id")
+  stripeCurrentPeriodEnd  DateTime? @map("stripe_current_period_end")
+
   boards     Board[]
   auditLogs  AuditLog[]
+  members    OrganizationUser[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  clerkUserId    String   @unique @map("clerk_user_id")
+  email          String   @unique
+  name           String
+  imageUrl       String?  @map("image_url")
+  
+  organizations  OrganizationUser[]
+  assignedCards  Card[]   @relation("CardAssignee")
+  auditLogs      AuditLog[]
+  
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  
+  @@map("users")
+}
+
+model OrganizationUser {
+  id             String       @id @default(uuid())
+  role           Role         @default(MEMBER)
+  
+  userId         String       @map("user_id")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime     @default(now()) @map("created_at")
+  
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("organization_users")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
 }
 
 // ============================================
@@ -36,6 +87,13 @@ model Organization {
 model Board {
   id             String       @id @default(uuid())
   title          String
+  
+  // Unsplash Integration
+  imageId        String?      @map("image_id")
+  imageThumbUrl  String?      @map("image_thumb_url") @db.Text
+  imageFullUrl   String?      @map("image_full_url") @db.Text
+  imageUserName  String?      @map("image_user_name") @db.Text
+  imageLinkHTML  String?      @map("image_link_html") @db.Text
   
   // Link to Organization for Multi-tenancy
   orgId          String       @map("org_id")
@@ -70,38 +128,67 @@ model List {
 }
 
 model Card {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
+  description String?   @db.Text
   
-  // Lexorank: Prevents fractional indexing math bugs
-  order       String   @default("m")
-  description String?  @db.Text
+  // Lexorank: String-based ordering is mandatory for Senior roles
+  order       String    @default("m")
+  
+  // Enhanced task management fields
+  dueDate     DateTime? @map("due_date")
+  priority    Priority  @default(MEDIUM)
   
   listId      String   @map("list_id")
   list        List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  
+  assigneeId  String?  @map("assignee_id")
+  assignee    User?    @relation("CardAssignee", fields: [assigneeId], references: [id])
+  
+  labels      CardLabel[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([listId])
+  @@index([assigneeId])
   @@map("cards")
+}
+
+model CardLabel {
+  id     String @id @default(uuid())
+  name   String
+  color  String @default("#6B7280")
+  
+  cardId String @map("card_id")
+  card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  
+  @@index([cardId])
+  @@map("card_labels")
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 // ============================================
 // AUDIT LOGGING
 // ============================================
 
-enum ACTION {
-  CREATE
-  UPDATE
-  DELETE
-}
-
 enum ENTITY_TYPE {
   BOARD
   LIST
   CARD
   ORGANIZATION
+}
+
+enum ACTION {
+  CREATE
+  UPDATE
+  DELETE
 }
 
 model AuditLog {
@@ -117,6 +204,7 @@ model AuditLog {
   entityTitle String      @map("entity_title")
   
   userId      String      @map("user_id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userImage   String      @db.Text @map("user_image")
   userName    String      @db.Text @map("user_name")
 
@@ -124,5 +212,6 @@ model AuditLog {
   updatedAt   DateTime    @updatedAt
 
   @@index([orgId])
+  @@index([userId])
   @@map("audit_logs")
 }

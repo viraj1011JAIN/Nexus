@@ -7,7 +7,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { List, Card } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { createCard } from "@/actions/create-card";
-import { deleteList } from "@/actions/delete-list"; 
+import { deleteList } from "@/actions/delete-list";
+import { logger } from "@/lib/logger"; 
 import { updateList } from "@/actions/update-list"; // <--- Import new action
 import { CardItem } from "./card-item";
 import { Trash2 } from "lucide-react"; 
@@ -77,7 +78,7 @@ export const ListItem = ({
     const result = await updateList({ id: listId, boardId, title });
     
     if (result.error) {
-      console.error("Failed to update list:", result.error);
+      logger.error("Failed to update list", { error: result.error, listId, boardId });
     }
     
     disableEditing();
@@ -95,14 +96,14 @@ export const ListItem = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="w-72 shrink-0 h-full select-none"
+      className="w-72 shrink-0 h-full select-none animate-fadeInUp"
     >
       <div 
         {...listeners} 
-        className="w-full rounded-md bg-[#f1f2f4] shadow-md pb-2"
+        className="w-full rounded-xl glass-effect shadow-lg hover:shadow-xl transition-all duration-300 pb-3 border border-white/20"
       >
         {/* List Header (Now Switchable!) */}
-        <div className="pt-2 px-2 text-sm font-semibold flex justify-between items-start gap-x-2">
+        <div className="pt-3 px-3 text-sm font-bold flex justify-between items-start gap-x-2">
           
           {/* IF EDITING: Show Input */}
           {isEditing ? (
@@ -117,8 +118,8 @@ export const ListItem = ({
                     ref={inputRef}
                     name="title"
                     defaultValue={data.title}
-                    onBlur={() => formRef.current?.requestSubmit()} // Save when clicking away
-                    className="text-sm font-medium border-transparent h-7 w-full px-[7px] py-1 bg-white focus:bg-white border transition truncate focus:outline-none focus:ring-2 focus:ring-sky-500 rounded-sm"
+                    onBlur={() => formRef.current?.requestSubmit()}
+                    className="text-sm font-bold border-transparent h-8 w-full px-3 py-1 bg-white/90 focus:bg-white border transition truncate focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded-lg shadow-sm"
                     placeholder="Enter list title..."
                 />
                 <button type="submit" hidden />
@@ -127,7 +128,7 @@ export const ListItem = ({
              /* IF NOT EDITING: Show Title (Click to Edit) */
              <div 
                 onClick={enableEditing}
-                className="w-full text-sm px-2.5 py-1 h-7 font-medium border-transparent cursor-pointer hover:bg-white/50 rounded-sm transition"
+                className="w-full text-sm px-3 py-1.5 h-8 font-bold border-transparent cursor-pointer hover:bg-white/60 rounded-lg transition-all text-slate-800"
              >
                {data.title}
              </div>
@@ -140,7 +141,7 @@ export const ListItem = ({
             <Button 
                 size="sm" 
                 variant="ghost" 
-                className="h-auto w-auto p-1 text-rose-500 hover:text-rose-600 hover:bg-rose-100"
+                className="h-auto w-auto p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all hover:scale-110 active:scale-95"
             >
                 <Trash2 className="h-4 w-4" />
             </Button>
@@ -149,7 +150,7 @@ export const ListItem = ({
 
         {/* Cards Area */}
         <SortableContext items={data.cards} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-y-2 mx-1 px-1 py-0.5 mt-2">
+          <div className="flex flex-col gap-y-2.5 mx-2 px-1 py-0.5 mt-3">
             {data.cards.map((card, index) => (
               <CardItem
                 index={index}
@@ -161,7 +162,7 @@ export const ListItem = ({
         </SortableContext>
 
         {/* Add Card Form */}
-        <div className="px-2 mt-2">
+        <div className="px-3 mt-3">
              <form 
                 action={async (formData) => {
                     const title = formData.get("title") as string;
@@ -169,7 +170,7 @@ export const ListItem = ({
                     const boardIdValue = formData.get("boardId") as string;
                     const result = await createCard({ title, listId: listIdValue, boardId: boardIdValue });
                     if (result.error) {
-                        console.error("Failed to create card:", result.error);
+                        logger.error("Failed to create card", { error: result.error, listId: listIdValue, boardId: boardIdValue });
                     }
                 }} 
                 className="mt-2"
@@ -177,14 +178,14 @@ export const ListItem = ({
                 <input hidden name="listId" value={data.id} readOnly />
                 <input hidden name="boardId" value={boardId} readOnly />
                 
-                <div className="flex gap-1 items-center">
+                <div className="flex gap-2 items-center">
                   <input 
                     name="title" 
                     placeholder="Add a card..." 
-                    className="w-full px-2 py-1 text-sm border rounded hover:bg-slate-50 focus:bg-white transition outline-none focus:border-sky-500"
+                    className="flex-1 px-3 py-2 text-sm border-0 rounded-lg bg-white/80 hover:bg-white focus:bg-white transition-all outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm font-medium placeholder:text-slate-400"
                     required
                   />
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" type="submit">
+                  <Button size="sm" className="h-8 w-8 p-0 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm hover:scale-110 active:scale-95 transition-all" type="submit">
                     +
                   </Button>
                 </div>

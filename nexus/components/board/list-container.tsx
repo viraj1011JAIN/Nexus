@@ -2,6 +2,8 @@
 
 import { List, Card } from "@prisma/client";
 import { useState, useEffect, useRef } from "react";
+import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 import {
   DndContext,
   closestCorners,
@@ -23,7 +25,8 @@ import { Button } from "@/components/ui/button";
 import { createList } from "@/actions/create-list";
 import { updateListOrder } from "@/actions/update-list-order"; 
 import { updateCardOrder } from "@/actions/update-card-order"; 
-import { generateNextOrder } from "@/lib/lexorank"; 
+import { generateNextOrder } from "@/lib/lexorank";
+import { useRealtimeBoard } from "@/hooks/use-realtime-board";
 
 type ListWithCards = List & { cards: Card[] };
 
@@ -45,6 +48,55 @@ export const ListContainer = ({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // 2. Real-time synchronization
+  const { isConnected } = useRealtimeBoard({
+    boardId,
+    onCardCreated: (card) => {
+      setOrderedData((prev) => {
+        const listIndex = prev.findIndex((list) => list.id === card.listId);
+        if (listIndex === -1) return prev;
+        
+        const newLists = [...prev];
+        newLists[listIndex] = {
+          ...newLists[listIndex],
+          cards: [...newLists[listIndex].cards, card],
+        };
+        return newLists;
+      });
+      toast.success(`Card "${card.title}" added by another user`);
+    },
+    onCardUpdated: (card) => {
+      setOrderedData((prev) => {
+        return prev.map((list) => ({
+          ...list,
+          cards: list.cards.map((c) => c.id === card.id ? card : c),
+        }));
+      });
+    },
+    onCardDeleted: (cardId) => {
+      setOrderedData((prev) => {
+        return prev.map((list) => ({
+          ...list,
+          cards: list.cards.filter((c) => c.id !== cardId),
+        }));
+      });
+      toast.info("Card removed by another user");
+    },
+    onListCreated: (list) => {
+      setOrderedData((prev) => [...prev, { ...list, cards: [] }]);
+      toast.success(`List "${list.title}" added by another user`);
+    },
+    onListUpdated: (list) => {
+      setOrderedData((prev) =>
+        prev.map((l) => l.id === list.id ? { ...l, ...list } : l)
+      );
+    },
+    onListDeleted: (listId) => {
+      setOrderedData((prev) => prev.filter((l) => l.id !== listId));
+      toast.info("List removed by another user");
+    },
+  });
 
   // Sync state and ref when data changes
   useEffect(() => {
@@ -269,26 +321,26 @@ export const ListContainer = ({
           ))}
         </SortableContext>
 
-        <div className="w-72 shrink-0">
+        <div className="w-72 shrink-0 animate-fadeInUp">
             <form 
                 action={async (formData) => {
                     const title = formData.get("title") as string;
                     const boardIdValue = formData.get("boardId") as string;
                     const result = await createList({ title, boardId: boardIdValue });
                     if (result.error) {
-                        console.error("Failed to create list:", result.error);
+                        logger.error("Failed to create list", { error: result.error, boardId: boardIdValue });
                     }
                 }} 
-                className="bg-white/80 p-3 rounded-xl flex flex-col gap-2 hover:bg-white transition"
+                className="glass-effect p-4 rounded-xl flex flex-col gap-3 hover:shadow-lg transition-all duration-300 border border-white/20"
             >
             <input hidden name="boardId" value={boardId} readOnly />
             <input 
                 name="title" 
-                placeholder="List title..." 
-                className="p-2 text-sm border-2 border-transparent focus:border-sky-500 rounded-md outline-none font-medium"
+                placeholder="Enter list title..." 
+                className="px-3 py-2 text-sm border-2 border-transparent focus:border-indigo-400 rounded-lg outline-none font-semibold bg-white/80 focus:bg-white shadow-sm transition-all placeholder:text-slate-400"
                 required
             />
-            <Button size="sm" variant="default" className="w-full justify-start">
+            <Button size="sm" className="w-full justify-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-95 font-semibold rounded-lg">
                 + Add List
             </Button>
             </form>

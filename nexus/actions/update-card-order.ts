@@ -1,7 +1,9 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { protectDemoMode } from "@/lib/action-protection";
 
 interface CardUpdate {
   id: string;
@@ -12,6 +14,22 @@ interface CardUpdate {
 
 export async function updateCardOrder(items: CardUpdate[], boardId: string) {
   try {
+    // Get board to check orgId for demo protection
+    const board = await db.board.findUnique({
+      where: { id: boardId },
+      select: { orgId: true },
+    });
+
+    if (!board) {
+      return { success: false, error: "Board not found" };
+    }
+
+    // Demo mode protection
+    const demoCheck = await protectDemoMode(board.orgId);
+    if (demoCheck) {
+      return { success: false, error: "Cannot modify demo data" };
+    }
+
     const transaction = items.map((card) =>
       db.card.update({
         where: { id: card.id },

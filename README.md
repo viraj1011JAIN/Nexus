@@ -2,18 +2,20 @@
   
 # 🚀 NEXUS
 
-### Enterprise-Grade B2B SaaS Task Management Platform
+### Production-Ready Revenue-Generating SaaS Platform
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.1-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Stripe](https://img.shields.io/badge/Stripe-Integrated-purple?style=for-the-badge&logo=stripe)](https://stripe.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com)
 
-[Live Demo](https://nexus-demo.vercel.app) • [Documentation](#-documentation) • [Report Bug](https://github.com/yourusername/nexus/issues) • [Request Feature](https://github.com/yourusername/nexus/issues)
+[🎯 Quick Start](#-quick-start) • [📚 Documentation](nexus/PRODUCTION_READY.md) • [💳 Stripe Setup](nexus/STRIPE_SETUP.md) • [🔄 Subscription Flow](nexus/SUBSCRIPTION_FLOW.md)
 
 <img src="public/screenshots/hero.png" alt="NEXUS Dashboard" width="800px" />
 
-**Task management for humans. Organize projects, collaborate in real-time, and build productivity at light speed.**
+**Enterprise task management with built-in monetization. Go from code to cash in minutes.**
+
+✅ **100% Production-Ready** • 💳 **Stripe Billing Integrated** • 🔐 **Multi-Tenant** • 🚀 **Deploy in 5 Minutes**
 
 </div>
 
@@ -48,54 +50,91 @@
       <ul>
         <li>Secure OAuth authentication via Clerk</li>
         <li>Organization-based workspace isolation</li>
-        <li>One-click guest demo mode</li>
-        <li>SSO support for enterprise</li>
+        <li>Route protection middleware</li>
+        <li>Session management</li>
       </ul>
     </td>
     <td>
-      <h3>🎯 Real-Time Collaboration</h3>
+      <h3>💳 Stripe Billing System</h3>
       <ul>
-        <li>Live updates via Supabase Realtime</li>
-        <li>Optimistic UI for zero-latency</li>
-        <li>Conflict-free concurrent editing</li>
-        <li>WebSocket-based notifications</li>
+        <li>Subscription checkout flow</li>
+        <li>Webhook lifecycle automation</li>
+        <li>Customer Portal integration</li>
+        <li>Feature gating (FREE/PRO)</li>
       </ul>
     </td>
   </tr>
   <tr>
     <td>
-      <h3>🎨 Advanced Drag & Drop</h3>
+      <h3>🎯 Task Management</h3>
       <ul>
-        <li>Physics-based smooth animations</li>
-        <li>Full mobile touch support</li>
-        <li>Cross-list card movement</li>
-        <li>Lexorank ordering system</li>
+        <li>Unlimited boards (Pro tier)</li>
+        <li>Drag & drop lists and cards</li>
+        <li>Rich text card descriptions</li>
+        <li>Activity audit logs</li>
       </ul>
     </td>
-    <td>
-      <h3>💳 Subscription Management</h3>
-      <ul>
-        <li>Stripe payment integration</li>
-        <li>Multiple pricing tiers</li>
-        <li>Webhook-based sync</li>
-        <li>Usage-based billing</li>
-      </ul>
-    </td>
-  </tr>
-  <tr>
     <td>
       <h3>⚡ Performance Optimized</h3>
       <ul>
         <li>Server Components for SSR</li>
-        <li>Edge middleware <50ms</li>
-        <li>Lighthouse score 95+</li>
-        <li>Bundle size <200KB</li>
+        <li>Optimistic UI updates</li>
+        <li>Type-safe Server Actions</li>
+        <li>Edge-ready infrastructure</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <h3>🎨 Modern UI/UX</h3>
+      <ul>
+        <li>Tailwind CSS + shadcn/ui</li>
+        <li>Responsive mobile-first</li>
+        <li>Custom error boundaries</li>
+        <li>Toast notifications</li>
       </ul>
     </td>
     <td>
-      <h3>🔍 Advanced Search</h3>
+      <h3>🔒 Production Security</h3>
       <ul>
-        <li>Command palette (⌘K)</li>
+        <li>Webhook signature verification</li>
+        <li>Data isolation per org</li>
+        <li>Environment secrets</li>
+        <li>Sentry-ready error tracking</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 💰 Monetization Built-In
+
+NEXUS includes a complete Stripe billing system out of the box:
+
+### 📊 Subscription Tiers
+
+| Feature | FREE | PRO ($9/month) |
+|---------|------|----------------|
+| Boards | 5 | ∞ Unlimited |
+| Cards per board | 50 | ∞ Unlimited |
+| Activity logs | Basic | Advanced |
+| Support | Community | Priority |
+| Templates | ❌ | ✅ |
+| Collaboration | ❌ | ✅ |
+
+### 🚀 Revenue Features
+
+✅ **Self-Service Checkout:** Stripe-hosted payment pages  
+✅ **Automated Billing:** Webhook-driven subscription sync  
+✅ **Customer Portal:** Self-service subscription management  
+✅ **Feature Gating:** Enforce limits based on subscription tier  
+✅ **Upgrade Prompts:** Contextual CTAs when limits reached  
+✅ **Webhook Automation:** Handle subscriptions, cancellations, failed payments  
+
+**→ See [STRIPE_SETUP.md](nexus/STRIPE_SETUP.md) for 5-minute integration guide**
+
+---
         <li>Full-text search</li>
         <li>Quick actions</li>
         <li>Keyboard shortcuts</li>

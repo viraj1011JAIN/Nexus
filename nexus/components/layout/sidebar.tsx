@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Layout, Settings, Activity, CreditCard, Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -23,39 +24,78 @@ export const Sidebar = () => {
      * in the flex container. This prevents an invisible 100vw container from 
      * intercepting pointer events meant for your cards.
      */
-    <div className="w-64 h-full bg-white border-r flex flex-col shadow-soft shrink-0 z-20 relative">
-      <div className="p-6 border-b flex items-center justify-between">
-        <span className="font-bold text-xl text-brand-700 tracking-tight">NEXUS</span>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500">
-           <Plus className="h-4 w-4" />
-        </Button>
+    <div className="w-64 h-full glass-effect border-r border-white/20 flex flex-col shadow-xl shrink-0 z-20 relative backdrop-blur-xl">
+      <div className="p-6 border-b border-white/10">
+        <div className="flex items-center justify-between mb-6">
+          <span className="font-bold text-2xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">NEXUS</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        {/* Organization Switcher for multi-tenancy */}
+        <OrganizationSwitcher
+          hidePersonal
+          afterCreateOrganizationUrl="/"
+          afterLeaveOrganizationUrl="/"
+          afterSelectOrganizationUrl="/"
+          appearance={{
+            elements: {
+              rootBox: {
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                width: "100%",
+              },
+              organizationSwitcherTrigger: {
+                padding: "6px 8px",
+                width: "100%",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                justifyContent: "space-between",
+                backgroundColor: "white",
+                "&:hover": {
+                  backgroundColor: "#f8fafc",
+                },
+              },
+            },
+          }}
+        />
       </div>
-      <div className="p-4 flex-1 space-y-1">
+      <div className="p-4 flex-1 space-y-2">
         {routes.map((route) => (
           <Button
             key={route.href}
             variant="ghost"
             className={cn(
-              "w-full justify-start gap-x-2 font-medium transition-all px-4 py-6",
-              route.active ? "bg-brand-50 text-brand-700 hover:bg-brand-50" : "text-slate-600 hover:bg-slate-50"
+              "w-full justify-start gap-x-3 font-semibold transition-all px-4 py-6 rounded-xl group hover:scale-102",
+              route.active 
+                ? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 shadow-sm" 
+                : "text-slate-600 hover:bg-white/80 hover:shadow-sm"
             )}
             asChild
           >
             <Link href={route.href}>
-              <route.icon className={cn("h-5 w-5", route.active ? "text-brand-700" : "text-slate-400")} />
+              <route.icon className={cn(
+                "h-5 w-5 transition-transform group-hover:scale-110", 
+                route.active ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
+              )} />
               {route.label}
             </Link>
           </Button>
         ))}
       </div>
-      <div className="p-4 border-t bg-slate-50">
-         <div className="flex items-center gap-x-3 p-2">
-            <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">TU</div>
-            <div className="flex flex-col truncate">
-               <p className="text-xs font-bold text-slate-700">Test User</p>
-               <p className="text-[10px] text-slate-500">Free Plan</p>
-            </div>
-         </div>
+      <div className="p-6 border-t border-white/10 bg-gradient-to-b from-transparent to-slate-50/50">
+        <div className="flex items-center justify-center">
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: "h-10 w-10",
+                userButtonPopoverCard: "shadow-xl",
+              },
+            }}
+            afterSignOutUrl="/"
+          />
+        </div>
       </div>
     </div>
   );

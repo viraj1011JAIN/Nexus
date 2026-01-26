@@ -23,7 +23,10 @@ export const useCardModal = create<CardModalStore>((set) => ({
   // onOpen triggers the modal and determines if the description 
   // starts in a read-only or editing state.
   onOpen: (id: string, mode = "view") => {
-    console.log(`[useCardModal] Opening card: ${id} in ${mode} mode`); // Senior Debugging
+    // Debug logging only in development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[useCardModal] Opening card: ${id} in ${mode} mode`);
+    }
     set({ isOpen: true, id, mode });
   },
 

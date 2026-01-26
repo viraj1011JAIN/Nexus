@@ -63,13 +63,17 @@ export const CardItem = ({
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
+      transition={{ 
+        duration: 0.2, 
+        ease: "easeOut",
+        delay: index * 0.05 // Senior "Stagger" effect - each card animates slightly after the previous
+      }}
       // ONLY WAY TO EDIT: Click the card body
       onClick={() => cardModal.onOpen(data.id)}
-      className="group relative border-2 border-transparent hover:border-black/5 py-2 px-3 text-sm bg-white rounded-md shadow-sm cursor-pointer min-h-[36px] flex items-center justify-between transition-colors"
+      className="group relative border-2 border-transparent hover:border-indigo-200/50 py-3 px-4 text-sm bg-white/90 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-lg cursor-pointer min-h-9 flex items-center justify-between transition-all duration-300"
     >
         {/* Title Display */}
-        <span className="truncate block pr-6 h-5 w-full font-medium text-neutral-700">
+        <span className="truncate block pr-6 h-5 w-full font-semibold text-slate-800 group-hover:text-indigo-700 transition-colors">
             {data.title} 
         </span>
 
@@ -80,7 +84,7 @@ export const CardItem = ({
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6 text-neutral-500 hover:text-neutral-900 focus:opacity-100"
+                        className="h-7 w-7 text-slate-400 hover:text-slate-900 hover:bg-slate-100 focus:opacity-100 rounded-lg transition-all hover:scale-110"
                         onClick={(e) => e.stopPropagation()} 
                     >
                         <MoreHorizontal className="h-4 w-4" />
@@ -90,9 +94,9 @@ export const CardItem = ({
                 <DropdownMenuContent align="end" side="bottom" className="w-auto pb-2">
                     <DropdownMenuItem 
                         onClick={handleDelete}
-                        className="text-rose-600 cursor-pointer hover:!text-rose-700 hover:!bg-rose-50 font-medium text-xs px-2"
+                        className="text-rose-600 cursor-pointer hover:text-rose-700! hover:bg-rose-50! font-semibold text-xs px-3 py-2 rounded-lg"
                     >
-                        <Trash2 className="h-3 w-3 mr-2" />
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
                         Delete
                     </DropdownMenuItem>
                 </DropdownMenuContent>
