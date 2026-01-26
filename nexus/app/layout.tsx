@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { ModalProvider } from "@/components/providers/modal-provider";
@@ -15,29 +16,35 @@ export const metadata: Metadata = {
   description: "Production-level B2B SaaS Platform",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { userId } = await auth();
+
   return (
     <ClerkProvider>
       <html lang="en">
         <body className={`${inter.className} bg-slate-50 antialiased`}>
           <ModalProvider />
           <Toaster />
-          <CommandPalette />
+          {userId && <CommandPalette />}
 
-          <div className="flex h-screen w-full overflow-hidden"> 
-              
+          {userId ? (
+            <div className="flex h-screen w-full overflow-hidden"> 
               <Sidebar />
-
               <main className="flex-1 h-full overflow-y-auto relative bg-slate-50">
                 <div className="p-8 min-h-full">
-                    {children}
+                  {children}
                 </div>
               </main>
-          </div>
+            </div>
+          ) : (
+            <main className="w-full h-full">
+              {children}
+            </main>
+          )}
         </body>
       </html>
     </ClerkProvider>

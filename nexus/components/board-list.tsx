@@ -77,6 +77,7 @@ export function BoardList({ boards: initialBoards }: BoardListProps) {
             className="flex-1 glass-effect px-4 py-3 rounded-xl outline-none focus:ring-2 ring-indigo-400 focus:ring-offset-2 transition-all placeholder:text-slate-400 text-slate-700 font-medium shadow-sm hover:shadow-md"
             disabled={isPending}
             autoComplete="off"
+            suppressHydrationWarning
           />
           <Button 
             type="submit" 

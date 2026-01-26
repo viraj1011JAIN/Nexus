@@ -11,7 +11,7 @@ export const Sidebar = () => {
   const pathname = usePathname();
   
   const routes = [
-    { label: "Boards", icon: Layout, href: `/`, active: pathname === "/" },
+    { label: "Boards", icon: Layout, href: `/dashboard`, active: pathname === "/dashboard" },
     { label: "Activity", icon: Activity, href: `/activity`, active: pathname === "/activity" },
     { label: "Settings", icon: Settings, href: `/settings`, active: pathname === "/settings" },
     { label: "Billing", icon: CreditCard, href: `/billing`, active: pathname === "/billing" },

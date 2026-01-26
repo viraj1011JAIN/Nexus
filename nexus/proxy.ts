@@ -28,6 +28,7 @@ const isPublicRoute = createRouteMatcher([
 
 // Define protected routes that require authentication
 const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
   "/board(.*)",
   "/activity(.*)",
   "/settings(.*)",
