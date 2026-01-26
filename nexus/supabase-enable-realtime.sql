@@ -4,13 +4,16 @@
 -- Run this in Supabase Dashboard > SQL Editor
 -- This enables real-time broadcasts for table changes
 
--- Enable realtime for Card table
-ALTER PUBLICATION supabase_realtime ADD TABLE "Card";
+-- Enable realtime for boards table
+ALTER PUBLICATION supabase_realtime ADD TABLE "boards";
 
--- Enable realtime for List table  
-ALTER PUBLICATION supabase_realtime ADD TABLE "List";
+-- Enable realtime for cards table
+ALTER PUBLICATION supabase_realtime ADD TABLE "cards";
 
--- Verify replication is enabled (should return 2 rows)
+-- Enable realtime for lists table  
+ALTER PUBLICATION supabase_realtime ADD TABLE "lists";
+
+-- Verify replication is enabled (should return 3 rows)
 SELECT 
   schemaname, 
   tablename, 
@@ -19,12 +22,19 @@ FROM
   pg_publication_tables 
 WHERE 
   pubname = 'supabase_realtime' 
-  AND tablename IN ('Card', 'List');
+  AND tablename IN ('boards', 'cards', 'lists');
+
+-- If no rows returned, check if publication exists:
+SELECT * FROM pg_publication WHERE pubname = 'supabase_realtime';
+
+-- Alternative: Check all tables in the publication
+SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
 
 -- ============================================
 -- Expected Output:
 -- schemaname | tablename | pubname
 -- -----------+-----------+------------------
--- public     | Card      | supabase_realtime
--- public     | List      | supabase_realtime
+-- public     | boards    | supabase_realtime
+-- public     | cards     | supabase_realtime
+-- public     | lists     | supabase_realtime
 -- ============================================

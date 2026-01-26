@@ -14,25 +14,46 @@ export const stripe = new Stripe(stripeSecretKey || "sk_test_dummy_key_for_build
   typescript: true,
 });
 
-// Stripe Product Configuration
+// Stripe Product Configuration (UK/GBP)
 export const STRIPE_CONFIG = {
-  // Replace these with your actual Stripe Price IDs after creating products in Stripe Dashboard
+  // Stripe Price IDs - Replace with your actual IDs from Stripe Dashboard
+  // See STRIPE_SETUP_UK.md for setup instructions
   prices: {
     pro: {
-      monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "price_pro_monthly",
-      yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || "price_pro_yearly",
+      monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "",
+      yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || "",
     },
   },
+  
+  // Currency and locale settings for UK
+  currency: "gbp" as const,
+  locale: "en-GB" as const,
   
   // Plan limits
   limits: {
     FREE: {
-      boards: 5,
-      cardsPerBoard: 50,
+      boards: 50,  // Increased for testing
+      cardsPerBoard: 500,  // Increased for testing
     },
     PRO: {
       boards: Infinity,
       cardsPerBoard: Infinity,
     },
   },
+  
+  // Pricing for display
+  pricing: {
+    monthly: 9,
+    yearly: 90,
+    currency: "£",
+  },
 } as const;
+
+// Helper to check if Stripe is configured
+export const isStripeConfigured = () => {
+  return !!(
+    process.env.STRIPE_SECRET_KEY &&
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID &&
+    process.env.STRIPE_PRO_YEARLY_PRICE_ID
+  );
+};

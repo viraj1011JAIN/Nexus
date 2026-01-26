@@ -1,15 +1,26 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Zap, Users, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default async function LandingPage() {
-  const { userId } = await auth();
+export default function LandingPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
 
-  // If user is authenticated, redirect to dashboard
-  if (userId) {
-    redirect("/dashboard");
+  useEffect(() => {
+    // Redirect authenticated users to dashboard
+    if (isLoaded && isSignedIn) {
+      router.push("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  // Show nothing while checking auth (instant redirect)
+  if (!isLoaded || isSignedIn) {
+    return null;
   }
 
   return (

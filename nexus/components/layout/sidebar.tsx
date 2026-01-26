@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Layout, Settings, Activity, CreditCard, Plus } from "lucide-react";
+import { Layout, Settings, Activity, CreditCard, Plus, Moon, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/theme-provider";
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const { theme, toggleTheme } = useTheme();
   
   const routes = [
     { label: "Boards", icon: Layout, href: `/dashboard`, active: pathname === "/dashboard" },
@@ -34,10 +36,9 @@ export const Sidebar = () => {
         </div>
         {/* Organization Switcher for multi-tenancy */}
         <OrganizationSwitcher
-          hidePersonal
-          afterCreateOrganizationUrl="/"
-          afterLeaveOrganizationUrl="/"
-          afterSelectOrganizationUrl="/"
+          afterCreateOrganizationUrl="/dashboard"
+          afterLeaveOrganizationUrl="/dashboard"
+          afterSelectOrganizationUrl="/dashboard"
           appearance={{
             elements: {
               rootBox: {
@@ -84,7 +85,29 @@ export const Sidebar = () => {
           </Button>
         ))}
       </div>
-      <div className="p-6 border-t border-white/10 bg-gradient-to-b from-transparent to-slate-50/50">
+      
+      {/* Footer with Theme Toggle and User Button */}
+      <div className="p-6 border-t border-white/10 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-900/50 space-y-3">
+        {/* Theme Toggle */}
+        <Button
+          onClick={toggleTheme}
+          variant="ghost"
+          className="w-full justify-start text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700"
+        >
+          {theme === "light" ? (
+            <>
+              <Moon className="h-4 w-4 mr-2" />
+              Dark Mode
+            </>
+          ) : (
+            <>
+              <Sun className="h-4 w-4 mr-2" />
+              Light Mode
+            </>
+          )}
+        </Button>
+        
+        {/* User Button */}
         <div className="flex items-center justify-center">
           <UserButton
             appearance={{

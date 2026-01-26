@@ -19,7 +19,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   const { orgId } = await auth();
   
   if (!orgId) {
-    return { error: "Unauthorized - Please sign in" };
+    return { error: "Unauthorized - Please sign in or create an organization" };
   }
 
   // Demo mode protection
@@ -27,16 +27,26 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   if (demoCheck) return demoCheck;
 
   try {
-    // Get organization with subscription plan
-    const organization = await db.organization.findUnique({
+    // Get or create organization
+    let organization = await db.organization.findUnique({
       where: { id: orgId },
       include: {
         boards: true,
       },
     });
 
+    // Auto-create organization if it doesn't exist
     if (!organization) {
-      return { error: "Organization not found" };
+      organization = await db.organization.create({
+        data: {
+          id: orgId,
+          name: "My Organization",
+          slug: orgId.toLowerCase(),
+        },
+        include: {
+          boards: true,
+        },
+      });
     }
 
     // Feature Gating: Check board limit based on plan

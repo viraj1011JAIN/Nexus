@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -9,15 +9,70 @@ import { createBoard } from "@/actions/create-board";
 import { deleteBoard } from "@/actions/delete-board";
 import Link from "next/link";
 import { Board } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
 
-interface BoardListProps {
-  boards: Board[];
-}
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export function BoardList({ boards: initialBoards }: BoardListProps) {
+export function BoardList() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBoards();
+
+    // Set up real-time subscription for board changes
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      
+      const channel = supabase
+        .channel('boards-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'boards',
+          },
+          (payload) => {
+            console.log('✅ Real-time board change detected:', payload);
+            // Refresh the board list when any board changes
+            fetchBoards();
+          }
+        )
+        .subscribe((status) => {
+          console.log('🔌 Supabase subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Successfully subscribed to real-time board changes');
+          }
+          if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Failed to subscribe to real-time changes');
+          }
+        });
+
+      return () => {
+        console.log('🔌 Cleaning up Supabase subscription');
+        supabase.removeChannel(channel);
+      };
+    } else {
+      console.warn('⚠️ Supabase environment variables not configured');
+    }
+  }, []);
+
+  const fetchBoards = async () => {
+    try {
+      const res = await fetch('/api/boards');
+      if (res.ok) {
+        const data = await res.json();
+        setBoards(data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +90,7 @@ export function BoardList({ boards: initialBoards }: BoardListProps) {
       } else {
         toast.success(`Board "${result.data?.title}" created successfully!`);
         setTitle("");
-        router.refresh();
+        fetchBoards(); // Refresh the list
       }
     });
   };
@@ -48,10 +103,18 @@ export function BoardList({ boards: initialBoards }: BoardListProps) {
         toast.error(result.error);
       } else {
         toast.success(`Board "${boardTitle}" deleted`);
-        router.refresh();
+        fetchBoards(); // Refresh the list
       }
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-slate-600">Loading boards...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-10 relative overflow-hidden">
@@ -65,7 +128,7 @@ export function BoardList({ boards: initialBoards }: BoardListProps) {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
             Nexus Boards
           </h1>
-          <p className="text-slate-600 font-medium">{initialBoards.length} {initialBoards.length === 1 ? 'Board' : 'Boards'}</p>
+          <p className="text-slate-600 font-medium">{boards.length} {boards.length === 1 ? 'Board' : 'Boards'}</p>
         </div>
 
         {/* Create Board Form */}
@@ -103,7 +166,7 @@ export function BoardList({ boards: initialBoards }: BoardListProps) {
 
         {/* List of Boards */}
         <div className="flex flex-col gap-4 w-full max-w-md">
-          {initialBoards.map((board, index) => (
+          {boards.map((board, index) => (
             <div
               key={board.id}
               style={{ animationDelay: `${index * 0.1}s` }}
@@ -131,7 +194,7 @@ export function BoardList({ boards: initialBoards }: BoardListProps) {
             </div>
           ))}
         
-          {initialBoards.length === 0 && (
+          {boards.length === 0 && (
             <div className="glass-effect p-8 rounded-2xl text-center space-y-3 animate-scaleIn">
               <div className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
                 <Plus className="h-8 w-8 text-indigo-600" />

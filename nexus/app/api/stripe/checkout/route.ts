@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { stripe } from "@/lib/stripe";
+import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if Stripe is configured
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        { 
+          error: "Stripe is not configured. Please add STRIPE_SECRET_KEY, STRIPE_PRO_MONTHLY_PRICE_ID, and STRIPE_PRO_YEARLY_PRICE_ID to your .env.local file. See STRIPE_SETUP_UK.md for instructions." 
+        },
+        { status: 503 }
+      );
+    }
+
     const { orgId } = await auth();
     
     if (!orgId) {
@@ -57,7 +67,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create Stripe Checkout Session
+    // Create Stripe Checkout Session (UK/GBP)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
@@ -68,10 +78,24 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?success=true`,
+      currency: "gbp",
+      billing_address_collection: "required",
+      customer_update: {
+        address: "auto",
+        name: "auto",
+      },
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?canceled=true`,
       metadata: {
         orgId: organization.id,
+        orgName: organization.name,
+      },
+      allow_promotion_codes: true,
+      tax_id_collection: {
+        enabled: true, // Allow UK VAT collection
+      },
+      consent_collection: {
+        terms_of_service: "required",
       },
     });
 

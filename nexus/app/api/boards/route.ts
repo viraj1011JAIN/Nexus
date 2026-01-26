@@ -5,13 +5,18 @@ import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
-    const { orgId } = await auth();
+    const { userId, orgId } = await auth();
     
-    if (!orgId) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
+    }
+    
+    // Return empty array if no organization selected
+    if (!orgId) {
+      return NextResponse.json([]);
     }
     
     const boards = await db.board.findMany({
