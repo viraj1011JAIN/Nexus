@@ -94,9 +94,11 @@ export async function POST(req: NextRequest) {
       tax_id_collection: {
         enabled: true, // Allow UK VAT collection
       },
-      consent_collection: {
-        terms_of_service: "required",
-      },
+      // Terms of service - Only enable if you've set a URL in Stripe Dashboard
+      // Go to: https://dashboard.stripe.com/settings/public
+      // consent_collection: {
+      //   terms_of_service: "required",
+      // },
     });
 
     return NextResponse.json({ url: session.url });

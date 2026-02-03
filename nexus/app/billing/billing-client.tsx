@@ -8,7 +8,15 @@ import { Organization } from "@prisma/client";
 import { STRIPE_CONFIG } from "@/lib/stripe";
 import { useSearchParams } from "next/navigation";
 
-export default function BillingClient({ organization }: { organization: Organization }) {
+export default function BillingClient({ 
+  organization,
+  isStripeConfigured: isStripeConfiguredProp = true,
+  priceIds 
+}: { 
+  organization: Organization;
+  isStripeConfigured?: boolean;
+  priceIds: { monthly: string; yearly: string };
+}) {
   const [loading, setLoading] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
   const [mounted, setMounted] = useState(false);
@@ -42,8 +50,8 @@ export default function BillingClient({ organization }: { organization: Organiza
     setLoading(true);
     try {
       const priceId = billingPeriod === "monthly" 
-        ? STRIPE_CONFIG.prices.pro.monthly
-        : STRIPE_CONFIG.prices.pro.yearly;
+        ? priceIds.monthly
+        : priceIds.yearly;
       
       if (!priceId) {
         toast.error("Stripe not configured", {
@@ -112,7 +120,7 @@ export default function BillingClient({ organization }: { organization: Organiza
 
   const isActive = organization.stripeSubscriptionStatus === "active";
   const renewalDate = formatDate(organization.stripeCurrentPeriodEnd);
-  const isStripeConfigured = !!(STRIPE_CONFIG.prices.pro.monthly && STRIPE_CONFIG.prices.pro.yearly);
+  const isStripeConfigured = isStripeConfiguredProp;
 
   return (
     <div className="max-w-5xl mx-auto">

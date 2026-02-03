@@ -7,10 +7,11 @@ import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateBoard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { Board } from "@prisma/client";
+import { Board, ACTION, ENTITY_TYPE } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { STRIPE_CONFIG } from "@/lib/stripe";
 import { protectDemoMode } from "@/lib/action-protection";
+import { createAuditLog } from "@/lib/create-audit-log";
 
 type InputType = z.infer<typeof CreateBoard>;
 type ReturnType = ActionState<InputType, Board>;
@@ -65,6 +66,14 @@ const handler = async (data: InputType): Promise<ReturnType> => {
         title: data.title,
         orgId: orgId,
       }
+    });
+
+    // Create audit log
+    await createAuditLog({
+      entityId: board.id,
+      entityType: ENTITY_TYPE.BOARD,
+      entityTitle: board.title,
+      action: ACTION.CREATE,
     });
 
     logger.info("Board created successfully", { boardId: board.id, orgId });

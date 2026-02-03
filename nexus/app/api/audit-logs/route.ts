@@ -16,14 +16,6 @@ export async function GET() {
 
     const logs = await db.auditLog.findMany({
       where: { orgId },
-      include: {
-        user: {
-          select: {
-            name: true,
-            imageUrl: true,
-          },
-        },
-      },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
@@ -33,8 +25,8 @@ export async function GET() {
       action: log.action,
       entityTitle: log.entityTitle,
       entityType: log.entityType,
-      userName: log.user.name,
-      userImage: log.user.imageUrl,
+      userName: log.userName,
+      userImage: log.userImage,
       createdAt: log.createdAt.toISOString(),
     }));
 

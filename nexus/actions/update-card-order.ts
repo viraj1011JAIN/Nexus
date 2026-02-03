@@ -41,7 +41,8 @@ export async function updateCardOrder(items: CardUpdate[], boardId: string) {
     );
 
     await db.$transaction(transaction);
-    revalidatePath(`/board/${boardId}`);
+    // Note: No revalidatePath here for smooth drag-and-drop performance
+    // The UI is already optimistically updated
     return { success: true };
   } catch (error) {
     console.error("[UPDATE_CARD_ORDER_ERROR]", error);

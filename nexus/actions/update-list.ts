@@ -7,8 +7,9 @@ import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateList } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { List } from "@prisma/client";
+import { List, ACTION, ENTITY_TYPE } from "@prisma/client";
 import { protectDemoMode } from "@/lib/action-protection";
+import { createAuditLog } from "@/lib/create-audit-log";
 
 type InputType = z.infer<typeof UpdateList>;
 type ReturnType = ActionState<InputType, List>;
@@ -39,6 +40,14 @@ const handler = async (data: InputType): Promise<ReturnType> => {
       data: {
         title,
       },
+    });
+
+    // Create audit log
+    await createAuditLog({
+      entityId: list.id,
+      entityType: ENTITY_TYPE.LIST,
+      entityTitle: list.title,
+      action: ACTION.UPDATE,
     });
 
     revalidatePath(`/board/${boardId}`);

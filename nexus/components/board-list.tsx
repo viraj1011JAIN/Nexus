@@ -2,17 +2,49 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
+import { formatDistanceToNow, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { createBoard } from "@/actions/create-board";
 import { deleteBoard } from "@/actions/delete-board";
 import Link from "next/link";
 import { Board } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
+import { motion, AnimatePresence } from "framer-motion";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const boardGradients = [
+  "from-purple-500 to-indigo-600",
+  "from-pink-500 to-rose-600",
+  "from-blue-500 to-cyan-600",
+  "from-green-500 to-emerald-600",
+  "from-orange-500 to-amber-600",
+  "from-red-500 to-pink-600",
+  "from-teal-500 to-green-600",
+  "from-violet-500 to-purple-600",
+];
+
+// Helper function to format dates safely
+function formatRelativeDate(date: string | Date | null | undefined): string {
+  if (!date) return "Never updated";
+  
+  try {
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    
+    if (!isValid(dateObj)) {
+      console.error("Invalid date:", date);
+      return "Recently updated";
+    }
+    
+    return formatDistanceToNow(dateObj, { addSuffix: true });
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "Recently updated";
+  }
+}
 
 export function BoardList() {
   const router = useRouter();
@@ -24,7 +56,6 @@ export function BoardList() {
   useEffect(() => {
     fetchBoards();
 
-    // Set up real-time subscription for board changes
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       
@@ -39,26 +70,16 @@ export function BoardList() {
           },
           (payload) => {
             console.log('✅ Real-time board change detected:', payload);
-            // Refresh the board list when any board changes
             fetchBoards();
           }
         )
         .subscribe((status) => {
           console.log('🔌 Supabase subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Successfully subscribed to real-time board changes');
-          }
-          if (status === 'CHANNEL_ERROR') {
-            console.error('❌ Failed to subscribe to real-time changes');
-          }
         });
 
       return () => {
-        console.log('🔌 Cleaning up Supabase subscription');
         supabase.removeChannel(channel);
       };
-    } else {
-      console.warn('⚠️ Supabase environment variables not configured');
     }
   }, []);
 
@@ -90,7 +111,7 @@ export function BoardList() {
       } else {
         toast.success(`Board "${result.data?.title}" created successfully!`);
         setTitle("");
-        fetchBoards(); // Refresh the list
+        fetchBoards();
       }
     });
   };
@@ -103,108 +124,192 @@ export function BoardList() {
         toast.error(result.error);
       } else {
         toast.success(`Board "${boardTitle}" deleted`);
-        fetchBoards(); // Refresh the list
+        fetchBoards();
       }
     });
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-slate-600">Loading boards...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#FAFBFC]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-[#475569] text-base"
+        >
+          Loading boards...
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-10 relative overflow-hidden">
-      {/* Animated background orbs */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
-      
-      <div className="relative z-10 flex flex-col items-center gap-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+    <div className="min-h-screen bg-[#FAFBFC] p-8">
+      {/* Background Texture */}
+      <div className="fixed inset-0 opacity-30 pointer-events-none">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: "linear-gradient(135deg, #F0F4FF 0%, #FDF2F8 50%, #FEF3F2 100%)",
+          }}
+        />
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10 px-4 sm:px-6 lg:px-0">
+        {/* Hero Section - Enhanced Typography */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mb-8 sm:mb-12 space-y-2 sm:space-y-3"
+        >
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Nexus Boards
           </h1>
-          <p className="text-slate-600 font-medium">{boards.length} {boards.length === 1 ? 'Board' : 'Boards'}</p>
-        </div>
+          <p className="text-[13px] text-[#64748B]">
+            {boards.length} {boards.length === 1 ? "Board" : "Boards"}
+          </p>
+        </motion.div>
 
-        {/* Create Board Form */}
-        <form onSubmit={handleCreateBoard} className="flex gap-3 w-full max-w-md">
-          <input 
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter board name..." 
-            className="flex-1 glass-effect px-4 py-3 rounded-xl outline-none focus:ring-2 ring-indigo-400 focus:ring-offset-2 transition-all placeholder:text-slate-400 text-slate-700 font-medium shadow-sm hover:shadow-md"
-            disabled={isPending}
-            autoComplete="off"
-            suppressHydrationWarning
-          />
-          <Button 
-            type="submit" 
-            disabled={isPending}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 px-6"
-          >
-            {isPending ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Creating...
-            </>
-          ) : (
-            <>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Board
-            </>
-          )}
-        </Button>
-      </form>
-
-        {/* List of Boards */}
-        <div className="flex flex-col gap-4 w-full max-w-md">
-          {boards.map((board, index) => (
-            <div
-              key={board.id}
-              style={{ animationDelay: `${index * 0.1}s` }}
-              className="group relative p-5 glass-effect rounded-2xl border border-white/20 hover:shadow-2xl hover:shadow-indigo-200/50 transition-all duration-300 flex items-center justify-between hover:scale-102 animate-fadeInUp overflow-hidden"
+        {/* Create Board Section */}
+        <motion.form
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          onSubmit={handleCreateBoard}
+          className="mb-8 sm:mb-12"
+        >
+          <div className="flex flex-col sm:flex-row gap-3 max-w-2xl bg-white rounded-xl p-3 sm:p-2 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04)] transition-all duration-200">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter board name..."
+              className="flex-1 px-4 sm:px-6 py-3 text-[15px] text-[#0F172A] placeholder:text-[#94A3B8] outline-none bg-transparent"
+              disabled={isPending}
+              autoComplete="off"
+            />
+            <Button
+              type="submit"
+              disabled={isPending}
+              size="default"
+              className="w-full sm:w-auto"
             >
-              {/* Shine effect on hover */}
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-              <Link 
-                href={`/board/${board.id}`}
-                className="relative flex-1 font-semibold text-slate-800 hover:text-transparent hover:bg-gradient-to-r hover:from-indigo-600 hover:to-purple-600 hover:bg-clip-text transition-all truncate pr-4 z-10"
-              >
-                {board.title}
-              </Link>
-            
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 opacity-0 group-hover:opacity-100 transition-all duration-300 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:scale-110 active:scale-95 rounded-xl z-10"
-                onClick={() => handleDeleteBoard(board.id, board.title)}
-                disabled={isPending}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        
-          {boards.length === 0 && (
-            <div className="glass-effect p-8 rounded-2xl text-center space-y-3 animate-scaleIn">
-              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
-                <Plus className="h-8 w-8 text-indigo-600" />
+              {isPending ? (
+                <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create Board
+                </>
+              )}
+            </Button>
+          </div>
+        </motion.form>
+
+        {/* Boards Grid */}
+        {boards.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="flex flex-col items-center justify-center py-24 px-8 bg-white rounded-2xl border border-[#E5E7EB]"
+          >
+            <div className="w-32 h-32 mb-6 rounded-full bg-gradient-to-br from-[#7C3AED]/10 to-[#EC4899]/10 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#7C3AED]/20 to-[#EC4899]/20 flex items-center justify-center">
+                <Plus className="h-8 w-8 text-[#7C3AED]" />
               </div>
-              <p className="text-slate-600 font-medium">
-                No boards yet. Create your first board above!
-              </p>
             </div>
-          )}
-        </div>
+            <h2 className="text-2xl font-semibold text-[#0F172A] mb-2">
+              Your workspace is empty
+            </h2>
+            <p className="text-[15px] text-[#64748B] mb-6 text-center max-w-md">
+              Create your first board to get started organizing your projects
+            </p>
+            <Button
+              onClick={() => document.querySelector<HTMLInputElement>('input[placeholder="Enter board name..."]')?.focus()}
+              size="default"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Create Your First Board
+            </Button>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <AnimatePresence>
+              {boards.map((board, index) => (
+                <motion.div
+                  key={board.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                  className="group"
+                >
+                  <Link href={`/board/${board.id}`}>
+                    <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-md hover:shadow-xl hover:border-purple-300 transition-all duration-200 overflow-hidden h-80 flex flex-col cursor-pointer">
+                      {/* Colored Header Area */}
+                      <div
+                        className={`h-32 bg-gradient-to-br ${
+                          boardGradients[index % boardGradients.length]
+                        } p-5 flex items-start justify-between`}
+                      >
+                        <h3 className="text-xl font-semibold text-white truncate pr-2">
+                          {board.title}
+                        </h3>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (confirm(`Delete board "${board.title}"?`)) {
+                              handleDeleteBoard(board.id, board.title);
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-2 bg-white/20 hover:bg-white/30 rounded-lg backdrop-blur-sm transition-all duration-200 hover:scale-105"
+                          disabled={isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-white" />
+                        </button>
+                      </div>
+
+                      {/* Content Area */}
+                      <div className="flex-1 p-5 flex flex-col justify-between bg-white">
+                        {/* List Preview */}
+                        <div className="flex gap-2 mb-4">
+                          <div className="w-2 h-12 bg-[#E5E7EB] rounded-full" />
+                          <div className="w-2 h-12 bg-[#E5E7EB] rounded-full" />
+                          <div className="w-2 h-12 bg-[#E5E7EB] rounded-full" />
+                        </div>
+
+                        {/* Metadata */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-[13px] text-[#64748B]">
+                            <div className="w-5 h-5 rounded-full bg-[#F3F4F6] flex items-center justify-center">
+                              <div className="w-2 h-2 rounded-full bg-[#7C3AED]" />
+                            </div>
+                            <span>0 cards</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[13px] text-[#64748B]">
+                            <Clock className="h-4 w-4" />
+                            <span>
+                              {formatRelativeDate(board.updatedAt)}
+                            </span>
+                          </div>
+                          {/* Collaborator Avatars Placeholder */}
+                          <div className="flex items-center gap-1">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#A855F7] border-2 border-white shadow-sm" />
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#EC4899] to-[#BE185D] border-2 border-white shadow-sm -ml-2" />
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#2563EB] border-2 border-white shadow-sm -ml-2" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </div>
   );

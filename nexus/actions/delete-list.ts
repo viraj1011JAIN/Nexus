@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { protectDemoMode } from "@/lib/action-protection";
+import { createAuditLog } from "@/lib/create-audit-log";
+import { ACTION, ENTITY_TYPE } from "@prisma/client";
 
 export async function deleteList(id: string, boardId: string) {
   try {
@@ -23,11 +25,29 @@ export async function deleteList(id: string, boardId: string) {
       throw new Error("Cannot modify demo data");
     }
 
+    // Get list info before deletion
+    const list = await db.list.findUnique({
+      where: { id },
+      select: { title: true },
+    });
+
+    if (!list) {
+      throw new Error("List not found");
+    }
+
     await db.list.delete({
       where: {
         id,
         boardId,
       },
+    });
+
+    // Create audit log
+    await createAuditLog({
+      entityId: id,
+      entityType: ENTITY_TYPE.LIST,
+      entityTitle: list.title,
+      action: ACTION.DELETE,
     });
 
     revalidatePath(`/board/${boardId}`);

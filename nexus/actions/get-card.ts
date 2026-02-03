@@ -7,7 +7,14 @@ export async function getCard(id: string) {
     const card = await db.card.findUnique({
       where: { id },
       include: {
-        list: true, // We might want to know which list it's in
+        list: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+          },
+        },
       },
     });
     return card;

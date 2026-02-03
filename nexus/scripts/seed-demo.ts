@@ -239,16 +239,9 @@ async function main() {
           },
         });
 
-        // Create labels for this card
-        for (const label of cardData.labels) {
-          await tx.cardLabel.create({
-            data: {
-              name: label.name,
-              color: label.color,
-              cardId: card.id,
-            },
-          });
-        }
+        // TODO: Update label creation for new many-to-many schema
+        // Labels are now organization-scoped, not card-specific
+        // See PHASE_1_COMPLETE.md for new schema structure
 
         cardCount++;
       }
@@ -268,15 +261,7 @@ async function main() {
           },
         });
 
-        for (const label of cardData.labels) {
-          await tx.cardLabel.create({
-            data: {
-              name: label.name,
-              color: label.color,
-              cardId: card.id,
-            },
-          });
-        }
+        // TODO: Update label creation for new many-to-many schema
 
         cardCount++;
       }
@@ -295,20 +280,12 @@ async function main() {
           },
         });
 
-        for (const label of cardData.labels) {
-          await tx.cardLabel.create({
-            data: {
-              name: label.name,
-              color: label.color,
-              cardId: card.id,
-            },
-          });
-        }
+        // TODO: Update label creation for new many-to-many schema
 
         cardCount++;
       }
 
-      console.log(`✅ Created ${cardCount} cards with labels\n`);
+      console.log(`✅ Created ${cardCount} cards (labels disabled pending schema update)\n`);
 
       // 7. Create sample audit logs
       console.log("📜 Creating audit trail...");

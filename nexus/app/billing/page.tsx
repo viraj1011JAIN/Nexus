@@ -18,5 +18,23 @@ export default async function BillingPage() {
     redirect("/");
   }
 
-  return <BillingClient organization={organization} />;
+  // Check if Stripe is configured on the server side
+  const isStripeConfigured = !!(
+    process.env.STRIPE_SECRET_KEY &&
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID &&
+    process.env.STRIPE_PRO_YEARLY_PRICE_ID
+  );
+
+  const priceIds = {
+    monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "",
+    yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || "",
+  };
+
+  return (
+    <BillingClient 
+      organization={organization} 
+      isStripeConfigured={isStripeConfigured}
+      priceIds={priceIds}
+    />
+  );
 }

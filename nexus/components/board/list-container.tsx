@@ -114,7 +114,10 @@ export const ListContainer = ({
       activationConstraint: { distance: 8 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 5 },
+      activationConstraint: { 
+        delay: 150, 
+        tolerance: 8 
+      },
     }),
   );
 

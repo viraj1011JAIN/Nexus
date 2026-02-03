@@ -42,7 +42,8 @@ export async function updateListOrder(items: ListUpdate[], boardId: string) {
     );
 
     await db.$transaction(transaction);
-    revalidatePath(`/board/${boardId}`);
+    // Note: No revalidatePath here for smooth drag-and-drop performance
+    // The UI is already optimistically updated
     return { success: true };
   } catch (error) {
     console.error("[UPDATE_LIST_ORDER_ERROR]", error);

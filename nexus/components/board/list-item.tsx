@@ -96,7 +96,7 @@ export const ListItem = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="w-72 shrink-0 h-full select-none animate-fadeInUp"
+      className="w-72 sm:w-80 shrink-0 h-full select-none animate-fadeInUp touch-manipulation"
     >
       <div 
         {...listeners} 

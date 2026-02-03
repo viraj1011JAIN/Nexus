@@ -7,7 +7,8 @@ import { createSafeAction } from "@/lib/create-safe-action";
 import { DeleteBoard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { Board } from "@prisma/client";
+import { Board, ACTION, ENTITY_TYPE } from "@prisma/client";
+import { createAuditLog } from "@/lib/create-audit-log";
 
 type InputType = z.infer<typeof DeleteBoard>;
 type ReturnType = ActionState<InputType, Board>;
@@ -36,6 +37,14 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     // Delete board (cascade will delete all lists, cards, etc.)
     const deletedBoard = await db.board.delete({
       where: { id: data.id },
+    });
+
+    // Create audit log
+    await createAuditLog({
+      entityId: deletedBoard.id,
+      entityType: ENTITY_TYPE.BOARD,
+      entityTitle: deletedBoard.title,
+      action: ACTION.DELETE,
     });
 
     revalidatePath(`/`);

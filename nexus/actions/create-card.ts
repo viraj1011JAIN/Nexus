@@ -7,10 +7,11 @@ import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateCard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { Card } from "@prisma/client";
+import { Card, ACTION, ENTITY_TYPE } from "@prisma/client";
 import { generateNextOrder } from "@/lib/lexorank";
 import { logger } from "@/lib/logger";
 import { protectDemoMode } from "@/lib/action-protection";
+import { createAuditLog } from "@/lib/create-audit-log";
 
 type InputType = z.infer<typeof CreateCard>;
 type ReturnType = ActionState<InputType, Card>;
@@ -51,7 +52,15 @@ const handler = async (data: InputType): Promise<ReturnType> => {
       },
     });
 
-    // 3. Refresh the board page
+    // 3. Create audit log
+    await createAuditLog({
+      entityId: card.id,
+      entityType: ENTITY_TYPE.CARD,
+      entityTitle: card.title,
+      action: ACTION.CREATE,
+    });
+
+    // 4. Refresh the board page
     revalidatePath(`/board/${boardId}`);
     return { data: card };
   } catch (error) {

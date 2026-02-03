@@ -50,8 +50,59 @@ export const CreateCard = z.object({
 });
 
 export const UpdateCard = z.object({
-  boardId: z.string(),
-  description: z.string().min(3, "Description is too short").optional(),
-  title: z.string().min(3, "Title is too short").optional(),
-  id: z.string(),
+  boardId: z.string().uuid("Invalid board ID"),
+  description: z
+    .string()
+    .min(3, "Description is too short")
+    .max(10000, "Description is too long")
+    .optional(),
+  title: z
+    .string()
+    .min(3, "Title is too short")
+    .max(100, "Title must be less than 100 characters")
+    .optional(),
+  id: z.string().uuid("Invalid card ID"),
+});
+
+// ============================================
+// LABEL SCHEMAS (Enhanced Security)
+// ============================================
+
+export const CreateLabel = z.object({
+  name: z
+    .string()
+    .min(1, "Label name is required")
+    .max(50, "Label name must be less than 50 characters")
+    .regex(/^[a-zA-Z0-9\s\-_]+$/, "Label name contains invalid characters"),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format (must be hex)"),
+  orgId: z.string().uuid("Invalid organization ID"),
+});
+
+export const AssignLabel = z.object({
+  cardId: z.string().uuid("Invalid card ID"),
+  labelId: z.string().uuid("Invalid label ID"),
+  orgId: z.string().uuid("Invalid organization ID"),
+});
+
+export const UnassignLabel = z.object({
+  cardId: z.string().uuid("Invalid card ID"),
+  labelId: z.string().uuid("Invalid label ID"),
+  orgId: z.string().uuid("Invalid organization ID"),
+});
+
+// ============================================
+// ASSIGNEE SCHEMAS (Enhanced Security)
+// ============================================
+
+export const AssignUser = z.object({
+  cardId: z.string().uuid("Invalid card ID"),
+  assigneeId: z.string(), // Clerk user IDs are not UUIDs
+  orgId: z.string().uuid("Invalid organization ID"),
+});
+
+export const UnassignUser = z.object({
+  cardId: z.string().uuid("Invalid card ID"),
+  orgId: z.string().uuid("Invalid organization ID"),
 });

@@ -13,7 +13,7 @@ export const getAuditLogs = async (cardId: string) => {
       orderBy: {
         createdAt: "desc",
       },
-      take: 3, // Only show the last 3 actions
+      take: 10, // Show the last 10 actions
     });
 
     return logs;
