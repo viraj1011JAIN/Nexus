@@ -1,23 +1,15 @@
 "use server";
 
-import { db } from "@/lib/db";
-import { ENTITY_TYPE } from "@prisma/client";
+import { createDAL } from "@/lib/dal";
+import { TenantError } from "@/lib/tenant-context";
 
 export const getAuditLogs = async (cardId: string) => {
   try {
-    const logs = await db.auditLog.findMany({
-      where: {
-        entityId: cardId,
-        entityType: ENTITY_TYPE.CARD,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 10, // Show the last 10 actions
-    });
-
-    return logs;
-  } catch {
+    const dal = await createDAL();
+    // DAL verifies the cardId belongs to this org before returning audit logs
+    return await dal.auditLogs.findManyForEntity(cardId);
+  } catch (error) {
+    if (error instanceof TenantError) return [];
     return [];
   }
 };

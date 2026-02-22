@@ -46,18 +46,13 @@ html {
   }
 }
 
-/* Subtle gradient overlay for depth */
+/* Clean modern background - no gradients */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-    135deg,
-    rgba(124, 58, 237, 0.02) 0%,
-    rgba(236, 72, 153, 0.015) 50%,
-    transparent 100%
-  );
+  background: transparent;
   z-index: -1;
 }
 
@@ -160,166 +155,171 @@ body {
 }
 
 /* ============================================================================
-   LIGHT THEME VARIABLES - "THE FROSTED WORKSPACE"
-   Professional color palette with translucent slates for eye comfort
+   LIGHT THEME - Professional SaaS Design
+   Clean white with subtle gray surfaces - No harsh borders
    ============================================================================ */
 
 :root {
   /* Border Radius */
-  --radius: 0.75rem;
-  
-  /* Base Colors - Light Mode */
-  --background: 248 250 252;  /* #F8FAFC - Slate 50: Soft gray background */
-  --foreground: 15 23 42;     /* #0F172A - Slate 900: Near-black for maximum readability */
-  
-  /* Card & Glass Surface */
-  --card: 255 255 255;        /* white with 0.7 opacity in glass-effect */
-  --card-foreground: 15 23 42; /* slate-900 */
-  
-  /* Popover */
-  --popover: 255 255 255;     /* white */
-  --popover-foreground: 15 23 42; /* slate-900 */
-  
-  /* Primary - Indigo Brand #6366F1 */
-  --primary: 99 102 241;      /* #6366F1 - Indigo for buttons and active states */
-  --primary-foreground: 255 255 255; /* white */
-  
-  /* Secondary - Pink Vibrant #EC4899 */
-  --secondary: 236 72 153;    /* #EC4899 - Pink for secondary gradients */
-  --secondary-foreground: 255 255 255; /* white */
-  
-  /* Success - Emerald #10B981 */
-  --success: 16 185 129;      /* #10B981 - Success indicators */
+  --radius: 0.5rem;
+
+  /* Base Colors - Clean slate background */
+  --background: 250 250 250;  /* #FAFAFA - Soft off-white */
+  --foreground: 9 9 11;       /* #09090B - Deep readable black */
+
+  /* Card & Surface - Layered backgrounds */
+  --card: 255 255 255;        /* White cards on gray background */
+  --card-foreground: 9 9 11;
+
+  /* Popover & Dropdown */
+  --popover: 255 255 255;
+  --popover-foreground: 9 9 11;
+
+  /* Primary - Indigo (Professional Blue) */
+  --primary: 99 102 241;      /* #6366F1 - Indigo 500 */
+  --primary-foreground: 255 255 255;
+
+  /* Secondary - Slate for subtle accents */
+  --secondary: 100 116 139;   /* Slate 500 */
+  --secondary-foreground: 255 255 255;
+
+  /* Success - Emerald */
+  --success: 16 185 129;      /* Emerald 500 */
   --success-foreground: 255 255 255;
-  
-  /* Destructive - Rose #EF4444 */
-  --destructive: 239 68 68;   /* #EF4444 - Delete and warnings */
+
+  /* Warning - Amber */
+  --warning: 245 158 11;      /* Amber 500 */
+  --warning-foreground: 9 9 11;
+
+  /* Destructive - Red */
+  --destructive: 239 68 68;   /* Red 500 */
   --destructive-foreground: 255 255 255;
-  
-  /* Muted - For secondary info */
-  --muted: 226 232 240;       /* slate-200 */
-  --muted-foreground: 100 116 139; /* #64748B - Slate 500: Secondary text */
-  
-  /* Accent */
-  --accent: 226 232 240;      /* slate-200 */
-  --accent-foreground: 15 23 42; /* slate-900 */
-  
-  /* Border - Essential for "Senior" finish */
-  --border: 226 232 240;      /* rgba(226, 232, 240, 0.8) - Slate 200 */
-  --input: 226 232 240;       /* slate-200 */
-  --ring: 99 102 241;         /* indigo-500 */
-  
+
+  /* Muted - Subtle backgrounds */
+  --muted: 244 244 245;       /* Zinc 100 */
+  --muted-foreground: 113 113 122; /* Zinc 500 */
+
+  /* Accent - Very subtle hover */
+  --accent: 244 244 245;      /* Zinc 100 */
+  --accent-foreground: 9 9 11;
+
+  /* Border - Minimal, subtle */
+  --border: 228 228 231;      /* Zinc 200 */
+  --input: 228 228 231;
+  --ring: 99 102 241;         /* Indigo 500 */
+
   /* Charts */
-  --chart-1: 99 102 241;      /* indigo */
-  --chart-2: 236 72 153;      /* pink */
-  --chart-3: 16 185 129;      /* emerald */
-  --chart-4: 251 191 36;      /* amber */
-  --chart-5: 139 92 246;      /* violet */
-  
+  --chart-1: 99 102 241;      /* Indigo */
+  --chart-2: 139 92 246;      /* Violet */
+  --chart-3: 16 185 129;      /* Emerald */
+  --chart-4: 249 115 22;      /* Orange */
+  --chart-5: 236 72 153;      /* Pink */
+
   /* Sidebar */
-  --sidebar: 255 255 255;     /* white */
-  --sidebar-foreground: 15 23 42; /* slate-900 */
-  --sidebar-primary: 99 102 241; /* indigo-500 */
-  --sidebar-primary-foreground: 255 255 255; /* white */
-  --sidebar-accent: 241 245 249; /* slate-100 */
-  --sidebar-accent-foreground: 15 23 42; /* slate-900 */
-  --sidebar-border: 226 232 240; /* slate-200 */
-  --sidebar-ring: 99 102 241; /* indigo-500 */
-  
-  /* Shadows */
-  --shadow-color: 226 232 240; /* slate-200 */
-  --shadow-elevation-low: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-elevation-medium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-elevation-high: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  
-  /* Brand Gradients */
-  --gradient-brand: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-brand-hover: linear-gradient(135deg, #5568d3 0%, #63408a 100%);
-  --gradient-shine: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
-  
-  /* Glass Effect */
-  --glass-background: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --glass-blur: 16px;
+  --sidebar: 255 255 255;
+  --sidebar-foreground: 9 9 11;
+  --sidebar-primary: 99 102 241;
+  --sidebar-primary-foreground: 255 255 255;
+  --sidebar-accent: 244 244 245;
+  --sidebar-accent-foreground: 9 9 11;
+  --sidebar-border: 228 228 231;
+  --sidebar-ring: 99 102 241;
+
+  /* Shadows - Subtle depth */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
 }
 
 /* ============================================================================
-   DARK THEME VARIABLES - "THE MIDNIGHT NEBULA"
-   Deep navy with glassmorphism and subtle glow effects
-   Avoids pure black (#000000) to maintain glass effect depth
+   DARK THEME - "Deep Zinc" Professional System
+   Surfaces create hierarchy, not borders - Like Linear, Vercel, Notion
    ============================================================================ */
 
 .dark {
-  /* Base Colors - Dark Mode */
-  --background: 2 6 23;       /* #020617 - Slate 950: Deep navy background */
-  --foreground: 248 250 252;  /* #F8FAFC - Slate 50: Off-white for reduced glare */
-  
-  /* Card & Glass Surface */
-  --card: 15 23 42;           /* rgba(15, 23, 42, 0.6) in glass-effect */
-  --card-foreground: 248 250 252; /* slate-50 */
-  
-  /* Popover */
-  --popover: 15 23 42;        /* slate-900 */
-  --popover-foreground: 248 250 252; /* slate-50 */
-  
-  /* Primary - Indigo #6366F1 */
-  --primary: 99 102 241;      /* #6366F1 - Same indigo for consistency */
-  --primary-foreground: 255 255 255; /* white */
-  
-  /* Secondary - Pink #EC4899 */
-  --secondary: 236 72 153;    /* #EC4899 - Pink for secondary gradients */
-  --secondary-foreground: 255 255 255; /* white */
-  
-  /* Success - Emerald #10B981 */
-  --success: 16 185 129;      /* #10B981 - Success indicators */
-  --success-foreground: 255 255 255;
-  
-  /* Destructive - Rose #EF4444 */
-  --destructive: 239 68 68;   /* #EF4444 - Delete and warnings */
-  --destructive-foreground: 255 255 255;
-  
-  /* Muted */
-  --muted: 30 41 59;          /* slate-800 */
-  --muted-foreground: 148 163 184; /* #94A3B8 - Slate 400: Muted text */
-  
-  /* Accent */
-  --accent: 30 41 59;         /* slate-800 */
-  --accent-foreground: 248 250 252; /* slate-50 */
-  
-  /* Border - Creates subtle "rim-light" effect on cards */
-  --border: 30 41 59;         /* rgba(30, 41, 59, 0.5) - Slate 800 */
-  --input: 30 41 59;          /* slate-800 */
-  --ring: 99 102 241;         /* indigo-500 */
-  
-  /* Charts - Vibrant for dark mode */
-  --chart-1: 99 102 241;      /* indigo */
-  --chart-2: 236 72 153;      /* pink */
-  --chart-3: 16 185 129;      /* emerald */
-  --chart-4: 251 191 36;      /* amber */
-  --chart-5: 139 92 246;      /* violet */
-  
-  /* Glow Effect - Soft indigo glow behind active boards */
-  --glow-accent: rgba(99, 102, 241, 0.15);
+  /* Base Colors - Deep Zinc Canvas */
+  --background: 9 9 11;       /* #09090B - Zinc 950: Deep, rich background */
+  --foreground: 250 250 250;  /* #FAFAFA - Zinc 50: Crisp white text */
+
+  /* Card & Surface - Layered elevation through lightness */
+  --card: 24 24 27;           /* #18181B - Zinc 900: Elevated surface */
+  --card-foreground: 250 250 250;
+
+  /* Popover & Dropdown - Same as cards */
+  --popover: 24 24 27;        /* #18181B - Zinc 900 */
+  --popover-foreground: 250 250 250;
+
+  /* Primary - Indigo (Professional, not neon) */
+  --primary: 99 102 241;      /* #6366F1 - Indigo 500 */
+  --primary-foreground: 255 255 255;
+
+  /* Secondary - Subtle slate */
+  --secondary: 148 163 184;   /* Slate 400 */
+  --secondary-foreground: 9 9 11;
+
+  /* Success - Emerald */
+  --success: 52 211 153;      /* Emerald 400 */
+  --success-foreground: 9 9 11;
+
+  /* Warning - Amber (subtle, not neon yellow) */
+  --warning: 251 191 36;      /* Amber 400 */
+  --warning-foreground: 9 9 11;
+
+  /* Destructive - Red */
+  --destructive: 248 113 113; /* Red 400 */
+  --destructive-foreground: 9 9 11;
+
+  /* Muted - Element backgrounds (inputs, hover states) */
+  --muted: 39 39 42;          /* #27272A - Zinc 800: Input backgrounds */
+  --muted-foreground: 161 161 170; /* #A1A1AA - Zinc 400: Muted text */
+
+  /* Accent - Hover states (slightly lighter than muted) */
+  --accent: 39 39 42;         /* #27272A - Zinc 800 */
+  --accent-foreground: 250 250 250;
+
+  /* Border - Subtle, barely visible */
+  --border: 39 39 42;         /* #27272A - Zinc 800: Minimal borders */
+  --input: 39 39 42;          /* #27272A - Zinc 800 */
+  --ring: 99 102 241;         /* Indigo 500 for focus */
+
+  /* Charts - Vibrant but not neon */
+  --chart-1: 99 102 241;      /* Indigo 500 */
+  --chart-2: 167 139 250;     /* Violet 400 */
+  --chart-3: 52 211 153;      /* Emerald 400 */
+  --chart-4: 251 146 60;      /* Orange 400 */
+  --chart-5: 244 114 182;     /* Pink 400 */
+
+  /* Sidebar */
+  --sidebar: 9 9 11;          /* Same as background - seamless */
+  --sidebar-foreground: 250 250 250;
+  --sidebar-primary: 99 102 241;
+  --sidebar-primary-foreground: 255 255 255;
+  --sidebar-accent: 39 39 42;
+  --sidebar-accent-foreground: 250 250 250;
+  --sidebar-border: 39 39 42;
+  --sidebar-ring: 99 102 241;
+
+  /* Shadows - Deep, for layering */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.8);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.6), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.3);
 }
 
 /* ============================================================================
-   GLASS EFFECT - PROFESSIONAL IMPLEMENTATION
-   Light: Frosted glass with high clarity
-   Dark: Deep translucent surface that allows glow effects
+   SOLID MODERN DESIGN - NO GLASS EFFECTS
+   Clean, crisp surfaces with proper shadows for depth
    ============================================================================ */
 
 .glass-effect {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
 }
 
 .dark .glass-effect {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(30, 41, 59, 0.5);
+  background: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
 }
 
 /* ============================================================================
@@ -427,6 +427,90 @@ body {
 .animation-delay-1000 { animation-delay: 1s; }
 .animation-delay-2000 { animation-delay: 2s; }
 .animation-delay-4000 { animation-delay: 4s; }
+
+/* ============================================================================
+   MOBILE-SPECIFIC UTILITIES
+   ============================================================================ */
+
+/* Pull-to-refresh indicator (for when implementing native-like experience) */
+.pull-to-refresh {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pull-to-refresh-indicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  transition: transform 0.2s ease-out;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.pull-to-refresh-indicator.visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* No tap highlight - prevents blue flash on mobile */
+.no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Momentum scrolling for iOS */
+.momentum-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Prevent text selection on UI elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Active state feedback for better mobile UX */
+.touch-feedback {
+  transition: transform 75ms ease-out, opacity 75ms ease-out;
+}
+
+.touch-feedback:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/* Safe area utilities */
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-inset-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-inset-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Full viewport height accounting for mobile browser chrome */
+.min-h-screen-mobile {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height */
+}
+
+.h-screen-mobile {
+  height: 100vh;
+  height: 100dvh;
+}
 
 /* ============================================================================
    PRODUCTION-LEVEL PERFORMANCE UTILITIES
@@ -735,6 +819,56 @@ html:not(.theme-mounted) * {
       font-size: 14px; /* Reset for desktop */
     }
   }
+
+  /* iOS Safe Area Support */
+  @supports (padding: max(0px)) {
+    body {
+      /* Top safe area (notch) */
+      padding-top: max(0px, env(safe-area-inset-top));
+      /* Bottom safe area (home indicator) */
+      padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
+
+    /* Fix for fixed headers */
+    header, .header-fixed {
+      padding-top: max(12px, calc(12px + env(safe-area-inset-top)));
+    }
+
+    /* Fix for fixed footers */
+    footer, .footer-fixed {
+      padding-bottom: max(12px, calc(12px + env(safe-area-inset-bottom)));
+    }
+  }
+
+  /* Landscape mode optimizations for mobile */
+  @media (max-height: 500px) and (orientation: landscape) {
+    /* Reduce vertical padding in landscape */
+    body {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    
+    /* Make dialogs/modals scrollable in landscape */
+    [role="dialog"], .modal {
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+  }
+
+  /* Tablet-specific optimizations (768px - 1024px) */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    /* Optimize touch targets for tablets */
+    button, a, [role="button"] {
+      min-height: 40px;
+      min-width: 40px;
+    }
+    
+    /* Better spacing for tablet screens */
+    .container {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+  }
   
   /* Ultra-smooth scrollbar styling */
   ::-webkit-scrollbar {
@@ -764,6 +898,16 @@ html:not(.theme-mounted) * {
   /* Smooth momentum scrolling for all scrollable elements */
   * {
     -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
   
   /* Selection */

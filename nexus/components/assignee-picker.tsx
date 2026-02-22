@@ -58,7 +58,6 @@ export function AssigneePicker({
       const result = await assignUser({
         cardId,
         assigneeId: user.id,
-        orgId,
       });
 
       if (result.error) {
@@ -79,7 +78,7 @@ export function AssigneePicker({
 
     // Server action
     startTransition(async () => {
-      const result = await unassignUser({ cardId, orgId });
+      const result = await unassignUser({ cardId });
 
       if (result.error) {
         toast.error(result.error);

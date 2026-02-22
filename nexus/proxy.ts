@@ -1,96 +1,64 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+﻿import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-// Demo mode configuration
-const DEMO_ORG_ID = "demo-org-id";
-const DEMO_MUTATION_ROUTES = [
-  "/api/board/create",
-  "/api/board/update",
-  "/api/board/delete",
-  "/api/list/create",
-  "/api/list/update",
-  "/api/list/delete",
-  "/api/card/create",
-  "/api/card/update",
-  "/api/card/delete",
-  "/api/stripe/checkout",
-  "/api/stripe/portal",
-];
-
-// Define public routes that don't require authentication
+/**
+ * Public routes — no authentication required.
+ * Everything else requires a valid Clerk session.
+ */
 const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/api/webhook(.*)",
-  `/organization/${DEMO_ORG_ID}(.*)`, // Allow demo org access
+  "/api/webhook/stripe(.*)", // Stripe webhooks are verified by signature, not JWT
 ]);
 
-// Define protected routes that require authentication
-const isProtectedRoute = createRouteMatcher([
-  "/dashboard(.*)",
-  "/board(.*)",
-  "/activity(.*)",
-  "/settings(.*)",
-  "/billing(.*)",
-]);
-
-// Check if request is a mutation to demo organization
-function isDemoMutation(req: Request): boolean {
-  const url = new URL(req.url);
-  
-  // Check if route is a mutation endpoint
-  const isMutationRoute = DEMO_MUTATION_ROUTES.some(route => 
-    url.pathname.includes(route)
-  );
-  
-  if (!isMutationRoute) return false;
-  
-  // Check if the request is for demo org
-  const isDemoPath = url.pathname.includes(DEMO_ORG_ID);
-  
-  // Check body for orgId (for POST requests)
-  const isPostOrPatch = req.method === "POST" || req.method === "PATCH" || req.method === "DELETE";
-  
-  return isDemoPath || isPostOrPatch;
-}
-
-export default clerkMiddleware(async (auth, req) => {
-  const url = new URL(req.url);
-  
-  // Demo mode protection: Block mutations to demo organization
-  if (url.pathname.includes(DEMO_ORG_ID) && req.method !== "GET" && req.method !== "HEAD") {
-    // Check if this is a mutation
-    const isMutation = DEMO_MUTATION_ROUTES.some(route => url.pathname.includes(route));
-    
-    if (isMutation) {
-      return NextResponse.json(
-        { 
-          error: "Demo mode is read-only",
-          message: "This is a demo workspace. Changes are not saved. Sign up to create your own workspace with full access.",
-          demoMode: true,
-        },
-        { status: 403 }
-      );
-    }
-  }
-  
-  // Allow public routes without authentication
+export default clerkMiddleware(async (auth, req: NextRequest) => {
+  // Allow public routes through without auth check
   if (isPublicRoute(req)) {
-    return;
+    return NextResponse.next();
   }
-  
-  // Protect routes that require authentication
-  if (isProtectedRoute(req)) {
-    await auth.protect();
+
+  // Resolve auth state — cached per request by Clerk
+  const { userId, orgId, orgRole } = await auth();
+
+  // Layer 1: Authentication
+  // No session at all  redirect to sign-in, preserving the original URL
+  if (!userId) {
+    const signInUrl = new URL("/sign-in", req.url);
+    signInUrl.searchParams.set("redirect_url", req.nextUrl.pathname + req.nextUrl.search);
+    return NextResponse.redirect(signInUrl);
   }
+
+  // Layer 2: Organisation selection
+  // Authenticated but no active organisation  redirect to org selector
+  // Skip for the select-org page itself to avoid redirect loop
+  if (!orgId && !req.nextUrl.pathname.startsWith("/select-org")) {
+    const selectOrgUrl = new URL("/select-org", req.url);
+    return NextResponse.redirect(selectOrgUrl);
+  }
+
+  // Layer 3: Inject verified tenant identity as request headers
+  // Set by the middleware (trusted server-side) — never by the client.
+  // Downstream Server Components and API routes can read without re-calling auth().
+  const requestHeaders = new Headers(req.headers);
+  if (orgId) requestHeaders.set("x-tenant-id", orgId);
+  if (userId) requestHeaders.set("x-user-id", userId);
+  if (orgRole) requestHeaders.set("x-org-role", orgRole);
+
+  return NextResponse.next({ request: { headers: requestHeaders } });
 });
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
+    /*
+     * Match all request paths EXCEPT:
+     *   - _next/static (compiled assets)
+     *   - _next/image  (image optimisation)
+     *   - favicon.ico, robots.txt, sitemap.xml (public metadata)
+     *   - Files with an extension (images, fonts, etc.)
+     */
+    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf|eot)).*)",
     "/(api|trpc)(.*)",
   ],
 };

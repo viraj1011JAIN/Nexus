@@ -107,15 +107,15 @@ export const CardModal = () => {
       const fetchData = async () => {
         const card = await getCard(id);
         if (card) {
-          setCardData(card as CardWithRelations);
+          setCardData(card as unknown as CardWithRelations);
           setTitle(card.title);
           setCharCount(card.description?.length || 0);
           
           if (organizationId) {
             const [labels, cardLabelsList, members] = await Promise.all([
-              getOrganizationLabels(organizationId),
+              getOrganizationLabels(),
               getCardLabels(id),
-              getOrganizationMembers(organizationId),
+              getOrganizationMembers(),
             ]);
             
             setOrgLabels(labels);
@@ -191,7 +191,7 @@ export const CardModal = () => {
     ]);
     
     if (card) {
-      setCardData(card as CardWithRelations);
+      setCardData(card as unknown as CardWithRelations);
       setAuditLogs(logs);
       setCardLabels(cardLabelsList);
     }
@@ -354,7 +354,7 @@ export const CardModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[900px] h-[90vh] p-0 gap-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-none overflow-hidden">
+      <DialogContent className="w-full sm:max-w-[95vw] lg:max-w-4xl h-[90vh] max-h-[90vh] p-0 gap-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-none flex flex-col">
         <DialogTitle className="sr-only">Card Details</DialogTitle>
 
         {!cardData ? (
@@ -365,7 +365,7 @@ export const CardModal = () => {
               className="flex flex-col items-center gap-3"
             >
               <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-slate-500">Loading card...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading card...</p>
             </motion.div>
           </div>
         ) : (
@@ -562,7 +562,7 @@ export const CardModal = () => {
             </motion.div>
 
             {/* TAB NAVIGATION */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

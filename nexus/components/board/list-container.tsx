@@ -32,11 +32,14 @@ type ListWithCards = List & { cards: Card[] };
 
 interface ListContainerProps {
   boardId: string;
+  /** orgId required for tenant-isolated realtime channel subscriptions */
+  orgId: string;
   data: ListWithCards[];
 }
 
 export const ListContainer = ({
   boardId,
+  orgId,
   data
 }: ListContainerProps) => {
   const [orderedData, setOrderedData] = useState(data);
@@ -52,6 +55,7 @@ export const ListContainer = ({
   // 2. Real-time synchronization
   const { isConnected } = useRealtimeBoard({
     boardId,
+    orgId,
     onCardCreated: (card) => {
       setOrderedData((prev) => {
         const listIndex = prev.findIndex((list) => list.id === card.listId);

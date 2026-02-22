@@ -1,143 +1,88 @@
-"use server";
+﻿"use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { db } from "@/lib/db";
+import { createDAL } from "@/lib/dal";
+import { getTenantContext, requireRole } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
-import { createAuditLog } from "@/lib/create-audit-log";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
 // ============================================
-// ASSIGN USER TO CARD
+// ASSIGN USER TO CARD — MEMBER+
 // ============================================
 
 const AssignUserSchema = z.object({
   cardId: z.string(),
   assigneeId: z.string(),
-  orgId: z.string(),
+  // orgId removed — card ownership verified by DAL using ctx.orgId
 });
 
 async function assignUserHandler(data: z.infer<typeof AssignUserSchema>) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  const rl = checkRateLimit(ctx.userId, "assign-user", RATE_LIMITS["assign-user"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
+  const dal = await createDAL(ctx);
 
-  const { cardId, assigneeId, orgId } = data;
+  // DAL verifies Card->List->Board->orgId === ctx.orgId before assigning
+  const card = await dal.assignees.assign(data.cardId, data.assigneeId);
 
-  try {
-    const card = await db.card.update({
-      where: { id: cardId },
-      data: { assigneeId },
-      include: {
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-            imageUrl: true,
-          },
-        },
-        list: true,
-      },
-    });
+  await dal.auditLogs.create({
+    action: "UPDATE",
+    entityId: data.cardId,
+    entityType: "CARD",
+    entityTitle: (card as any).title ?? data.cardId,
+  });
 
-    await createAuditLog({
-      action: ACTION.UPDATE,
-      entityId: cardId,
-      entityType: ENTITY_TYPE.CARD,
-      entityTitle: card.title,
-    });
-
-    revalidatePath(`/board/${card.list.boardId}`);
-    return { data: card };
-  } catch (error) {
-    console.error("Assign user error:", error);
-    return { error: "Failed to assign user to card" };
-  }
+  revalidatePath(`/board/${(card as any).list?.boardId}`);
+  return { data: card };
 }
 
 export const assignUser = createSafeAction(AssignUserSchema, assignUserHandler);
 
 // ============================================
-// UNASSIGN USER FROM CARD
+// UNASSIGN USER FROM CARD — MEMBER+
 // ============================================
 
 const UnassignUserSchema = z.object({
   cardId: z.string(),
-  orgId: z.string(),
+  // orgId removed
 });
 
 async function unassignUserHandler(data: z.infer<typeof UnassignUserSchema>) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  const rl = checkRateLimit(ctx.userId, "assign-user", RATE_LIMITS["assign-user"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
+  const dal = await createDAL(ctx);
 
-  const { cardId, orgId } = data;
+  const card = await dal.assignees.unassign(data.cardId);
 
-  try {
-    const card = await db.card.update({
-      where: { id: cardId },
-      data: { assigneeId: null },
-      include: {
-        list: true,
-      },
-    });
+  await dal.auditLogs.create({
+    action: "UPDATE",
+    entityId: data.cardId,
+    entityType: "CARD",
+    entityTitle: (card as any).title ?? data.cardId,
+  });
 
-    await createAuditLog({
-      action: ACTION.UPDATE,
-      entityId: cardId,
-      entityType: ENTITY_TYPE.CARD,
-      entityTitle: card.title,
-    });
-
-    revalidatePath(`/board/${card.list.boardId}`);
-    return { data: card };
-  } catch (error) {
-    console.error("Unassign user error:", error);
-    return { error: "Failed to unassign user from card" };
-  }
+  revalidatePath(`/board/${(card as any).list?.boardId}`);
+  return { data: card };
 }
 
 export const unassignUser = createSafeAction(UnassignUserSchema, unassignUserHandler);
 
 // ============================================
 // GET ORGANIZATION MEMBERS (for assignee picker)
+// orgId comes from Clerk — not from caller
 // ============================================
 
-export async function getOrganizationMembers(orgId: string) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    const members = await db.organizationUser.findMany({
-      where: { organizationId: orgId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            imageUrl: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        user: {
-          name: 'asc',
-        },
-      },
-    });
-
-    return members.map((m) => m.user);
-  } catch (error) {
-    console.error("Get organization members error:", error);
-    throw new Error("Failed to fetch organization members");
-  }
+export async function getOrganizationMembers() {
+  const ctx = await getTenantContext();
+  const dal = await createDAL(ctx);
+  const members = await dal.assignees.findOrgMembers();
+  return members.map((m) => m.user);
 }

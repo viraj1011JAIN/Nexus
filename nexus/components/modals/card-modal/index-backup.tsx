@@ -1,253 +1,762 @@
 "use client";
 
-import { useEffect, useState, useRef, ElementRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Card, AuditLog, List } from "@prisma/client";
-import { Layout, AlignLeft, Check } from "lucide-react";
+import { Card, AuditLog, List, Label, Priority } from "@prisma/client";
+import { 
+  ChevronRight, 
+  X,
+  Tag,
+  User,
+  Calendar,
+  MoreHorizontal,
+  Copy,
+  Trash2,
+  MessageSquare,
+  Clock,
+  AlertCircle,
+  FileText,
+  Keyboard
+} from "lucide-react";
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useCardModal } from "@/hooks/use-card-modal";
 import { getCard } from "@/actions/get-card"; 
 import { updateCard } from "@/actions/update-card"; 
 import { Activity } from "./activity";
 import { getAuditLogs } from "@/actions/get-audit-logs";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { LabelManager, CardLabels } from "@/components/label-manager";
+import { AssigneePicker, CardAssignee } from "@/components/assignee-picker";
+import { SmartDueDate } from "@/components/smart-due-date";
+import { RichComments, type Comment } from "@/components/rich-comments";
+import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";
+import { getOrganizationMembers } from "@/actions/assignee-actions";
+import { 
+  updateCardPriority, 
+  setDueDate, 
+  clearDueDate,
+  createComment,
+  updateComment,
+  deleteComment,
+  addReaction,
+  removeReaction 
+} from "@/actions/phase3-actions";
+import { ErrorBoundary } from "@/components/error-boundary-realtime";
+import type { CardLabel } from "@/hooks/use-optimistic-card";
 
-// [FIXED: Senior Type Safety] Define the proper relation type to replace 'any'
-type CardWithList = Card & { list: List };
+type CardWithRelations = Card & { 
+  list: List;
+  assignee?: {
+    id: string;
+    name: string;
+    imageUrl: string | null;
+  } | null;
+};
+
+const priorityConfig = {
+  URGENT: { label: "Urgent", color: "bg-gradient-to-r from-red-500 to-red-600", text: "text-white", icon: "⚠" },
+  HIGH: { label: "High", color: "bg-gradient-to-r from-orange-400 to-orange-500", text: "text-white", icon: "↑" },
+  MEDIUM: { label: "Medium", color: "bg-amber-50 dark:bg-amber-900/20", text: "text-amber-700 dark:text-amber-400", icon: "—" },
+  LOW: { label: "Low", color: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-400", icon: "↓" },
+};
 
 export const CardModal = () => {
   const params = useParams();
-  const router = useRouter(); 
+  const router = useRouter();
   
-  // Destructure centralized state from Zustand
+  const organizationId = params.organizationId as string;
+  const boardId = params.boardId as string;
+  
   const id = useCardModal((state) => state.id);
   const isOpen = useCardModal((state) => state.isOpen);
-  const mode = useCardModal((state) => state.mode);
   const onClose = useCardModal((state) => state.onClose);
 
-  const [cardData, setCardData] = useState<CardWithList | null>(null);
+  const [cardData, setCardData] = useState<CardWithRelations | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [isDescEditing, setIsDescEditing] = useState(false);
-  const [savedField, setSavedField] = useState<"title" | "desc" | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("description");
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "error">("saved");
+  const [charCount, setCharCount] = useState(0);
+  
+  const [orgLabels, setOrgLabels] = useState<Label[]>([]);
+  const [cardLabels, setCardLabels] = useState<CardLabel[]>([]);
+  const [orgMembers, setOrgMembers] = useState<Array<{ id: string; name: string; imageUrl: string | null; email: string }>>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  
+  const { user } = useUser();
+  const titleInputRef = useRef<HTMLTextAreaElement>(null);
 
-  const descInputRef = useRef<ElementRef<"textarea">>(null);
-
-  // Fetch data when modal opens
   useEffect(() => {
     if (id && isOpen) {
-        const fetchData = async () => {
-            const card = await getCard(id);
-            if (card) {
-                setCardData(card as CardWithList);
-                setTitle(card.title);
-                setDescription(card.description || "");
-                
-                // [FIXED: Direct Edit Support] Automatically open editor if opened in 'edit' mode
-                if (mode === "edit") {
-                  setIsDescEditing(true);
-                }
-            }
-
-            const logs = await getAuditLogs(id);
-            setAuditLogs(logs);
+      const fetchData = async () => {
+        const card = await getCard(id);
+        if (card) {
+          setCardData(card as CardWithRelations);
+          setTitle(card.title);
+          setCharCount(card.description?.length || 0);
+          
+          if (organizationId) {
+            const [labels, cardLabelsList, members] = await Promise.all([
+              getOrganizationLabels(organizationId),
+              getCardLabels(id),
+              getOrganizationMembers(organizationId),
+            ]);
+            
+            setOrgLabels(labels);
+            setCardLabels(cardLabelsList);
+            setOrgMembers(members);
+          }
         }
-        fetchData();
-    }
-  }, [id, isOpen, mode]);
 
-  // Handle auto-focus when entering edit mode
-  useEffect(() => {
-    if (isDescEditing) {
-        descInputRef.current?.focus();
+        const logs = await getAuditLogs(id);
+        setAuditLogs(logs);
+      };
+      fetchData();
     }
-  }, [isDescEditing]);
+  }, [id, isOpen, organizationId]);
 
-  // UX: Escape key to cancel editing
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsDescEditing(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
 
   const onSaveTitle = async () => {
     if (!cardData) return;
-    if (title.trim() === cardData.title.trim()) return;
+    if (title.trim() === cardData.title.trim()) {
+      setIsEditingTitle(false);
+      return;
+    }
 
-    await updateCard({
-      boardId: params.boardId as string,
+    const result = await updateCard({
+      boardId: boardId,
       id: cardData.id,
       title: title
     });
     
-    router.refresh(); 
-
-    setCardData({ ...cardData, title });
-    setSavedField("title");
-    setTimeout(() => setSavedField(null), 2000);
+    if (result.error) {
+      toast.error(result.error);
+      setTitle(cardData.title);
+    } else {
+      setCardData({ ...cardData, title });
+      toast.success("Title updated");
+    }
+    setIsEditingTitle(false);
   };
 
-  const onSaveDesc = async () => {
+  const handleSaveDescription = async (html: string) => {
     if (!cardData) return;
 
-    const originalDesc = (cardData.description || "").trim();
-    const currentDesc = (description || "").trim();
-
-    if (originalDesc === currentDesc) {
-      setIsDescEditing(false);
-      return;
-    }
-
-    setIsSaving(true);
-
-    // ⭐ OPTIMISTIC UPDATE: Change UI immediately (zero-latency UX)
-    const previousDescription = cardData.description;
-    setCardData({ ...cardData, description: currentDesc });
-
-    // 🔄 BACKGROUND SYNC: Perform actual database update
+    setSaveStatus("saving");
     const result = await updateCard({
-      boardId: params.boardId as string,
+      boardId: boardId,
       id: cardData.id,
-      description: currentDesc
+      description: html
     });
 
-    setIsSaving(false);
+    if (result.error) {
+      setSaveStatus("error");
+      throw new Error(result.error);
+    }
+
+    setCardData({ ...cardData, description: html });
+    setCharCount(html.length);
+    setSaveStatus("saved");
+  };
+
+  const refreshCardData = async () => {
+    if (!id) return;
+    
+    const [card, logs, cardLabelsList] = await Promise.all([
+      getCard(id),
+      getAuditLogs(id),
+      getCardLabels(id),
+    ]);
+    
+    if (card) {
+      setCardData(card as CardWithRelations);
+      setAuditLogs(logs);
+      setCardLabels(cardLabelsList);
+    }
+  };
+
+  const handlePriorityChange = async (priority: Priority) => {
+    if (!cardData) return;
+    
+    const result = await updateCardPriority({
+      id: cardData.id,
+      boardId: boardId,
+      priority,
+      autoEscalated: false,
+    });
 
     if (result.error) {
-      // ❌ ROLLBACK: Revert to previous state if DB fails
-      setCardData({ ...cardData, description: previousDescription });
-      setDescription(previousDescription || "");
-      toast.error(`Failed to save: ${result.error}`);
+      toast.error(result.error);
       return;
     }
 
-    // ✅ SUCCESS: Refresh and show confirmation
-    setIsDescEditing(false);
-    setSavedField("desc");
-    toast.success("Description saved");
-    router.refresh();
-    setTimeout(() => setSavedField(null), 2000);
+    setCardData({ ...cardData, priority });
+    toast.success("Priority updated");
+  };
+
+  const handleDueDateChange = async (date: Date | null) => {
+    if (!cardData) return;
+
+    if (date) {
+      const result = await setDueDate({
+        id: cardData.id,
+        boardId: boardId,
+        dueDate: date.toISOString(),
+      });
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      setCardData({ ...cardData, dueDate: date });
+      toast.success("Due date set");
+    } else {
+      const result = await clearDueDate({
+        id: cardData.id,
+        boardId: boardId,
+      });
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      setCardData({ ...cardData, dueDate: null });
+      toast.success("Due date cleared");
+    }
+  };
+
+  const handleCreateComment = async (text: string, parentId: string | null = null) => {
+    if (!cardData || !user) return;
+
+    const result = await createComment({
+      cardId: cardData.id,
+      boardId: boardId,
+      text,
+      parentId,
+      mentions: [],
+      isDraft: false,
+    });
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    if (result.data) {
+      setComments((prev) => [...prev, result.data as Comment]);
+    }
+  };
+
+  const handleUpdateComment = async (commentId: string, text: string) => {
+    if (!cardData) return;
+
+    const result = await updateComment({
+      id: commentId,
+      boardId: boardId,
+      text,
+    });
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    setComments((prev) =>
+      prev.map((c) => (c.id === commentId ? { ...c, text } : c))
+    );
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!cardData) return;
+
+    const result = await deleteComment({
+      id: commentId,
+      boardId: boardId,
+    });
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+  };
+
+  const handleAddReaction = async (commentId: string, emoji: string) => {
+    if (!cardData || !user) return;
+
+    const result = await addReaction({
+      commentId,
+      boardId: boardId,
+      emoji,
+    });
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    if (result.data) {
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId
+            ? { ...c, reactions: [...c.reactions, result.data as any] }
+            : c
+        )
+      );
+    }
+  };
+
+  const handleRemoveReaction = async (reactionId: string) => {
+    if (!cardData) return;
+
+    const result = await removeReaction({
+      id: reactionId,
+      boardId: boardId,
+    });
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    setComments((prev) =>
+      prev.map((c) => ({
+        ...c,
+        reactions: c.reactions.filter((r) => r.id !== reactionId),
+      }))
+    );
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="md:max-w-3xl p-0 overflow-hidden bg-white z-[9999] pointer-events-auto shadow-strong">
-        <DialogTitle className="hidden">Card Details</DialogTitle>
+      <DialogContent className="w-full sm:max-w-[95vw] lg:max-w-[1100px] xl:max-w-[1200px] h-[90vh] p-0 gap-0 bg-white dark:bg-slate-900 overflow-hidden">
+        <DialogTitle className="sr-only">Card Details</DialogTitle>
 
         {!cardData ? (
-             <div className="p-6">Loading...</div>
+          <div className="flex items-center justify-center h-full">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center gap-3"
+            >
+              <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading card...</p>
+            </motion.div>
+          </div>
         ) : (
-            <div className="p-6">
+          <div className="flex flex-col lg:flex-row h-full">
+            
+            {/* ═══════════════════ LEFT COLUMN - MAIN CONTENT ═══════════════════ */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              
+              {/* HEADER - Breadcrumb only */}
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex-shrink-0 px-6 lg:px-8 pt-6 pb-3 border-b border-slate-200/50 dark:border-slate-700/50"
+              >
+              {/* Close Button */}
+              <DialogClose asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-6 right-6 h-10 w-10 p-0 rounded-lg opacity-70 hover:opacity-100 hover:bg-muted hover:scale-110 transition-all duration-200 ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </DialogClose>
+
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <button 
+                  onClick={() => router.push(`/board/${boardId}`)}
+                  className="hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 hover:underline"
+                >
+                  {cardData.list.title}
+                </button>
+                <ChevronRight className="h-3 w-3" />
+                <span className="text-slate-700 dark:text-slate-300">Card #{cardData.id.slice(-8)}</span>
+              </div>
+
+              {/* Title + Priority */}
+              <div className="flex items-start gap-4">
+                {isEditingTitle ? (
+                  <motion.div
+                    initial={{ scale: 0.98 }}
+                    animate={{ scale: 1 }}
+                    className="flex-1"
+                  >
+                    <textarea
+                      ref={titleInputRef}
+                      aria-label="Card title"
+                      value={title}
+                      onChange={(e) => {
+                        setTitle(e.target.value);
+                        e.currentTarget.style.height = 'auto';
+                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                      }}
+                      onBlur={onSaveTitle}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          onSaveTitle();
+                        }
+                        if (e.key === 'Escape') {
+                          setTitle(cardData.title);
+                          setIsEditingTitle(false);
+                        }
+                      }}
+                      rows={1}
+                      className="w-full text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none resize-none border-2 border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-100 dark:ring-purple-900/30"
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    onClick={() => setIsEditingTitle(true)}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="flex-1 text-left text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-3 sm:px-4 py-2 sm:py-3 transition-all duration-200 group cursor-text min-h-[44px] flex items-center"
+                  >
+                    {title}
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-slate-400">✎</span>
+                  </motion.button>
+                )}
+
+                {cardData.priority && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm",
+                          priorityConfig[cardData.priority].color,
+                          priorityConfig[cardData.priority].text
+                        )}
+                      >
+                        <span className="text-lg">{priorityConfig[cardData.priority].icon}</span>
+                        {priorityConfig[cardData.priority].label}
+                      </motion.button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuItem onClick={() => handlePriorityChange("URGENT")} className="cursor-pointer">
+                        <span className="mr-2">⚠</span> Urgent
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePriorityChange("HIGH")} className="cursor-pointer">
+                        <span className="mr-2">↑</span> High
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePriorityChange("MEDIUM")} className="cursor-pointer">
+                        <span className="mr-2">—</span> Medium
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePriorityChange("LOW")} className="cursor-pointer">
+                        <span className="mr-2">↓</span> Low
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+
+              {/* Metadata */}
+              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <Clock className="h-4 w-4" />
+                <span>Created {new Date(cardData.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                <span>•</span>
+                <span>Updated {new Date(cardData.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+            </motion.div>
+
+            {/* ACTION BAR */}
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="px-8 py-5 border-b border-slate-200 dark:border-slate-700"
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Labels</Button>}>
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <LabelManager
+                      cardId={cardData.id}
+                      orgId={organizationId}
+                      availableLabels={orgLabels}
+                      cardLabels={cardLabels}
+                      onLabelsChange={refreshCardData}
+                    />
+                  </motion.div>
+                </ErrorBoundary>
                 
-                {/* --- 1. TITLE SECTION --- */}
-                <div className="flex items-start gap-x-3 mb-8 w-full">
-                    <Layout className="h-5 w-5 mt-1 text-neutral-700 shrink-0" />
-                    <div className="w-full relative"> 
-                        <div className="flex items-center gap-x-2">
-                             <input 
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                onBlur={onSaveTitle}
-                                aria-label="Card title"
-                                placeholder="Card title"
-                                className="font-semibold text-xl px-1 border-2 border-transparent focus:border-brand-500 rounded-sm w-[95%] bg-transparent focus:bg-white truncate transition-all outline-none"
-                             />
+                <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Assign</Button>}>
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <AssigneePicker
+                      cardId={cardData.id}
+                      orgId={organizationId}
+                      currentAssignee={cardData.assignee || null}
+                      availableUsers={orgMembers}
+                      onAssigneeChange={refreshCardData}
+                    />
+                  </motion.div>
+                </ErrorBoundary>
+
+                <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Due Date</Button>}>
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <SmartDueDate
+                      dueDate={cardData.dueDate}
+                      onDateChange={handleDueDateChange}
+                      priority={cardData.priority}
+                      animated
+                      editable
+                    />
+                  </motion.div>
+                </ErrorBoundary>
+
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      toast.success("Link copied");
+                    }} className="cursor-pointer">
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy link
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-600 cursor-pointer">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete card
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </motion.div>
+
+            {/* TAB NAVIGATION */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.15 }}
+                className="flex-shrink-0 border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 lg:px-8"
+              >
+                <TabsList className="h-12 sm:h-14 bg-transparent p-0 gap-1 sm:gap-2 w-full justify-start overflow-x-auto scrollbar-hide">
+                  <TabsTrigger 
+                    value="description" 
+                    className="relative h-12 sm:h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap"
+                  >
+                    <FileText className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Description</span>
+                    <span className="sm:hidden">Desc</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="activity"
+                    className="relative h-12 sm:h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
+                    Activity
+                    {auditLogs.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 sm:ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                        {auditLogs.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="comments"
+                    className="relative h-12 sm:h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
+                    Comments
+                    {comments.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 sm:ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                        {comments.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+              </motion.div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50 overscroll-contain">
+                <TabsContent value="description" className="mt-0 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="description-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {(cardLabels.length > 0 || cardData.assignee) && (
+                        <div className="flex items-center gap-4 mb-6">
+                          <CardLabels labels={cardLabels} />
+                          <CardAssignee assignee={cardData.assignee || null} />
                         </div>
-                        
-                        {savedField === "title" && (
-                            <div className="absolute top-0 right-10 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md font-medium flex items-center animate-in fade-in zoom-in">
-                                <Check className="h-3 w-3 mr-1" /> Saved
-                            </div>
-                        )}
-
-                        <p className="text-sm text-muted-foreground px-1 mt-1">
-                            in list <span className="underline">{cardData.list.title}</span>
-                        </p>
-                    </div>
-                </div>
-
-                {/* --- 2. DESCRIPTION SECTION --- */}
-                <div className="flex items-start gap-x-3 w-full mb-10">
-                    <AlignLeft className="h-5 w-5 mt-1 text-neutral-700 shrink-0" />
-                    <div className="w-full">
-                        <div className="mb-2">
-                            <p className="font-semibold text-neutral-700 text-lg">Description</p>
+                      )}
+                      
+                      <ErrorBoundary
+                        fallback={
+                          <div className="p-6 text-center bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                            <p className="text-sm text-red-800 dark:text-red-200">Editor unavailable. Refresh to try again.</p>
+                          </div>
+                        }
+                      >
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                          <RichTextEditor
+                            content={cardData.description || ""}
+                            onSave={handleSaveDescription}
+                            placeholder="Add a detailed description..."
+                            editable
+                            minHeight="200px sm:300px lg:400px"
+                            maxHeight="600px"
+                            showToolbar
+                            enableAutoSave
+                            characterLimit={10000}
+                          />
                         </div>
-                        
-                        {isDescEditing ? (
-                            <div className="space-y-3">
-                                <textarea
-                                    ref={descInputRef}
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full mt-2 p-3 border-2 border-brand-500 rounded-md outline-none focus:ring-0 min-h-[150px] resize-none text-sm shadow-soft transition-all bg-white"
-                                    placeholder="Add a more detailed description..."
-                                    disabled={isSaving}
-                                />
-                                <div className="flex items-center gap-x-2">
-                                    <Button 
-                                        onClick={onSaveDesc}
-                                        disabled={isSaving || (cardData && description.trim() === (cardData.description || "").trim())}
-                                        className={`${
-                                            cardData && description.trim() !== (cardData.description || "").trim()
-                                                ? "bg-black hover:bg-neutral-900 text-white"
-                                                : "bg-neutral-400 text-neutral-700 cursor-not-allowed"
-                                        } disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
-                                    >
-                                        {isSaving ? (
-                                            <>
-                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            "Save"
-                                        )}
-                                    </Button>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm"
-                                        onClick={() => {
-                                            setDescription(cardData?.description || "");
-                                            setIsDescEditing(false);
-                                        }}
-                                        disabled={isSaving}
-                                        className="text-slate-500 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Cancel
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div 
-                                onClick={() => setIsDescEditing(true)}
-                                className="min-h-[78px] bg-slate-100 text-sm py-3 px-3.5 rounded-md hover:bg-slate-200 cursor-pointer whitespace-pre-wrap transition-all border border-transparent hover:border-slate-300"
-                                role="button"
-                                tabIndex={0}
-                            >
-                                {description || "Add a more detailed description..."}
-                            </div>
+                        {!cardData.description && (
+                          <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-3 px-1">
+                            <span className="opacity-70">💡 Type</span>
+                            <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs border border-slate-200 dark:border-slate-700">/</kbd>
+                            <span className="opacity-70">for commands</span>
+                          </div>
                         )}
+                      </ErrorBoundary>
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
+
+                <TabsContent value="activity" className="mt-0 p-4 sm:p-6 lg:p-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="activity-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Activity items={auditLogs} />
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
+
+                <TabsContent value="comments" className="mt-0 p-4 sm:p-6 lg:p-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="comments-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ErrorBoundary
+                        fallback={
+                          <div className="p-6 text-center bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl">
+                            <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                            <p className="text-sm text-red-800 dark:text-red-200">Comments unavailable. Refresh to try again.</p>
+                          </div>
+                        }
+                      >
+                        {user && (
+                          <RichComments
+                            cardId={cardData.id}
+                            comments={comments}
+                            currentUserId={user.id}
+                            currentUserName={user.fullName || user.username || "Unknown"}
+                            currentUserImage={user.imageUrl || null}
+                            onCreateComment={handleCreateComment}
+                            onUpdateComment={handleUpdateComment}
+                            onDeleteComment={handleDeleteComment}
+                            onAddReaction={handleAddReaction}
+                            onRemoveReaction={handleRemoveReaction}
+                            typingUsers={[]}
+                            editable
+                          />
+                        )}
+                      </ErrorBoundary>
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
+              </div>
+            </Tabs>
+
+            {/* FOOTER */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="border-t border-slate-200 dark:border-slate-700 px-8 py-4 bg-white dark:bg-slate-900"
+            >
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-6">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {charCount.toLocaleString()} / 10,000 characters
+                  </span>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs px-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200">
+                    <Keyboard className="h-3 w-3 mr-1.5" />
+                    Shortcuts
+                  </Button>
+                </div>
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center gap-2"
+                >
+                  {saveStatus === "saving" && (
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      <span>Saving...</span>
                     </div>
-                </div>
+                  )}
+                  {saveStatus === "saved" && (
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span>All changes saved</span>
+                    </div>
+                  )}
+                  {saveStatus === "error" && (
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <span>Failed to save</span>
+                    </div>
+                  )}
+                </motion.div>
+              </div>
+            </motion.div>
 
-                {/* --- 3. ACTIVITY LOG SECTION --- */}
-                <div className="w-full border-t pt-8">
-                    <Activity items={auditLogs} />
-                </div>
-
-            </div>
+          </div>
         )}
       </DialogContent>
     </Dialog>

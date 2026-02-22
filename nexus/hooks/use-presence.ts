@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useUser } from "@clerk/nextjs";
-import { getSupabaseClient, getPresenceChannelName } from "@/lib/supabase/client";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { getAuthenticatedSupabaseClient } from "@/lib/supabase/client";
+import { boardPresenceChannel } from "@/lib/realtime-channels";
 import { RealtimeChannel } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 export interface PresenceUser {
   userId: string;
@@ -15,6 +17,8 @@ export interface PresenceUser {
 
 interface UsePresenceOptions {
   boardId: string;
+  /** orgId is required — presence channels without orgId allow cross-tenant user tracking */
+  orgId: string;
   enabled?: boolean;
 }
 
@@ -55,8 +59,9 @@ interface UsePresenceOptions {
  * );
  * ```
  */
-export function usePresence({ boardId, enabled = true }: UsePresenceOptions) {
+export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptions) {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,17 +83,28 @@ export function usePresence({ boardId, enabled = true }: UsePresenceOptions) {
   }, []);
 
   useEffect(() => {
-    // Skip if disabled, no boardId, or no user
-    if (!enabled || !boardId || !user) {
+    // Skip if disabled, no boardId, no orgId, or no user
+    if (!enabled || !boardId || !orgId || !user) {
       return;
     }
 
-    const supabase = getSupabaseClient();
-    const channelName = getPresenceChannelName(boardId);
+    // Channel name includes orgId — prevents cross-tenant presence tracking
+    const channelName = boardPresenceChannel(orgId, boardId);
     let channel: RealtimeChannel;
+    let supabase: ReturnType<typeof getAuthenticatedSupabaseClient> | undefined;
 
     const setupPresence = async () => {
       try {
+        // Attempt to get a Supabase-scoped JWT from Clerk.
+        // Falls back to null if no 'supabase' JWT template is configured in the
+        // Clerk dashboard — Presence will still work via channel-name isolation.
+        let token: string | null = null;
+        try {
+          token = await getToken({ template: "supabase" });
+        } catch {
+          // Template not configured — degrade gracefully to anon key
+        }
+        supabase = getAuthenticatedSupabaseClient(token);
         channel = supabase.channel(channelName, {
           config: {
             presence: {
@@ -121,12 +137,12 @@ export function usePresence({ boardId, enabled = true }: UsePresenceOptions) {
 
         // Handle user joining
         channel.on("presence", { event: "join" }, ({ key, newPresences }) => {
-          console.log(`👋 User joined board: ${newPresences[0]?.userName}`);
+          // User joined - state updated via sync event
         });
 
         // Handle user leaving
         channel.on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-          console.log(`👋 User left board: ${leftPresences[0]?.userName}`);
+          // User left - state updated via sync event
         });
 
         // Subscribe to channel
@@ -144,16 +160,15 @@ export function usePresence({ boardId, enabled = true }: UsePresenceOptions) {
             await channel.track(currentUserPresence);
             setIsTracking(true);
             setError(null);
-            console.log(`✅ Presence tracking started for board: ${boardId}`);
           } else if (status === "CHANNEL_ERROR") {
             setIsTracking(false);
             setError("Failed to start presence tracking");
-            console.error(`❌ Presence tracking failed for board: ${boardId}`);
+            // Error state set - no console output needed
           }
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
-        console.error("Presence setup error:", err);
+        // Error state set - no console output needed
       }
     };
 
@@ -161,12 +176,11 @@ export function usePresence({ boardId, enabled = true }: UsePresenceOptions) {
 
     // Cleanup: untrack and unsubscribe
     return () => {
-      if (channel) {
+      if (channel && supabase) {
         channel.untrack();
         supabase.removeChannel(channel);
         setIsTracking(false);
         setOnlineUsers([]);
-        console.log(`🔌 Presence tracking stopped for board: ${boardId}`);
       }
     };
   }, [boardId, enabled, user, getUserColor]);

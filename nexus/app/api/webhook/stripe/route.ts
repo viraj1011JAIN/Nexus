@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
-import { db } from "@/lib/db";
+import { systemDb as db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+
+// NOTE: systemDb is used here intentionally — Stripe webhooks are not user sessions.
+// They are verified by HMAC signature and need superuser-level DB access to
+// update subscription state across all organizations without RLS restrictions.
 
 export async function POST(req: NextRequest) {
   const body = await req.text();

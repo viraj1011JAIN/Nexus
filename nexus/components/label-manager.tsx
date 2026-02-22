@@ -67,7 +67,7 @@ export function LabelManager({
 
       // Server action
       startTransition(async () => {
-        const result = await unassignLabel({ cardId, labelId: label.id, orgId });
+        const result = await unassignLabel({ cardId, labelId: label.id });
         
         if (result.error) {
           toast.error(result.error);
@@ -84,7 +84,7 @@ export function LabelManager({
 
       // Server action
       startTransition(async () => {
-        const result = await assignLabel({ cardId, labelId: label.id, orgId });
+        const result = await assignLabel({ cardId, labelId: label.id });
         
         if (result.error) {
           toast.error(result.error);
@@ -108,7 +108,6 @@ export function LabelManager({
       const result = await createLabel({
         name: newLabelName.trim(),
         color: selectedColor,
-        orgId,
       });
 
       if (result.error) {

@@ -1,204 +1,107 @@
-"use server";
+﻿"use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { db } from "@/lib/db";
+import { createDAL } from "@/lib/dal";
+import { getTenantContext, requireRole } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
-import { createAuditLog } from "@/lib/create-audit-log";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
 // ============================================
-// CREATE LABEL
+// CREATE LABEL — ADMIN only (org-level resource)
 // ============================================
 
 const CreateLabelSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name too long"),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format"),
-  orgId: z.string(),
+  // orgId removed from schema — injected from Clerk JWT via DAL
 });
 
 async function createLabelHandler(data: z.infer<typeof CreateLabelSchema>) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  await requireRole("ADMIN", ctx); // Labels are org-level resources
+  const rl = checkRateLimit(ctx.userId, "create-label", RATE_LIMITS["create-label"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
+  const dal = await createDAL(ctx);
 
-  const { name, color, orgId } = data;
+  const label = await dal.labels.create({ name: data.name, color: data.color });
 
-  try {
-    const label = await db.label.create({
-      data: {
-        name,
-        color,
-        orgId,
-      },
-    });
+  await dal.auditLogs.create({
+    action: "CREATE",
+    entityId: label.id,
+    entityType: "BOARD", // BOARD as proxy — no LABEL entity type in enum
+    entityTitle: label.name,
+  });
 
-    await createAuditLog({
-      action: ACTION.CREATE,
-      entityId: label.id,
-      entityType: ENTITY_TYPE.BOARD, // Using BOARD as proxy for label
-      entityTitle: label.name,
-    });
-
-    revalidatePath(`/dashboard`);
-    return { data: label };
-  } catch (error) {
-    console.error("Create label error:", error);
-    return { error: "Failed to create label" };
-  }
+  revalidatePath(`/dashboard`);
+  return { data: label };
 }
 
 export const createLabel = createSafeAction(CreateLabelSchema, createLabelHandler);
 
 // ============================================
-// ASSIGN LABEL TO CARD
+// ASSIGN LABEL TO CARD — MEMBER+
 // ============================================
 
 const AssignLabelSchema = z.object({
   cardId: z.string(),
   labelId: z.string(),
-  orgId: z.string(),
+  // orgId removed — both card and label ownership verified by DAL using ctx.orgId
 });
 
 async function assignLabelHandler(data: z.infer<typeof AssignLabelSchema>) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  const rl = checkRateLimit(ctx.userId, "assign-label", RATE_LIMITS["assign-label"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
+  const dal = await createDAL(ctx);
 
-  const { cardId, labelId, orgId } = data;
+  const assignment = await dal.labels.assign(data.cardId, data.labelId);
 
-  try {
-    // Check if already assigned
-    const existing = await db.cardLabelAssignment.findUnique({
-      where: {
-        cardId_labelId: {
-          cardId,
-          labelId,
-        },
-      },
-    });
-
-    if (existing) {
-      return { error: "Label already assigned to this card" };
-    }
-
-    const assignment = await db.cardLabelAssignment.create({
-      data: {
-        cardId,
-        labelId,
-      },
-      include: {
-        label: true,
-        card: true,
-      },
-    });
-
-    await createAuditLog({
-      action: ACTION.UPDATE,
-      entityId: cardId,
-      entityType: ENTITY_TYPE.CARD,
-      entityTitle: assignment.card.title,
-    });
-
-    revalidatePath(`/board/${assignment.card.listId}`);
-    return { data: assignment };
-  } catch (error) {
-    console.error("Assign label error:", error);
-    return { error: "Failed to assign label" };
-  }
+  return { data: assignment };
 }
 
 export const assignLabel = createSafeAction(AssignLabelSchema, assignLabelHandler);
 
 // ============================================
-// UNASSIGN LABEL FROM CARD
+// UNASSIGN LABEL FROM CARD — MEMBER+
 // ============================================
 
 const UnassignLabelSchema = z.object({
   cardId: z.string(),
   labelId: z.string(),
-  orgId: z.string(),
+  // orgId removed
 });
 
 async function unassignLabelHandler(data: z.infer<typeof UnassignLabelSchema>) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  const rl = checkRateLimit(ctx.userId, "assign-label", RATE_LIMITS["assign-label"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
+  const dal = await createDAL(ctx);
 
-  const { cardId, labelId, orgId } = data;
+  await dal.labels.unassign(data.cardId, data.labelId);
 
-  try {
-    const assignment = await db.cardLabelAssignment.findUnique({
-      where: {
-        cardId_labelId: {
-          cardId,
-          labelId,
-        },
-      },
-      include: {
-        card: true,
-      },
-    });
-
-    if (!assignment) {
-      return { error: "Label not assigned to this card" };
-    }
-
-    await db.cardLabelAssignment.delete({
-      where: {
-        cardId_labelId: {
-          cardId,
-          labelId,
-        },
-      },
-    });
-
-    await createAuditLog({
-      action: ACTION.UPDATE,
-      entityId: cardId,
-      entityType: ENTITY_TYPE.CARD,
-      entityTitle: assignment.card.title,
-    });
-
-    revalidatePath(`/board/${assignment.card.listId}`);
-    return { data: { success: true } };
-  } catch (error) {
-    console.error("Unassign label error:", error);
-    return { error: "Failed to unassign label" };
-  }
+  return { data: { success: true } };
 }
 
 export const unassignLabel = createSafeAction(UnassignLabelSchema, unassignLabelHandler);
 
 // ============================================
-// GET ORGANIZATION LABELS
+// GET ORGANIZATION LABELS — any authenticated member
 // ============================================
 
-export async function getOrganizationLabels(orgId: string) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    const labels = await db.label.findMany({
-      where: { orgId },
-      orderBy: { name: 'asc' },
-    });
-
-    return labels;
-  } catch (error) {
-    console.error("Get labels error:", error);
-    throw new Error("Failed to fetch labels");
-  }
+export async function getOrganizationLabels() {
+  const ctx = await getTenantContext();
+  const dal = await createDAL(ctx);
+  // orgId is from context — callers cannot query another org's labels
+  return dal.labels.findMany();
 }
 
 // ============================================
@@ -206,26 +109,8 @@ export async function getOrganizationLabels(orgId: string) {
 // ============================================
 
 export async function getCardLabels(cardId: string) {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    throw new Error("Unauthorized");
-  }
-
-  try {
-    const assignments = await db.cardLabelAssignment.findMany({
-      where: { cardId },
-      include: {
-        label: true,
-      },
-    });
-
-    return assignments.map((a) => ({
-      ...a.label,
-      assignmentId: a.id,
-    }));
-  } catch (error) {
-    console.error("Get card labels error:", error);
-    throw new Error("Failed to fetch card labels");
-  }
+  const ctx = await getTenantContext();
+  const dal = await createDAL(ctx);
+  // DAL verifies card belongs to this org before returning its labels
+  return dal.labels.findManyForCard(cardId);
 }

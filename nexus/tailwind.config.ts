@@ -9,35 +9,54 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Professional Semantic Palette
-        brand: {
-          primary: '#6366F1',    // Indigo - Primary brand color
-          secondary: '#EC4899',  // Pink - Secondary accents
-          success: '#10B981',    // Emerald - Success states
-          destructive: '#EF4444', // Rose - Destructive actions
+        // Semantic colors using CSS variables
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
+        card: {
+          DEFAULT: "rgb(var(--card) / <alpha-value>)",
+          foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
-        
-        // Light Theme - "Frosted Workspace"
-        light: {
-          bg: '#F8FAFC',         // Slate 50 - Background
-          surface: 'rgba(255, 255, 255, 0.7)', // Glass surface
-          border: 'rgba(226, 232, 240, 0.8)',  // Slate 200 border
-          text: {
-            primary: '#0F172A',  // Slate 900 - Primary text
-            muted: '#64748B',    // Slate 500 - Muted text
-          }
+        popover: {
+          DEFAULT: "rgb(var(--popover) / <alpha-value>)",
+          foreground: "rgb(var(--popover-foreground) / <alpha-value>)",
         },
-        
-        // Dark Theme - "Midnight Nebula"
-        dark: {
-          bg: '#020617',         // Slate 950 - Deep navy background
-          surface: 'rgba(15, 23, 42, 0.6)', // Glass surface
-          border: 'rgba(30, 41, 59, 0.5)',  // Slate 800 border
-          text: {
-            primary: '#F8FAFC',  // Slate 50 - Off-white text
-            muted: '#94A3B8',    // Slate 400 - Muted text
-          },
-          glow: 'rgba(99, 102, 241, 0.15)', // Indigo glow
+        primary: {
+          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
+        },
+        secondary: {
+          DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
+          foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
+        },
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          foreground: "rgb(var(--success-foreground) / <alpha-value>)",
+        },
+        warning: {
+          DEFAULT: "rgb(var(--warning) / <alpha-value>)",
+          foreground: "rgb(var(--warning-foreground) / <alpha-value>)",
+        },
+        destructive: {
+          DEFAULT: "rgb(var(--destructive) / <alpha-value>)",
+          foreground: "rgb(var(--destructive-foreground) / <alpha-value>)",
+        },
+        muted: {
+          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+          foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
+        },
+        accent: {
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          foreground: "rgb(var(--accent-foreground) / <alpha-value>)",
+        },
+        border: "rgb(var(--border) / <alpha-value>)",
+        input: "rgb(var(--input) / <alpha-value>)",
+        ring: "rgb(var(--ring) / <alpha-value>)",
+        chart: {
+          1: "rgb(var(--chart-1) / <alpha-value>)",
+          2: "rgb(var(--chart-2) / <alpha-value>)",
+          3: "rgb(var(--chart-3) / <alpha-value>)",
+          4: "rgb(var(--chart-4) / <alpha-value>)",
+          5: "rgb(var(--chart-5) / <alpha-value>)",
         },
       },
       boxShadow: {

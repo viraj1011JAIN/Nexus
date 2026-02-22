@@ -1,15 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { createDAL } from "@/lib/dal";
+import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateList } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { List, ACTION, ENTITY_TYPE } from "@prisma/client";
-import { protectDemoMode } from "@/lib/action-protection";
-import { createAuditLog } from "@/lib/create-audit-log";
+import { List } from "@prisma/client";
 
 type InputType = z.infer<typeof UpdateList>;
 type ReturnType = ActionState<InputType, List>;
@@ -17,37 +15,23 @@ type ReturnType = ActionState<InputType, List>;
 const handler = async (data: InputType): Promise<ReturnType> => {
   const { id, boardId, title } = data;
 
-  // Get board to check orgId for demo protection
-  const board = await db.board.findUnique({
-    where: { id: boardId },
-    select: { orgId: true },
-  });
+  const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  const dal = await createDAL(ctx);
 
-  if (!board) {
-    return { error: "Board not found" };
+  if (isDemoContext(ctx)) {
+    return { error: "Cannot update lists in demo mode." };
   }
 
-  // Demo mode protection
-  const demoCheck = await protectDemoMode<List>(board.orgId);
-  if (demoCheck) return demoCheck;
-
   try {
-    const list = await db.list.update({
-      where: {
-        id,
-        boardId,
-      },
-      data: {
-        title,
-      },
-    });
+    // DAL verifies List→Board→orgId === ctx.orgId before updating
+    const list = await dal.lists.update(id, boardId, { title });
 
-    // Create audit log
-    await createAuditLog({
+    await dal.auditLogs.create({
       entityId: list.id,
-      entityType: ENTITY_TYPE.LIST,
+      entityType: "LIST",
       entityTitle: list.title,
-      action: ACTION.UPDATE,
+      action: "UPDATE",
     });
 
     revalidatePath(`/board/${boardId}`);

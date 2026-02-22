@@ -6,6 +6,7 @@ import Script from "next/script";
 import { ModalProvider } from "@/components/providers/modal-provider";
 import { ThemeProvider, themeScript } from "@/components/theme-provider";
 import { PerformanceWrapper } from "@/components/performance-wrapper";
+import { CommandPalette } from "@/components/command-palette";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "sonner";
 import "./globals.css";
@@ -61,12 +62,13 @@ export default function RootLayout({
         <body className={inter.className} suppressHydrationWarning>
           <PerformanceWrapper>
             <ThemeProvider>
-              <div className="bg-slate-50 dark:bg-[#020617] min-h-screen contain-layout" suppressHydrationWarning>
+              <div className="bg-background text-foreground min-h-screen contain-layout" suppressHydrationWarning>
+                <CommandPalette />
                 <ModalProvider />
                 <Toaster />
-                <Sonner 
-                  position="top-right" 
-                  richColors 
+                <Sonner
+                  position="top-right"
+                  richColors
                   expand={false}
                   duration={3000}
                 />

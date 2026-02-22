@@ -1,56 +1,44 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { createDAL } from "@/lib/dal";
+import { getTenantContext, requireRole } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { DeleteBoard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { Board, ACTION, ENTITY_TYPE } from "@prisma/client";
-import { createAuditLog } from "@/lib/create-audit-log";
+import { Board } from "@prisma/client";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
 type InputType = z.infer<typeof DeleteBoard>;
 type ReturnType = ActionState<InputType, Board>;
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { orgId } = await auth();
-  
-  if (!orgId) {
-    return { error: "Unauthorized - Please sign in" };
+  // Deleting boards requires OWNER role
+  const ctx = await getTenantContext();
+  await requireRole("OWNER", ctx);
+
+  const rl = checkRateLimit(ctx.userId, "delete-board", RATE_LIMITS["delete-board"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
 
+  const dal = await createDAL(ctx);
+
   try {
-    // Verify board belongs to organization before deleting
-    const board = await db.board.findUnique({
-      where: { id: data.id },
-    });
+    // DAL verifies board.orgId === ctx.orgId before deleting
+    const deletedBoard = await dal.boards.delete(data.id);
 
-    if (!board) {
-      return { error: "Board not found" };
-    }
-
-    if (board.orgId !== orgId) {
-      return { error: "Unauthorized to delete this board" };
-    }
-
-    // Delete board (cascade will delete all lists, cards, etc.)
-    const deletedBoard = await db.board.delete({
-      where: { id: data.id },
-    });
-
-    // Create audit log
-    await createAuditLog({
+    await dal.auditLogs.create({
       entityId: deletedBoard.id,
-      entityType: ENTITY_TYPE.BOARD,
+      entityType: "BOARD",
       entityTitle: deletedBoard.title,
-      action: ACTION.DELETE,
+      action: "DELETE",
     });
 
     revalidatePath(`/`);
     return { data: deletedBoard };
   } catch (error) {
-    console.error("[DELETE_BOARD_ERROR]", error);
     return { error: "Failed to delete board. Please try again." };
   }
 };

@@ -1,17 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { createDAL } from "@/lib/dal";
+import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateCard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { Card, ACTION, ENTITY_TYPE } from "@prisma/client";
+import { Card } from "@prisma/client";
 import { generateNextOrder } from "@/lib/lexorank";
 import { logger } from "@/lib/logger";
-import { protectDemoMode } from "@/lib/action-protection";
-import { createAuditLog } from "@/lib/create-audit-log";
+import { db } from "@/lib/db";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
 type InputType = z.infer<typeof CreateCard>;
 type ReturnType = ActionState<InputType, Card>;
@@ -19,48 +19,43 @@ type ReturnType = ActionState<InputType, Card>;
 const handler = async (data: InputType): Promise<ReturnType> => {
   const { title, listId, boardId } = data;
 
-  // Get board to check orgId for demo protection
-  const board = await db.board.findUnique({
-    where: { id: boardId },
-    select: { orgId: true },
-  });
+  // 1. Build verified tenant context — orgId comes from Clerk, never from input
+  const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
 
-  if (!board) {
-    return { error: "Board not found" };
+  // Rate limit: 60 card creations per minute per user
+  const rl = checkRateLimit(ctx.userId, "create-card", RATE_LIMITS["create-card"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
 
-  // Demo mode protection
-  const demoCheck = await protectDemoMode<Card>(board.orgId);
-  if (demoCheck) return demoCheck;
+  const dal = await createDAL(ctx);
+
+  // 2. Demo mode protection: ctx.orgId is the canonical org value
+  if (isDemoContext(ctx)) {
+    return { error: "Cannot create cards in demo mode." };
+  }
 
   try {
-    // 1. Calculate order (append to end of list)
+    // 3. Calculate order (append to end of list)
     const lastCard = await db.card.findFirst({
       where: { listId },
       orderBy: { order: "desc" },
       select: { order: true },
     });
-
     const newOrder = generateNextOrder(lastCard?.order);
 
-    // 2. Create the card
-    const card = await db.card.create({
-      data: {
-        title,
-        listId,
-        order: newOrder,
-      },
-    });
+    // 4. Create card — DAL verifies boardId belongs to ctx.orgId before inserting
+    const card = await dal.cards.create(listId, boardId, { title, order: newOrder });
 
-    // 3. Create audit log
-    await createAuditLog({
+    // 5. Audit log scoped to verified org
+    await dal.auditLogs.create({
       entityId: card.id,
-      entityType: ENTITY_TYPE.CARD,
+      entityType: "CARD",
       entityTitle: card.title,
-      action: ACTION.CREATE,
+      action: "CREATE",
     });
 
-    // 4. Refresh the board page
     revalidatePath(`/board/${boardId}`);
     return { data: card };
   } catch (error) {

@@ -7,11 +7,14 @@ import { usePresence } from "@/hooks/use-presence";
 interface BoardHeaderProps {
   boardId: string;
   boardTitle: string;
+  /** orgId required for tenant-isolated presence channel */
+  orgId: string;
 }
 
-export function BoardHeader({ boardId, boardTitle }: BoardHeaderProps) {
+export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
   const { onlineUsers, totalOnline, isTracking } = usePresence({ 
     boardId,
+    orgId,
     enabled: true 
   });
 

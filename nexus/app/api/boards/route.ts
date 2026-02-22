@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getTenantContext, TenantError } from "@/lib/tenant-context";
 
 export async function GET() {
   try {
-    const { userId, orgId } = await auth();
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-    
-    // Return empty array if no organization selected
-    if (!orgId) {
-      return NextResponse.json([]);
+    let orgId: string;
+    try {
+      const ctx = await getTenantContext();
+      orgId = ctx.orgId;
+    } catch (e) {
+      if (e instanceof TenantError) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      throw e;
     }
     
     const boards = await db.board.findMany({

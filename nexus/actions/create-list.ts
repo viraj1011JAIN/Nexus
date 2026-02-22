@@ -1,16 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { createDAL } from "@/lib/dal";
+import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateList } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
-import { List, ACTION, ENTITY_TYPE } from "@prisma/client";
+import { List } from "@prisma/client";
 import { generateNextOrder } from "@/lib/lexorank";
-import { protectDemoMode } from "@/lib/action-protection";
-import { createAuditLog } from "@/lib/create-audit-log";
+import { db } from "@/lib/db";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
 type InputType = z.infer<typeof CreateList>;
 type ReturnType = ActionState<InputType, List>;
@@ -18,48 +18,39 @@ type ReturnType = ActionState<InputType, List>;
 const handler = async (data: InputType): Promise<ReturnType> => {
   const { title, boardId } = data;
 
-  // Get board to check orgId for demo protection
-  const board = await db.board.findUnique({
-    where: { id: boardId },
-    select: { orgId: true },
-  });
+  const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
 
-  if (!board) {
-    return { error: "Board not found" };
+  // Rate limit: 20 list creations per minute per user
+  const rl = checkRateLimit(ctx.userId, "create-list", RATE_LIMITS["create-list"]);
+  if (!rl.allowed) {
+    return { error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
   }
 
-  // Demo mode protection
-  const demoCheck = await protectDemoMode<List>(board.orgId);
-  if (demoCheck) return demoCheck;
+  const dal = await createDAL(ctx);
+
+  if (isDemoContext(ctx)) {
+    return { error: "Cannot create lists in demo mode." };
+  }
 
   try {
-    // 1. Calculate order (append to end of list)
     const lastList = await db.list.findFirst({
       where: { boardId },
       orderBy: { order: "desc" },
       select: { order: true },
     });
-
     const newOrder = generateNextOrder(lastList?.order);
 
-    // 2. Create the list
-    const list = await db.list.create({
-      data: {
-        title,
-        boardId,
-        order: newOrder,
-      },
-    });
+    // DAL verifies boardId belongs to ctx.orgId before inserting
+    const list = await dal.lists.create(boardId, { title, order: newOrder });
 
-    // 3. Create audit log
-    await createAuditLog({
+    await dal.auditLogs.create({
       entityId: list.id,
-      entityType: ENTITY_TYPE.LIST,
+      entityType: "LIST",
       entityTitle: list.title,
-      action: ACTION.CREATE,
+      action: "CREATE",
     });
 
-    // 4. Refresh the board page
     revalidatePath(`/board/${boardId}`);
     return { data: list };
   } catch (error) {

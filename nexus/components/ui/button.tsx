@@ -9,16 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98]",
+        default: "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
         destructive:
-          "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40 hover:scale-[1.02] active:scale-[0.98]",
+          "bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
         outline:
-          "border-2 border-purple-600 text-purple-600 bg-white hover:bg-purple-50 shadow-sm hover:shadow-md",
+          "border-2 border-primary text-primary bg-card hover:bg-accent shadow-sm hover:shadow-md",
         secondary:
-          "bg-white border-2 border-gray-200 text-gray-900 hover:bg-gray-50 hover:border-gray-300 shadow-sm hover:shadow-md",
+          "bg-secondary text-secondary-foreground shadow-md hover:bg-secondary/90 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
         ghost:
-          "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
-        link: "text-purple-600 underline-offset-4 hover:underline",
+          "text-foreground hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-12 px-6 text-[15px] has-[>svg]:px-4",

@@ -1,17 +1,19 @@
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { getTenantContext, TenantError } from "@/lib/tenant-context";
 
 export async function GET() {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!orgId) {
-      return NextResponse.json([]);
+    let orgId: string;
+    try {
+      const ctx = await getTenantContext();
+      orgId = ctx.orgId;
+    } catch (e) {
+      if (e instanceof TenantError) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      throw e;
     }
 
     const logs = await db.auditLog.findMany({
@@ -32,7 +34,7 @@ export async function GET() {
 
     return NextResponse.json(formattedLogs);
   } catch (error) {
-    console.error("Failed to fetch audit logs:", error);
+    logger.error("Failed to fetch audit logs", { error });
     return NextResponse.json({ error: "Failed to fetch logs" }, { status: 500 });
   }
 }

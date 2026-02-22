@@ -98,50 +98,50 @@ export const ListItem = ({
       {...attributes}
       className="w-72 sm:w-80 shrink-0 h-full select-none animate-fadeInUp touch-manipulation"
     >
-      <div 
-        {...listeners} 
-        className="w-full rounded-xl glass-effect shadow-lg hover:shadow-xl transition-all duration-300 pb-3 border border-white/20"
+      <div
+        {...listeners}
+        className="w-full rounded-lg bg-card shadow-sm hover:shadow-md transition-all duration-200 pb-3"
       >
         {/* List Header (Now Switchable!) */}
         <div className="pt-3 px-3 text-sm font-bold flex justify-between items-start gap-x-2">
-          
+
           {/* IF EDITING: Show Input */}
           {isEditing ? (
-             <form 
+             <form
                 ref={formRef}
                 action={handleSubmit}
                 className="flex-1 px-[2px]"
              >
                 <input hidden name="listId" value={data.id} readOnly />
                 <input hidden name="boardId" value={boardId} readOnly />
-                <input 
+                <input
                     ref={inputRef}
                     name="title"
                     defaultValue={data.title}
                     onBlur={() => formRef.current?.requestSubmit()}
-                    className="text-sm font-bold border-transparent h-8 w-full px-3 py-1 bg-white/90 focus:bg-white border transition truncate focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded-lg shadow-sm"
+                    className="text-sm font-bold h-8 w-full px-3 py-1 bg-muted focus:bg-accent transition truncate focus:outline-none focus:ring-2 focus:ring-primary rounded-lg text-card-foreground placeholder:text-muted-foreground"
                     placeholder="Enter list title..."
                 />
                 <button type="submit" hidden />
              </form>
           ) : (
              /* IF NOT EDITING: Show Title (Click to Edit) */
-             <div 
+             <div
                 onClick={enableEditing}
-                className="w-full text-sm px-3 py-1.5 h-8 font-bold border-transparent cursor-pointer hover:bg-white/60 rounded-lg transition-all text-slate-800"
+                className="w-full text-sm px-3 py-1.5 h-8 font-bold border-transparent cursor-pointer hover:bg-accent rounded-lg transition-all text-card-foreground"
              >
                {data.title}
              </div>
           )}
-          
+
           {/* DELETE BUTTON */}
           <form action={handleDelete}>
             <input hidden name="listId" value={data.id} readOnly />
             <input hidden name="boardId" value={boardId} readOnly />
-            <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-auto w-auto p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all hover:scale-110 active:scale-95"
+            <Button
+                size="sm"
+                variant="ghost"
+                className="h-auto w-auto p-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all hover:scale-110 active:scale-95"
             >
                 <Trash2 className="h-4 w-4" />
             </Button>
@@ -179,13 +179,13 @@ export const ListItem = ({
                 <input hidden name="boardId" value={boardId} readOnly />
                 
                 <div className="flex gap-2 items-center">
-                  <input 
-                    name="title" 
-                    placeholder="Add a card..." 
-                    className="flex-1 px-3 py-2 text-sm border-0 rounded-lg bg-white/80 hover:bg-white focus:bg-white transition-all outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm font-medium placeholder:text-slate-400"
+                  <input
+                    name="title"
+                    placeholder="Add a card..."
+                    className="flex-1 px-3 py-2 text-sm rounded-lg bg-muted hover:bg-accent focus:bg-accent transition-all outline-none focus:ring-2 focus:ring-primary font-medium placeholder:text-muted-foreground text-card-foreground"
                     required
                   />
-                  <Button size="sm" className="h-8 w-8 p-0 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm hover:scale-110 active:scale-95 transition-all" type="submit">
+                  <Button size="sm" className="h-8 w-8 p-0 rounded-lg shadow-sm hover:scale-110 active:scale-95 transition-all" type="submit">
                     +
                   </Button>
                 </div>

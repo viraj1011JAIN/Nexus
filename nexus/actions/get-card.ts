@@ -1,11 +1,12 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { createDAL } from "@/lib/dal";
+import { TenantError } from "@/lib/tenant-context";
 
 export async function getCard(id: string) {
   try {
-    const card = await db.card.findUnique({
-      where: { id },
+    const dal = await createDAL();
+    const card = await dal.cards.findUnique(id, {
       include: {
         list: true,
         assignee: {
@@ -19,6 +20,7 @@ export async function getCard(id: string) {
     });
     return card;
   } catch (error) {
+    if (error instanceof TenantError) return null; // card not in this org — return null, not an error
     return null;
   }
 }

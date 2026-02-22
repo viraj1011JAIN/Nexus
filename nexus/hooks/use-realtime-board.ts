@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { Card, List, Comment, CommentReaction } from "@prisma/client";
-import { getSupabaseClient, getBoardChannelName } from "@/lib/supabase/client";
+import { getAuthenticatedSupabaseClient } from "@/lib/supabase/client";
+import { boardChannel } from "@/lib/realtime-channels";
 import { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { Database } from "@/types/supabase";
 
@@ -14,6 +16,8 @@ type ReactionPayload = RealtimePostgresChangesPayload<CommentReaction>;
 
 interface UseRealtimeBoardOptions {
   boardId: string;
+  /** orgId is required — channels without orgId allow cross-tenant subscriptions */
+  orgId: string;
   onCardCreated?: (card: Card) => void;
   onCardUpdated?: (card: Card) => void;
   onCardDeleted?: (cardId: string) => void;
@@ -70,6 +74,7 @@ interface UseRealtimeBoardOptions {
  */
 export function useRealtimeBoard({
   boardId,
+  orgId,
   onCardCreated,
   onCardUpdated,
   onCardDeleted,
@@ -82,8 +87,11 @@ export function useRealtimeBoard({
   onReactionAdded,
   onReactionRemoved,
 }: UseRealtimeBoardOptions) {
+  const { getToken } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [retryTimeout, setRetryTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Stable callback refs to prevent re-subscriptions
   const handleCardChange = useCallback(
@@ -184,18 +192,29 @@ export function useRealtimeBoard({
   );
 
   useEffect(() => {
-    // Skip if no boardId
-    if (!boardId) {
+    // Skip if no boardId or orgId — orgId is required for tenant-isolated channels
+    if (!boardId || !orgId) {
       return;
     }
 
-    const supabase = getSupabaseClient();
-    const channelName = getBoardChannelName(boardId);
+    // Channel name includes orgId — prevents cross-tenant subscriptions
+    const channelName = boardChannel(orgId, boardId);
     let channel: RealtimeChannel;
+    let supabase: ReturnType<typeof getAuthenticatedSupabaseClient> | undefined;
 
     // Connect to real-time channel
     const setupRealtimeSubscription = async () => {
       try {
+        // Attempt to get a Supabase-scoped JWT from Clerk.
+        // Falls back to null if no 'supabase' JWT template is configured in the
+        // Clerk dashboard — Realtime will still work via channel-name isolation.
+        let token: string | null = null;
+        try {
+          token = await getToken({ template: "supabase" });
+        } catch {
+          // Template not configured — degrade gracefully to anon key
+        }
+        supabase = getAuthenticatedSupabaseClient(token);
         channel = supabase.channel(channelName);
 
         // Subscribe to card changes (Phase 1 + Phase 3: priority, dueDate)
@@ -250,21 +269,36 @@ export function useRealtimeBoard({
           );
         }
 
-        // Subscribe and handle connection status
+        // Subscribe and handle connection status with auto-retry
         channel
           .subscribe((status) => {
             if (status === "SUBSCRIBED") {
               setIsConnected(true);
               setError(null);
+              setRetryCount(0); // Reset retry count on success
               console.log(`✅ Real-time connected to board: ${boardId} (Phase 3 enabled)`);
-            } else if (status === "CHANNEL_ERROR") {
+            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
               setIsConnected(false);
-              setError("Failed to connect to real-time channel");
-              console.error(`❌ Real-time connection failed for board: ${boardId}`);
-            } else if (status === "TIMED_OUT") {
-              setIsConnected(false);
-              setError("Connection timed out");
-              console.error(`⏱️ Real-time connection timed out for board: ${boardId}`);
+              
+              // Implement exponential backoff retry (max 5 attempts)
+              if (retryCount < 5) {
+                const delay = Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30s
+                const timeout = setTimeout(() => {
+                  setRetryCount(prev => prev + 1);
+                  // Trigger re-subscription by updating state
+                  setupRealtimeSubscription();
+                }, delay);
+                setRetryTimeout(timeout);
+                
+                // Only log on first retry to reduce noise
+                if (retryCount === 0) {
+                  console.log(`🔄 Real-time connection ${status === "TIMED_OUT" ? "timed out" : "failed"}, retrying...`);
+                }
+              } else {
+                // Only show error after all retries exhausted
+                setError("Connection failed after multiple attempts");
+                console.warn(`⚠️ Real-time connection failed for board: ${boardId} after ${retryCount} retries`);
+              }
             }
           });
       } catch (err) {
@@ -277,7 +311,11 @@ export function useRealtimeBoard({
 
     // Cleanup: unsubscribe when component unmounts or boardId changes
     return () => {
-      if (channel) {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        setRetryTimeout(null);
+      }
+      if (channel && supabase) {
         supabase.removeChannel(channel);
         setIsConnected(false);
         console.log(`🔌 Disconnected from board: ${boardId}`);

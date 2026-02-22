@@ -20,6 +20,12 @@ model Organization {
   slug       String   @unique
   imageUrl   String?
 
+  // Regional data residency
+  region     String   @default("eu-west")
+
+  // Soft-delete support
+  deletedAt  DateTime? @map("deleted_at")
+
   // Stripe Billing Fields
   subscriptionPlan        String   @default("FREE") @map("subscription_plan") // FREE or PRO
   stripeCustomerId        String?  @unique @map("stripe_customer_id")
@@ -47,6 +53,7 @@ model User {
   
   organizations  OrganizationUser[]
   assignedCards  Card[]   @relation("CardAssignee")
+  preferences    UserPreference?
   
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -63,6 +70,12 @@ model OrganizationUser {
   
   organizationId String       @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Membership lifecycle
+  isActive       Boolean      @default(true)  @map("is_active")
+  invitedById    String?      @map("invited_by_id")
+  invitedAt      DateTime?    @map("invited_at")
+  joinedAt       DateTime?    @map("joined_at")
   
   createdAt      DateTime     @default(now()) @map("created_at")
   
@@ -99,6 +112,7 @@ model Board {
   organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   lists          List[]
+  analytics      BoardAnalytics?
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -289,10 +303,106 @@ model AuditLog {
   userImage   String      @db.Text @map("user_image")
   userName    String      @db.Text @map("user_name")
 
+  // Request context for security forensics
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")  @db.Text
+
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   @@index([orgId])
   @@index([userId])
   @@map("audit_logs")
+}
+
+// ============================================
+// ANALYTICS & REPORTING
+// ============================================
+
+model BoardAnalytics {
+  id            String   @id @default(uuid())
+  boardId       String   @unique @map("board_id")
+  board         Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  
+  // Snapshot data (updated daily)
+  totalCards    Int      @default(0) @map("total_cards")
+  completedCards Int     @default(0) @map("completed_cards")
+  overdueCards  Int      @default(0) @map("overdue_cards")
+  activeMembers Int      @default(0) @map("active_members")
+  
+  // Velocity metrics
+  cardsCreatedToday    Int @default(0) @map("cards_created_today")
+  cardsCompletedToday  Int @default(0) @map("cards_completed_today")
+  avgCompletionTime    Int @default(0) @map("avg_completion_time") // in hours
+  
+  // Trend data (JSON for flexibility)
+  weeklyTrends         Json? @map("weekly_trends") // {week1: {created: 10, completed: 8}, ...}
+  priorityDistribution Json? @map("priority_distribution") // {urgent: 5, high: 10, medium: 15, low: 20}
+  
+  lastCalculated DateTime @updatedAt @map("last_calculated")
+  createdAt      DateTime @default(now()) @map("created_at")
+  
+  @@index([boardId])
+  @@index([lastCalculated])
+  @@map("board_analytics")
+}
+
+model UserAnalytics {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  orgId        String   @map("org_id")
+  
+  // Daily snapshot
+  date         DateTime @db.Date
+  cardsCreated Int      @default(0) @map("cards_created")
+  cardsCompleted Int    @default(0) @map("cards_completed")
+  commentsAdded Int     @default(0) @map("comments_added")
+  activeMinutes Int     @default(0) @map("active_minutes")
+  
+  // Metadata
+  createdAt    DateTime @default(now()) @map("created_at")
+  
+  @@unique([userId, orgId, date])
+  @@index([userId, date])
+  @@index([orgId, date])
+  @@map("user_analytics")
+}
+
+model ActivitySnapshot {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  timestamp DateTime @default(now())
+  
+  // Aggregate metrics (for timeline charts)
+  activeUsers      Int @default(0) @map("active_users")
+  totalBoards      Int @default(0) @map("total_boards")
+  totalCards       Int @default(0) @map("total_cards")
+  actionsPerformed Int @default(0) @map("actions_performed")
+  
+  @@index([orgId, timestamp])
+  @@map("activity_snapshots")
+}
+
+model UserPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification preferences
+  emailNotifications   Boolean  @default(true)  @map("email_notifications")
+  desktopNotifications Boolean  @default(false) @map("desktop_notifications")
+  boardActivity        Boolean  @default(true)  @map("board_activity")
+  cardComments         Boolean  @default(true)  @map("card_comments")
+  cardDueDates         Boolean  @default(true)  @map("card_due_dates")
+  weeklyDigest         Boolean  @default(false) @map("weekly_digest")
+
+  // Workspace preferences
+  autoSave             Boolean  @default(true)  @map("auto_save")
+  compactMode          Boolean  @default(false) @map("compact_mode")
+  showArchived         Boolean  @default(false) @map("show_archived")
+
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt      @map("updated_at")
+
+  @@map("user_preferences")
 }

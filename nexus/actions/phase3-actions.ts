@@ -10,8 +10,9 @@
 
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { getTenantContext } from "@/lib/tenant-context";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/create-audit-log";
 import { createSafeAction } from "@/lib/create-safe-action";
@@ -43,9 +44,11 @@ const UpdateCardPrioritySchema = z.object({
 export const updateCardPriority = createSafeAction(
   UpdateCardPrioritySchema,
   async (data) => {
-    const { userId, orgId } = await auth();
-    if (!userId || !orgId) {
-      throw new Error("Unauthorized");
+    const ctx = await getTenantContext();
+    const { userId, orgId } = ctx;
+    const rl = checkRateLimit(userId, "update-priority", RATE_LIMITS["update-priority"]);
+    if (!rl.allowed) {
+      throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
     }
 
     const { id, boardId, priority, autoEscalated } = data;
@@ -84,6 +87,7 @@ export const updateCardPriority = createSafeAction(
       entityType: "CARD",
       entityTitle: updated.title,
       action: "UPDATE",
+      orgId: ctx.orgId,
     });
 
     revalidatePath(`/board/${boardId}`);
@@ -134,9 +138,11 @@ const SetDueDateSchema = z.object({
  * - Creates audit log for due date changes
  */
 export const setDueDate = createSafeAction(SetDueDateSchema, async (data) => {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) {
-    throw new Error("Unauthorized");
+  const ctx = await getTenantContext();
+  const { userId, orgId } = ctx;
+  const rl = checkRateLimit(userId, "set-due-date", RATE_LIMITS["set-due-date"]);
+  if (!rl.allowed) {
+    throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
   const { id, boardId, dueDate: dueDateString } = data;
@@ -176,6 +182,7 @@ export const setDueDate = createSafeAction(SetDueDateSchema, async (data) => {
     entityType: "CARD",
     entityTitle: updated.title,
     action: "UPDATE",
+    orgId: ctx.orgId,
   });
 
   revalidatePath(`/board/${boardId}`);
@@ -191,9 +198,11 @@ const ClearDueDateSchema = z.object({
  * Clear Due Date
  */
 export const clearDueDate = createSafeAction(ClearDueDateSchema, async (data) => {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) {
-    throw new Error("Unauthorized");
+  const ctx = await getTenantContext();
+  const { userId, orgId } = ctx;
+  const rl = checkRateLimit(userId, "set-due-date", RATE_LIMITS["set-due-date"]);
+  if (!rl.allowed) {
+    throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
   const { id, boardId } = data;
@@ -221,6 +230,7 @@ export const clearDueDate = createSafeAction(ClearDueDateSchema, async (data) =>
     entityType: "CARD",
     entityTitle: updated.title,
     action: "UPDATE",
+    orgId: ctx.orgId,
   });
 
   revalidatePath(`/board/${boardId}`);
@@ -252,9 +262,11 @@ const CreateCommentSchema = z.object({
  * - Triggers real-time notifications for mentioned users
  */
 export const createComment = createSafeAction(CreateCommentSchema, async (data) => {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) {
-    throw new Error("Unauthorized");
+  const ctx = await getTenantContext();
+  const { userId, orgId } = ctx;
+  const rl = checkRateLimit(userId, "create-comment", RATE_LIMITS["create-comment"]);
+  if (!rl.allowed) {
+    throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
   // Get user info from Clerk
@@ -303,6 +315,7 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
       entityType: "CARD",
       entityTitle: card.title,
       action: "UPDATE",
+      orgId: ctx.orgId,
     });
   }
 
@@ -321,9 +334,11 @@ const UpdateCommentSchema = z.object({
  * Update Comment (Edit)
  */
 export const updateComment = createSafeAction(UpdateCommentSchema, async (data) => {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) {
-    throw new Error("Unauthorized");
+  const ctx = await getTenantContext();
+  const { userId, orgId } = ctx;
+  const rl = checkRateLimit(userId, "update-comment", RATE_LIMITS["update-comment"]);
+  if (!rl.allowed) {
+    throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
   const { id, boardId, text, mentions } = data;
@@ -365,6 +380,7 @@ export const updateComment = createSafeAction(UpdateCommentSchema, async (data) 
     entityType: "CARD",
     entityTitle: comment.card.title,
     action: "UPDATE",
+    orgId: ctx.orgId,
   });
 
   revalidatePath(`/board/${boardId}`);
@@ -380,9 +396,11 @@ const DeleteCommentSchema = z.object({
  * Delete Comment
  */
 export const deleteComment = createSafeAction(DeleteCommentSchema, async (data) => {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) {
-    throw new Error("Unauthorized");
+  const ctx = await getTenantContext();
+  const { userId, orgId } = ctx;
+  const rl = checkRateLimit(userId, "delete-comment", RATE_LIMITS["delete-comment"]);
+  if (!rl.allowed) {
+    throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
   const { id, boardId } = data;
@@ -412,9 +430,11 @@ export const deleteComment = createSafeAction(DeleteCommentSchema, async (data) 
     entityType: "CARD",
     entityTitle: comment.card.title,
     action: "UPDATE",
+    orgId: ctx.orgId,
   });
 
   revalidatePath(`/board/${boardId}`);
+
   return { data: { success: true } };
 });
 
@@ -434,9 +454,11 @@ const AddReactionSchema = z.object({
  * Add Reaction to Comment
  */
 export const addReaction = createSafeAction(AddReactionSchema, async (data) => {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) {
-    throw new Error("Unauthorized");
+  const ctx = await getTenantContext();
+  const { userId, orgId } = ctx;
+  const rl = checkRateLimit(userId, "add-reaction", RATE_LIMITS["add-reaction"]);
+  if (!rl.allowed) {
+    throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
   const user = await fetch(`https://api.clerk.dev/v1/users/${userId}`, {
@@ -491,9 +513,11 @@ const RemoveReactionSchema = z.object({
  * Remove Reaction from Comment
  */
 export const removeReaction = createSafeAction(RemoveReactionSchema, async (data) => {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) {
-    throw new Error("Unauthorized");
+  const ctx = await getTenantContext();
+  const { userId, orgId } = ctx;
+  const rl = checkRateLimit(userId, "remove-reaction", RATE_LIMITS["remove-reaction"]);
+  if (!rl.allowed) {
+    throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
   const { id, boardId } = data;

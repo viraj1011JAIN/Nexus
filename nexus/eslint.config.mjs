@@ -13,6 +13,34 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // ── Security: ban systemDb outside privileged routes ─────────────────────
+  // systemDb uses the Supabase service role (SYSTEM_DATABASE_URL) and bypasses
+  // ALL Row-Level Security policies. It must never appear in server actions or
+  // user-triggered API routes. Only webhook handlers and cron jobs may import it.
+  {
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/db",
+              importNames: ["systemDb"],
+              message:
+                "systemDb bypasses Row-Level Security. Only import it in app/api/webhook/ or app/api/cron/. See lib/db.ts.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Allowlist: webhook and cron route files may use systemDb
+  {
+    files: ["app/api/webhook/**/*.ts", "app/api/cron/**/*.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

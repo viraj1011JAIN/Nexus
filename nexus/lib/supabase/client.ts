@@ -81,3 +81,59 @@ export function getBoardChannelName(boardId: string): string {
 export function getPresenceChannelName(boardId: string): string {
   return `presence:board:${boardId}`;
 }
+
+/**
+ * Creates a Supabase client that carries a Clerk JWT in the Authorization header.
+ *
+ * WHY: When Supabase Row-Level Security (RLS) policies use `auth.jwt()` or
+ * `current_setting('app.current_user_id')`, the JWT must be present on the
+ * connection for those policies to evaluate correctly. The anonymous key alone
+ * only satisfies policies that run as `anon` role.
+ *
+ * USAGE: Call this in realtime hooks AFTER you have a Clerk session token.
+ *
+ * @example
+ * ```typescript
+ * const token = await getToken({ template: 'supabase' });
+ * const supabase = getAuthenticatedSupabaseClient(token);
+ * const channel = supabase.channel(boardChannel(orgId, boardId));
+ * ```
+ *
+ * CLERK JWT TEMPLATE SETUP:
+ * Clerk Dashboard → JWT Templates → New → Supabase
+ * The template must include EXACTLY this claim (key name matters):
+ *
+ *   { "org_id": "{{org.id}}" }
+ *
+ * The Supabase RLS helper `requesting_org_id()` reads `->> 'org_id'` from the
+ * JWT claims. If the key name in the template differs by even one character
+ * (e.g. 'orgId', 'organization_id'), the function returns NULL and all
+ * Realtime policies silently drop every event — no error is raised.
+ *
+ * FALLBACK: When clerkToken is null (template not yet configured), the
+ * Authorization header is omitted and the anon key alone is used. Realtime
+ * still works via channel-name isolation; JWT-gated RLS policies are inactive.
+ */
+export function getAuthenticatedSupabaseClient(clerkToken: string | null) {
+  return createSupabaseClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: false,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+    global: {
+      headers: {
+        "x-client-info": "nexus-realtime",
+        // Passes Clerk JWT so Supabase RLS policies can evaluate auth.jwt().
+        // When clerkToken is null (no JWT template configured in Clerk dashboard),
+        // the header is omitted and the anon key alone is used — RLS falls back
+        // to channel-name isolation only. Configure a 'supabase' JWT template in
+        // the Clerk dashboard for full JWT-gated Realtime auth.
+        ...(clerkToken ? { Authorization: `Bearer ${clerkToken}` } : {}),
+      },
+    },
+  });
+}

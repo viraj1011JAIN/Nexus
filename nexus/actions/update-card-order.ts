@@ -1,48 +1,42 @@
 "use server";
 
-import { db } from "@/lib/db";
-import { auth } from "@clerk/nextjs/server";
+import { createDAL } from "@/lib/dal";
+import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { revalidatePath } from "next/cache";
-import { protectDemoMode } from "@/lib/action-protection";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
 interface CardUpdate {
   id: string;
-  order: string; // FIXED: Changed from number to string for lexorank
+  order: string;
   listId: string;
   title: string;
 }
 
 export async function updateCardOrder(items: CardUpdate[], boardId: string) {
   try {
-    // Get board to check orgId for demo protection
-    const board = await db.board.findUnique({
-      where: { id: boardId },
-      select: { orgId: true },
-    });
+    const ctx = await getTenantContext();
+    await requireRole("MEMBER", ctx);
 
-    if (!board) {
-      return { success: false, error: "Board not found" };
+    const rl = checkRateLimit(ctx.userId, "update-card-order", RATE_LIMITS["update-card-order"]);
+    if (!rl.allowed) {
+      return { success: false, error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
     }
 
-    // Demo mode protection
-    const demoCheck = await protectDemoMode(board.orgId);
-    if (demoCheck) {
+    const dal = await createDAL(ctx);
+
+    if (isDemoContext(ctx)) {
       return { success: false, error: "Cannot modify demo data" };
     }
 
-    const transaction = items.map((card) =>
-      db.card.update({
-        where: { id: card.id },
-        data: {
-          order: card.order,
-          listId: card.listId,
-        },
-      })
+    // DAL.cards.reorder:
+    //   1. Verifies boardId→orgId === ctx.orgId
+    //   2. Fetches all valid card IDs for this board from DB
+    //   3. Rejects any client-supplied ID not in that set (prevents ID injection)
+    await dal.cards.reorder(
+      items.map(({ id, order, listId }) => ({ id, order, listId })),
+      boardId
     );
 
-    await db.$transaction(transaction);
-    // Note: No revalidatePath here for smooth drag-and-drop performance
-    // The UI is already optimistically updated
     return { success: true };
   } catch (error) {
     console.error("[UPDATE_CARD_ORDER_ERROR]", error);

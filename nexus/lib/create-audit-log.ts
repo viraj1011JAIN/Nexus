@@ -8,13 +8,14 @@ interface Props {
   entityType: ENTITY_TYPE;
   entityTitle: string;
   action: ACTION;
+  /** Skip redundant auth() call when orgId is already resolved by the caller */
+  orgId?: string;
 }
 
 export const createAuditLog = async (props: Props) => {
   try {
     const { entityId, entityType, entityTitle, action } = props;
-
-    const { orgId } = await auth();
+    const orgId = props.orgId ?? (await auth()).orgId;
     const user = await currentUser();
     
     if (!orgId || !user) {
