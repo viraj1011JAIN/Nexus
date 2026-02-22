@@ -68,6 +68,7 @@
 - Board image fields (`imageThumbUrl`, `imageFullUrl`, etc.) in schema — **no live Unsplash picker built**; populated only by `scripts/seed-demo.ts`
 - `CreateBoard` action schema accepts `title` only; no image input
 - `board-list.tsx` renders `imageThumbUrl` as a full-width 96px banner on each board card when the field is set; falls back to gradient+letter when null
+- `board/[boardId]/page.tsx` renders `imageFullUrl` as the full-page background when present; dark overlay (`bg-black/40`) applied for readability; gradient+animated blobs shown when null
 
 ### List Management
 - Create, rename, delete lists
@@ -172,6 +173,8 @@
 - Landscape mode adjustments
 - `manifest.json` at `/public/manifest.json` — includes top-level `icons` array, two size shortcuts, theme color
 - `public/icon-192.png` and `public/icon-512.png` present — indigo background (#4F46E5), white bold "N", generated via System.Drawing
+- `public/apple-touch-icon.png` present (180×180) — solid fill, no padding; handles iOS home screen installs which ignore manifest.json
+- `app/layout.tsx` metadata includes `icons: { apple: "/apple-touch-icon.png" }`
 
 ### UI Foundation
 - shadcn/ui component library (Radix UI primitives)
@@ -203,7 +206,7 @@
 | @mention notifications | Not built | |
 | PWA install icons | Done | `icon-192.png` and `icon-512.png` present in `/public`. Manifest `icons` array added. |
 | E2E tests | Not started | Playwright not in `package.json`. |
-| GitHub Actions CI/CD | Configured | `.github/workflows/ci.yml` — runs `tsc --noEmit` and `jest --ci` on push/PR to main. |
+| GitHub Actions CI/CD | Configured | `.github/workflows/ci.yml` — 4 jobs: typecheck, lint, test (coverage artifact), build (needs all three; Stripe + Clerk + Supabase secrets). |
 | Dedicated search page | Not built | Command palette searches API; no full-text search results page. |
 | PostHog / product analytics | Not integrated | |
 | Uptime monitoring | Not configured | |
@@ -215,13 +218,16 @@
 
 **Test files:**
 - `__tests__/unit/action-protection.test.ts` — 19 test cases
+- `__tests__/unit/tenant-context.test.ts` — 5 test cases (new)
+- `__tests__/unit/rate-limit.test.ts` — 4 test cases (new, uses `jest.useFakeTimers()`)
 - `__tests__/integration/server-actions.test.ts` — 19 test cases
-- **Total: 38 test cases**
+- **Total: 47 test cases**
 
-**What they test:** Both test files cover `lib/action-protection.ts`:
+**What they test:**
 - `protectDemoMode` — 11 cases (error shape, message content, null/undefined/case-sensitivity)
 - `isDemoOrganization` — 5 cases
-- `checkRateLimit` — 4 cases: first request allowed, remaining decrements, limit blocks, per-user isolation
+- `checkRateLimit` — 8 cases total: allows/decrements/blocks/per-user isolation (existing) + `RATE_LIMITS` constant, window-reset after 61s clock advance, fake-timer isolation (new)
+- `getTenantContext` — 5 cases: UNAUTHENTICATED (no userId), UNAUTHENTICATED (no orgId), FORBIDDEN (isActive=false), valid member returns TenantContext, TenantError instanceof check
 - Integration file mocks Clerk `auth()` and verifies the demo-mode guard blocks all mutation types
 
 No other server actions, hooks, or library code is covered by tests.
@@ -327,7 +333,7 @@ Jest + Testing Library are configured and runnable. No E2E tests. No visual regr
 | Supabase Realtime | Working via channel-name isolation; degrades gracefully without Clerk JWT template |
 | Sentry | Client + server + edge configured |
 | GitHub repo | `https://github.com/viraj1011JAIN/Nexus.git`, branch `main` |
-| GitHub Actions CI | `.github/workflows/ci.yml` — typecheck + test on push/PR to main |
+| GitHub Actions CI | `.github/workflows/ci.yml` — 4 jobs: typecheck, lint (zero warnings), test (coverage artifact), build (gated on first three) |
 | Preview deployments | Not configured |
 | DB migrations | Managed via `prisma db push` — no migration history files |
 
@@ -352,11 +358,11 @@ Jest + Testing Library are configured and runnable. No E2E tests. No visual regr
 | Command palette | 100% | |
 | Mobile responsive | 100% | |
 | PWA manifest | 100% | Icons present in `/public`, manifest `icons` array added |
-| Board backgrounds | 50% | `imageThumbUrl` renders in board-list; no picker UI to set it |
+| Board backgrounds | 75% | `imageThumbUrl` on board cards + `imageFullUrl` on board page; no picker UI |
 | Email delivery | 0% | Cron scaffold only, no mailer |
 | File attachments | 0% | Not started |
 | Board templates | 0% | Not started |
 | @mention UI | 0% | Extension installed, not wired |
-| Test coverage | ~1% | 38 tests, action-protection.ts covered (demo guard + rate limiter) |
+| Test coverage | ~2% | 47 tests, action-protection.ts + tenant-context.ts covered |
 | E2E tests | 0% | Not started |
-| CI/CD pipeline | 100% | GitHub Actions: typecheck + tests on every push |
+| CI/CD pipeline | 100% | GitHub Actions: typecheck + lint + test + build on every push |

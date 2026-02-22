@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   title: "NEXUS | Enterprise Task Management",
   description: "Production-level B2B SaaS Platform",
   manifest: "/manifest.json",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
