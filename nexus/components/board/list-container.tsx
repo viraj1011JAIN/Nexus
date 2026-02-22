@@ -347,7 +347,7 @@ export const ListContainer = ({
                 className="px-3 py-2 text-sm border-2 border-transparent focus:border-indigo-400 rounded-lg outline-none font-semibold bg-white/80 focus:bg-white shadow-sm transition-all placeholder:text-slate-400"
                 required
             />
-            <Button size="sm" className="w-full justify-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-95 font-semibold rounded-lg">
+            <Button size="sm" className="w-full justify-center bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-95 font-semibold rounded-lg">
                 + Add List
             </Button>
             </form>

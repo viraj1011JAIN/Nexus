@@ -196,7 +196,7 @@ export const CommandPalette = () => {
           <DialogTitle>Command Menu</DialogTitle>
         </VisuallyHidden>
         <CommandPrimitive
-          className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5"
+          className="**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground **:[[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 **:[[cmdk-input]]:h-12 **:[[cmdk-item]]:px-2 **:[[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5"
           shouldFilter={true}
         >
           <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
@@ -209,7 +209,7 @@ export const CommandPalette = () => {
             />
           </div>
 
-          <CommandPrimitive.List className="max-h-[400px] overflow-y-auto overflow-x-hidden p-2">
+          <CommandPrimitive.List className="max-h-100 overflow-y-auto overflow-x-hidden p-2">
             <CommandPrimitive.Empty className="py-6 text-center text-sm text-muted-foreground">
               No results found.
             </CommandPrimitive.Empty>
@@ -221,7 +221,7 @@ export const CommandPalette = () => {
             ) : (
               <>
                 {/* Quick Actions */}
-                <CommandPrimitive.Group heading="Quick Actions" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+                <CommandPrimitive.Group heading="Quick Actions" className="**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground">
                   <CommandPrimitive.Item
                     value="create-board"
                     onSelect={() => runCommand(() => {
@@ -250,7 +250,7 @@ export const CommandPalette = () => {
                 {/* Boards */}
                 {boards.length > 0 && (
                   <>
-                    <CommandPrimitive.Group heading="Boards" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+                    <CommandPrimitive.Group heading="Boards" className="**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground">
                       {boards.slice(0, 8).map((board) => (
                         <CommandPrimitive.Item
                           key={board.id}
@@ -273,7 +273,7 @@ export const CommandPalette = () => {
                 {/* Cards */}
                 {cards.length > 0 && (
                   <>
-                    <CommandPrimitive.Group heading="Cards" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+                    <CommandPrimitive.Group heading="Cards" className="**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground">
                       {cards.slice(0, 8).map((card) => (
                         <CommandPrimitive.Item
                           key={card.id}
@@ -299,7 +299,7 @@ export const CommandPalette = () => {
                 )}
 
                 {/* Navigation */}
-                <CommandPrimitive.Group heading="Navigation" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+                <CommandPrimitive.Group heading="Navigation" className="**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground">
                   <CommandPrimitive.Item
                     value="home"
                     onSelect={() => runCommand(() => router.push("/"))}

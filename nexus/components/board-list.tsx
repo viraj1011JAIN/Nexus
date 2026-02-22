@@ -195,13 +195,14 @@ export function BoardList() {
                   <div className="bg-card rounded-lg hover:shadow-md hover:ring-2 hover:ring-primary/20 transition-all duration-200 overflow-hidden">
                     {/* Board Header — image when available, gradient fallback */}
                     {board.imageThumbUrl ? (
+                      // eslint-disable-next-line react/forbid-component-props
                       <div
                         className="h-24 w-full bg-cover bg-center"
                         style={{ backgroundImage: `url(${board.imageThumbUrl})` }}
                       />
                     ) : (
                       <div
-                        className={`h-24 w-full bg-gradient-to-br ${
+                        className={`h-24 w-full bg-linear-to-br ${
                           boardColors[index % boardColors.length]
                         } flex items-center justify-center`}
                       >
@@ -231,6 +232,8 @@ export function BoardList() {
                         }}
                         className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded transition-all"
                         disabled={isPending}
+                        aria-label={`Delete board ${board.title}`}
+                        title={`Delete board ${board.title}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

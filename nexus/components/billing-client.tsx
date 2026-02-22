@@ -92,12 +92,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
     <div className="min-h-screen bg-[#FAFBFC] dark:bg-[#0B0F1A] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
       {/* Background Texture */}
       <div className="fixed inset-0 opacity-30 pointer-events-none">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: "linear-gradient(135deg, #F0F4FF 0%, #FDF2F8 50%, #FEF3F2 100%)",
-          }}
-        />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#F0F4FF_0%,#FDF2F8_50%,#FEF3F2_100%)]" />
       </div>
 
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
@@ -109,11 +104,11 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
         >
           <div className="flex items-center gap-4 mb-3">
             <div className="relative">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
                 <CreditCard className="h-6 w-6 text-white" />
               </div>
               <motion.div
-                className="absolute -inset-1 bg-gradient-to-br from-[#7C3AED] to-[#A855F7] rounded-xl opacity-20 blur-lg"
+                className="absolute -inset-1 bg-linear-to-br from-[#7C3AED] to-[#A855F7] rounded-xl opacity-20 blur-lg"
                 animate={{ opacity: [0.2, 0.4, 0.2] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
@@ -134,16 +129,16 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="relative overflow-hidden rounded-2xl border-2 border-[#7C3AED]/20 bg-gradient-to-br from-[#F5F3FF] to-[#FDF2F8] dark:from-[#2E1A2E] dark:to-[#2E1A1F] p-6"
+          className="relative overflow-hidden rounded-2xl border-2 border-[#7C3AED]/20 bg-linear-to-br from-[#F5F3FF] to-[#FDF2F8] dark:from-[#2E1A2E] dark:to-[#2E1A1F] p-6"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#7C3AED]/10 to-transparent rounded-full blur-3xl" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-linear-to-br from-[#7C3AED]/10 to-transparent rounded-full blur-3xl" />
           
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 {isPro ? (
                   <>
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F59E0B] to-[#EAB308] flex items-center justify-center shadow-lg">
+                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#F59E0B] to-[#EAB308] flex items-center justify-center shadow-lg">
                       <Crown className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -173,7 +168,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
               </div>
               
               {isPro && isActive && (
-                <div className="px-3 py-1.5 bg-gradient-to-r from-[#10B981] to-[#059669] text-white text-[13px] font-bold rounded-full shadow-md flex items-center gap-2">
+                <div className="px-3 py-1.5 bg-linear-to-r from-[#10B981] to-[#059669] text-white text-[13px] font-bold rounded-full shadow-md flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
                   Active
                 </div>
@@ -202,7 +197,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
                 className={cn(
                   "px-5 py-2.5 rounded-lg text-[14px] font-medium transition-all duration-200",
                   billingCycle === "monthly"
-                    ? "bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white shadow-[0_2px_8px_rgba(124,58,237,0.25)]"
+                    ? "bg-linear-to-r from-[#7C3AED] to-[#A855F7] text-white shadow-[0_2px_8px_rgba(124,58,237,0.25)]"
                     : "text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F9FAFB] dark:hover:bg-[#252B3A]"
                 )}
               >
@@ -213,7 +208,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
                 className={cn(
                   "px-5 py-2.5 rounded-lg text-[14px] font-medium transition-all duration-200 flex items-center gap-2",
                   billingCycle === "yearly"
-                    ? "bg-gradient-to-r from-[#7C3AED] to-[#A855F7] text-white shadow-[0_2px_8px_rgba(124,58,237,0.25)]"
+                    ? "bg-linear-to-r from-[#7C3AED] to-[#A855F7] text-white shadow-[0_2px_8px_rgba(124,58,237,0.25)]"
                     : "text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F9FAFB] dark:hover:bg-[#252B3A]"
                 )}
               >
@@ -233,7 +228,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            className="bg-white dark:bg-[#1A1F2E] border-[1.5px] border-[#E5E7EB] dark:border-[#252B3A] rounded-2xl p-8 flex flex-col min-h-[500px]"
+            className="bg-white dark:bg-[#1A1F2E] border-[1.5px] border-[#E5E7EB] dark:border-[#252B3A] rounded-2xl p-8 flex flex-col min-h-125"
           >
             <h3 className="text-2xl font-semibold text-[#0F172A] dark:text-[#F1F5F9] mb-2">
               Free
@@ -254,7 +249,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
                 "Standard templates",
               ].map((feature) => (
                 <li key={feature} className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#10B981]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-[#10B981]/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="h-3 w-3 text-[#10B981]" />
                   </div>
                   <span className="text-[15px] text-[#475569] dark:text-[#CBD5E1]">{feature}</span>
@@ -275,7 +270,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.25 }}
-            className="relative bg-gradient-to-br from-[#7C3AED] to-[#A855F7] rounded-2xl p-8 flex flex-col min-h-[500px] shadow-[0_20px_40px_rgba(124,58,237,0.4)] transform hover:scale-[1.02] transition-transform duration-300"
+            className="relative bg-linear-to-br from-[#7C3AED] to-[#A855F7] rounded-2xl p-8 flex flex-col min-h-125 shadow-[0_20px_40px_rgba(124,58,237,0.4)] transform hover:scale-[1.02] transition-transform duration-300"
           >
             {/* Popular Badge */}
             <div className="absolute -top-3 left-8 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center gap-2">
@@ -309,7 +304,7 @@ export default function BillingClient({ organization, isStripeConfigured, priceI
                 "Team collaboration",
               ].map((feature) => (
                 <li key={feature} className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="h-3 w-3 text-white" />
                   </div>
                   <span className="text-[15px] text-white font-medium">{feature}</span>

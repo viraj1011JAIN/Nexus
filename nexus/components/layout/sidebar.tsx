@@ -47,23 +47,15 @@ export const Sidebar = () => {
   }[theme];
 
   return (
-    <div className="w-[280px] h-full bg-white dark:bg-[#1A1F2E] border-r border-[#E5E7EB] dark:border-[#252B3A] flex flex-col shadow-sm shrink-0 z-20">
+    <div className="w-70 h-full bg-white dark:bg-[#1A1F2E] border-r border-[#E5E7EB] dark:border-[#252B3A] flex flex-col shadow-sm shrink-0 z-20">
       {/* Header - Brand Section */}
       <div className="px-8 pt-8 pb-8 border-b border-[#E5E7EB] dark:border-[#252B3A]">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
               <div className="w-4 h-4 rounded bg-white/30 backdrop-blur-sm" />
             </div>
-            <span
-              className="font-bold text-2xl tracking-tight"
-              style={{
-                background: "linear-gradient(135deg, #7C3AED, #A855F7)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
+            <span className="font-bold text-2xl tracking-tight bg-linear-to-br from-[#7C3AED] to-[#A855F7] bg-clip-text text-transparent">
               NEXUS
             </span>
           </div>
@@ -133,14 +125,14 @@ export const Sidebar = () => {
               className={cn(
                 "group relative flex items-center gap-3 h-11 px-4 rounded-lg font-medium text-[15px] transition-all duration-200",
                 route.active
-                  ? "bg-gradient-to-r from-[#F5F3FF] to-transparent dark:from-[#2E1A2E] text-[#0F172A] dark:text-[#F1F5F9] font-semibold"
+                  ? "bg-linear-to-r from-[#F5F3FF] to-transparent dark:from-[#2E1A2E] text-[#0F172A] dark:text-[#F1F5F9] font-semibold"
                   : "text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F9FAFB] dark:hover:bg-[#252B3A] hover:text-[#374151] dark:hover:text-[#F1F5F9]"
               )}
             >
               {route.active && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#7C3AED] rounded-r"
+                  className="absolute left-0 top-0 bottom-0 w-0.75 bg-[#7C3AED] rounded-r"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}

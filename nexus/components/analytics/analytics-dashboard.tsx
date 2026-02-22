@@ -350,7 +350,7 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[300px]">
+              <div className="flex items-center justify-center h-75">
                 <p className="text-sm text-muted-foreground">No assigned members yet</p>
               </div>
             )}

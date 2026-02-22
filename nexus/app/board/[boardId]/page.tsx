@@ -44,6 +44,7 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
   if (!board) notFound();
 
   return (
+    // eslint-disable-next-line react/forbid-component-props
     <div
       className="h-full min-h-screen overflow-x-auto relative"
       style={board.imageFullUrl ? {
@@ -54,7 +55,7 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
     >
       {/* Page background — gradient + blobs when no image, dark overlay when image set */}
       {!board.imageFullUrl ? (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-indigo-50 to-purple-50 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-indigo-50 to-purple-50 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
           <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
         </div>
