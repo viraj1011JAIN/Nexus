@@ -1,6 +1,6 @@
 ﻿# NEXUS — PROJECT STATUS
 
-**Last Audited:** February 22, 2026  
+**Last Audited:** February 22, 2026 (updated same day)  
 **Audited Against:** Live codebase at `c:\Nexus\nexus`  
 **Every fact verified from source files. No estimates, no aspirational claims.**
 
@@ -65,8 +65,9 @@
 ### Board Management
 - Create, rename, delete boards — scoped to org via tenant context
 - FREE plan board limit enforced against Stripe subscription plan in `create-board.ts`
-- Board image fields in schema — **no live Unsplash picker built**; fields populated only by `scripts/seed-demo.ts` with hardcoded URLs
+- Board image fields (`imageThumbUrl`, `imageFullUrl`, etc.) in schema — **no live Unsplash picker built**; populated only by `scripts/seed-demo.ts`
 - `CreateBoard` action schema accepts `title` only; no image input
+- `board-list.tsx` renders `imageThumbUrl` as a full-width 96px banner on each board card when the field is set; falls back to gradient+letter when null
 
 ### List Management
 - Create, rename, delete lists
@@ -169,8 +170,8 @@
 - Momentum scrolling (iOS `-webkit-overflow-scrolling`)
 - Overscroll containment
 - Landscape mode adjustments
-- `manifest.json` at `/public/manifest.json` with name, shortcuts, theme color
-- **PWA icons missing**: manifest references `icon-192.png` and `icon-512.png` — neither file exists in `/public`
+- `manifest.json` at `/public/manifest.json` — includes top-level `icons` array, two size shortcuts, theme color
+- `public/icon-192.png` and `public/icon-512.png` present — indigo background (#4F46E5), white bold "N", generated via System.Drawing
 
 ### UI Foundation
 - shadcn/ui component library (Radix UI primitives)
@@ -187,7 +188,7 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Board background picker (Unsplash) | Not built | Schema has 5 image fields. `createBoard` accepts `title` only. No Unsplash API calls exist. |
-| Board backgrounds rendered in board-list | Not rendered | `board-list.tsx` does not use `imageThumbUrl` for card background. |
+| Board backgrounds rendered in board-list | Rendered | `board-list.tsx` shows `imageThumbUrl` as card banner. No picker to set it from UI — seed script only. |
 | File attachments | Not started | No storage provider. No schema model. |
 | Board templates | Not started | No model, no UI. |
 | Board archiving | Not started | No `archivedAt` on Board. |
@@ -200,9 +201,9 @@
 | Email delivery | Not built | Cron scaffold generates data; no mailer library installed. |
 | Desktop push notifications | Not built | Preference toggle persisted; no Service Worker or Push API. |
 | @mention notifications | Not built | |
-| PWA install icons | Missing | `manifest.json` references `icon-192.png` and `icon-512.png` — both absent from `/public`. |
+| PWA install icons | Done | `icon-192.png` and `icon-512.png` present in `/public`. Manifest `icons` array added. |
 | E2E tests | Not started | Playwright not in `package.json`. |
-| GitHub Actions CI/CD | Not configured | No `.github/workflows/` directory. |
+| GitHub Actions CI/CD | Configured | `.github/workflows/ci.yml` — runs `tsc --noEmit` and `jest --ci` on push/PR to main. |
 | Dedicated search page | Not built | Command palette searches API; no full-text search results page. |
 | PostHog / product analytics | Not integrated | |
 | Uptime monitoring | Not configured | |
@@ -213,21 +214,29 @@
 ## Test Coverage — Actual Numbers
 
 **Test files:**
-- `__tests__/unit/action-protection.test.ts` — 15 test cases
+- `__tests__/unit/action-protection.test.ts` — 19 test cases
 - `__tests__/integration/server-actions.test.ts` — 19 test cases
-- **Total: 34 test cases**
+- **Total: 38 test cases**
 
-**What they test:** Both files exclusively exercise `protectDemoMode` and `isDemoOrganization` from `lib/action-protection.ts`. The integration file mocks Clerk `auth()` and verifies the demo-mode guard blocks writes. No other server actions, hooks, or library code is tested.
+**What they test:** Both test files cover `lib/action-protection.ts`:
+- `protectDemoMode` — 11 cases (error shape, message content, null/undefined/case-sensitivity)
+- `isDemoOrganization` — 5 cases
+- `checkRateLimit` — 4 cases: first request allowed, remaining decrements, limit blocks, per-user isolation
+- Integration file mocks Clerk `auth()` and verifies the demo-mode guard blocks all mutation types
+
+No other server actions, hooks, or library code is covered by tests.
 
 **Coverage scope:** `jest.config.ts` instruments the entire source tree. The report tracks all 61 files across 20 packages including `lib/tenant-context.ts`, `lib/dal.ts`, `lib/create-audit-log.ts`, all server actions, all hooks, and all components — those files simply have 0 hits.
 
-**Coverage from last run (coverage/clover.xml):**
+**Coverage from last instrumented run (coverage/clover.xml — pre-`checkRateLimit` tests):**
 
 | Metric | Covered | Total | % |
 |--------|---------|-------|---|
 | Statements | 10 | 1329 | 0.75% |
 | Methods | 2 | 252 | 0.79% |
 | Elements | 14 | 2188 | 0.64% |
+
+The 4 new `checkRateLimit` tests cover additional branches in `lib/action-protection.ts`. Rerun `npm run test:ci` to get updated numbers.
 
 Jest + Testing Library are configured and runnable. No E2E tests. No visual regression tests.
 
@@ -318,7 +327,7 @@ Jest + Testing Library are configured and runnable. No E2E tests. No visual regr
 | Supabase Realtime | Working via channel-name isolation; degrades gracefully without Clerk JWT template |
 | Sentry | Client + server + edge configured |
 | GitHub repo | `https://github.com/viraj1011JAIN/Nexus.git`, branch `main` |
-| GitHub Actions CI | Not configured |
+| GitHub Actions CI | `.github/workflows/ci.yml` — typecheck + test on push/PR to main |
 | Preview deployments | Not configured |
 | DB migrations | Managed via `prisma db push` — no migration history files |
 
@@ -342,12 +351,12 @@ Jest + Testing Library are configured and runnable. No E2E tests. No visual regr
 | Sentry + error boundaries | 100% | |
 | Command palette | 100% | |
 | Mobile responsive | 100% | |
-| PWA manifest | 90% | Icons referenced but not present |
-| Board backgrounds | 0% | Schema only, no UI |
+| PWA manifest | 100% | Icons present in `/public`, manifest `icons` array added |
+| Board backgrounds | 50% | `imageThumbUrl` renders in board-list; no picker UI to set it |
 | Email delivery | 0% | Cron scaffold only, no mailer |
 | File attachments | 0% | Not started |
 | Board templates | 0% | Not started |
 | @mention UI | 0% | Extension installed, not wired |
-| Test coverage | <1% | 2 test files, 0.75% statement coverage |
+| Test coverage | ~1% | 38 tests, action-protection.ts covered (demo guard + rate limiter) |
 | E2E tests | 0% | Not started |
-| CI/CD pipeline | 0% | Not configured |
+| CI/CD pipeline | 100% | GitHub Actions: typecheck + tests on every push |

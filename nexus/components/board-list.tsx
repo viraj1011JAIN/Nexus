@@ -65,14 +65,11 @@ export function BoardList() {
             schema: 'public',
             table: 'boards',
           },
-          (payload) => {
-            console.log('✅ Real-time board change detected:', payload);
-            fetchBoards();
-          }
-        )
-        .subscribe((status) => {
-          console.log('🔌 Supabase subscription status:', status);
-        });
+() => {
+              fetchBoards();
+            }
+          )
+          .subscribe();
 
       return () => {
         supabase.removeChannel(channel);
@@ -195,18 +192,27 @@ export function BoardList() {
                 className="group"
               >
                 <Link href={`/board/${board.id}`}>
-                  <div className="bg-card rounded-lg hover:bg-accent hover:shadow-md transition-all duration-200 overflow-hidden">
-                    {/* Board Icon & Title */}
-                    <div className="p-4 flex items-start gap-3">
+                  <div className="bg-card rounded-lg hover:shadow-md hover:ring-2 hover:ring-primary/20 transition-all duration-200 overflow-hidden">
+                    {/* Board Header — image when available, gradient fallback */}
+                    {board.imageThumbUrl ? (
                       <div
-                        className={`w-12 h-12 rounded-lg bg-gradient-to-br ${
+                        className="h-24 w-full bg-cover bg-center"
+                        style={{ backgroundImage: `url(${board.imageThumbUrl})` }}
+                      />
+                    ) : (
+                      <div
+                        className={`h-24 w-full bg-gradient-to-br ${
                           boardColors[index % boardColors.length]
-                        } flex items-center justify-center shrink-0`}
+                        } flex items-center justify-center`}
                       >
-                        <span className="text-white font-bold text-lg">
+                        <span className="text-white/25 font-bold text-6xl select-none">
                           {board.title.charAt(0).toUpperCase()}
                         </span>
                       </div>
+                    )}
+
+                    {/* Title & Actions */}
+                    <div className="p-4 flex items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                           {board.title}

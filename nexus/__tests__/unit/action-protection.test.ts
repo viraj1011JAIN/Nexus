@@ -4,7 +4,7 @@
  * Tests the demo mode protection utilities and hooks
  */
 
-import { protectDemoMode, isDemoOrganization } from '@/lib/action-protection';
+import { protectDemoMode, isDemoOrganization, checkRateLimit } from '@/lib/action-protection';
 
 describe('Demo Mode Protection', () => {
   describe('isDemoOrganization', () => {
@@ -121,5 +121,43 @@ describe('Demo Mode Protection', () => {
       expect(result?.error).not.toContain('database');
       expect(result?.error).not.toContain('Prisma');
     });
+  });
+});
+
+describe('checkRateLimit', () => {
+  it('allows the first request and returns correct remaining count', () => {
+    const result = checkRateLimit('rl-test-user-1', 'create-board', 10);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(9); // limit 10, one request just recorded
+    expect(result.resetInMs).toBe(60_000);
+  });
+
+  it('decrements remaining with each successive request', () => {
+    checkRateLimit('rl-test-user-2', 'create-card', 5);
+    checkRateLimit('rl-test-user-2', 'create-card', 5);
+    const result = checkRateLimit('rl-test-user-2', 'create-card', 5);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(2); // 5 limit - 3 requests
+  });
+
+  it('blocks once the per-window limit is reached', () => {
+    for (let i = 0; i < 3; i++) {
+      checkRateLimit('rl-test-user-3', 'delete-board', 3);
+    }
+    const result = checkRateLimit('rl-test-user-3', 'delete-board', 3);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+    expect(result.resetInMs).toBeGreaterThan(0);
+    expect(result.resetInMs).toBeLessThanOrEqual(60_000);
+  });
+
+  it('isolates limits per user — one user at limit does not affect another', () => {
+    for (let i = 0; i < 10; i++) {
+      checkRateLimit('rl-test-user-4a', 'create-list', 10);
+    }
+    const blocked = checkRateLimit('rl-test-user-4a', 'create-list', 10);
+    const allowed = checkRateLimit('rl-test-user-4b', 'create-list', 10);
+    expect(blocked.allowed).toBe(false);
+    expect(allowed.allowed).toBe(true);
   });
 });
