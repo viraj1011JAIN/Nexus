@@ -116,19 +116,25 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         // Handle presence sync (initial state + updates)
         channel.on("presence", { event: "sync" }, () => {
           const state = channel.presenceState();
+          const seen = new Set<string>();
           const users: PresenceUser[] = [];
 
-          // Aggregate all users from presence state
+          // Each key in presenceState is the Clerk user ID (set via config.presence.key).
+          // state[key] is an array — one entry per open connection (tab) for that user.
+          // Take only presences[0] to avoid duplicate userId entries when a user has
+          // multiple tabs open.
           Object.keys(state).forEach((key) => {
-            const presences = state[key];
-            presences.forEach((presence: any) => {
-              users.push({
-                userId: presence.userId,
-                userName: presence.userName,
-                userAvatar: presence.userAvatar,
-                joinedAt: presence.joinedAt,
-                color: presence.color,
-              });
+            const presence = state[key][0] as any;
+            if (!presence) return;
+            const uid: string = presence.userId ?? key;
+            if (seen.has(uid)) return; // safety-net dedup
+            seen.add(uid);
+            users.push({
+              userId: uid,
+              userName: presence.userName ?? "Anonymous",
+              userAvatar: presence.userAvatar ?? "",
+              joinedAt: presence.joinedAt ?? new Date().toISOString(),
+              color: presence.color ?? getUserColor(uid),
             });
           });
 

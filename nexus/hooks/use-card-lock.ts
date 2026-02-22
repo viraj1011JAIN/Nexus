@@ -85,9 +85,8 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
         userAvatar: user.imageUrl,
         lockedAt: new Date().toISOString(),
       });
-      console.log(`🔒 Locked card: ${cardId}`);
-    } catch (error) {
-      console.error("Failed to lock card:", error);
+    } catch {
+      // track failed — ignore silently
     } finally {
       setIsLocking(false);
     }
@@ -98,11 +97,9 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
     if (!channel || !cardId) return;
 
     try {
-      // Untrack removes our presence entry
       await channel.untrack();
-      console.log(`🔓 Unlocked card: ${cardId}`);
-    } catch (error) {
-      console.error("Failed to unlock card:", error);
+    } catch {
+      // untrack failed — ignore silently
     }
   }, [channel, cardId]);
 
@@ -130,20 +127,18 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
           const state = newChannel.presenceState();
           const locks = new Map<string, CardLockState>();
 
-          // Aggregate all card locks from presence state
+          // Take only presences[0] per key (= one entry per user, deduplicates multi-tab)
           Object.keys(state).forEach((key) => {
-            const presences = state[key];
-            presences.forEach((presence: any) => {
-              if (presence.editingCardId) {
-                locks.set(presence.editingCardId, {
-                  cardId: presence.editingCardId,
-                  userId: presence.userId,
-                  userName: presence.userName,
-                  userAvatar: presence.userAvatar,
-                  lockedAt: presence.lockedAt,
-                });
-              }
-            });
+            const presence = state[key][0] as any;
+            if (presence?.editingCardId) {
+              locks.set(presence.editingCardId, {
+                cardId: presence.editingCardId,
+                userId: presence.userId,
+                userName: presence.userName,
+                userAvatar: presence.userAvatar,
+                lockedAt: presence.lockedAt,
+              });
+            }
           });
 
           setCardLocks(locks);
@@ -153,13 +148,12 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
         await newChannel.subscribe(async (status) => {
           if (status === "SUBSCRIBED") {
             setChannel(newChannel);
-            console.log(`✅ Card lock tracking enabled for board: ${boardId}`);
           } else if (status === "CHANNEL_ERROR") {
-            console.error(`❌ Card lock tracking failed for board: ${boardId}`);
+            // error stored in hook state if needed
           }
         });
-      } catch (error) {
-        console.error("Card lock setup error:", error);
+      } catch (err) {
+        // setup failed — channel unavailable
       }
     };
 
@@ -172,7 +166,7 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
         supabase.removeChannel(newChannel);
         setChannel(null);
         setCardLocks(new Map());
-        console.log(`🔌 Card lock tracking disabled for board: ${boardId}`);
+      }
       }
     };
   }, [boardId, enabled, user]);

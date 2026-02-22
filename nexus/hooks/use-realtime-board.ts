@@ -303,7 +303,6 @@ export function useRealtimeBoard({
           });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
-        console.error("Real-time setup error:", err);
       }
     };
 
@@ -318,7 +317,6 @@ export function useRealtimeBoard({
       if (channel && supabase) {
         supabase.removeChannel(channel);
         setIsConnected(false);
-        console.log(`🔌 Disconnected from board: ${boardId}`);
       }
     };
   }, [

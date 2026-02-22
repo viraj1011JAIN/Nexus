@@ -33,7 +33,7 @@ export function useRealtimeAnalytics(boardId: string, orgId: string) {
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           setIsConnected(true);
-          console.log(`📊 Analytics real-time connected: ${boardId}`);
+
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setIsConnected(false);
         }
