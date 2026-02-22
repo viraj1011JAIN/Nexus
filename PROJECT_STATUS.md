@@ -148,7 +148,7 @@
 - Quick Actions and Navigation sections
 - Recent items: localStorage, 5 most recent
 - Priority badges on card results
-- `command-palette-enhanced.tsx` also exists in `/components` — **not imported anywhere, unused**
+
 
 ### Performance Utilities
 - `LazyLoad` component (Intersection Observer)
@@ -213,8 +213,13 @@
 ## Test Coverage — Actual Numbers
 
 **Test files:**
-- `__tests__/unit/action-protection.test.ts`
-- `__tests__/integration/server-actions.test.ts`
+- `__tests__/unit/action-protection.test.ts` — 15 test cases
+- `__tests__/integration/server-actions.test.ts` — 19 test cases
+- **Total: 34 test cases**
+
+**What they test:** Both files exclusively exercise `protectDemoMode` and `isDemoOrganization` from `lib/action-protection.ts`. The integration file mocks Clerk `auth()` and verifies the demo-mode guard blocks writes. No other server actions, hooks, or library code is tested.
+
+**Coverage scope:** `jest.config.ts` instruments the entire source tree. The report tracks all 61 files across 20 packages including `lib/tenant-context.ts`, `lib/dal.ts`, `lib/create-audit-log.ts`, all server actions, all hooks, and all components — those files simply have 0 hits.
 
 **Coverage from last run (coverage/clover.xml):**
 
@@ -300,13 +305,7 @@ Jest + Testing Library are configured and runnable. No E2E tests. No visual regr
 | `/api/tenor` | API Route | GIF search proxy (Giphy/Klipy) |
 | `/api/audit-logs` | API Route | |
 
-### Notable File Duplicates (not cleaning up, just noting)
-- `components/billing-client.tsx`, `billing-client-original.tsx`, `billing-client-redesign.tsx`
-- `components/board-list.tsx`, `board-list-original.tsx`, `board-list-redesign.tsx`
-- `app/settings/page.tsx`, `page-original.tsx`, `page-redesign.tsx`
-- `components/layout/sidebar.tsx`, `sidebar-original.tsx`, `sidebar-redesign.tsx`
-- `components/modals/card-modal/index.tsx`, `index-backup.tsx`, `index-modern.tsx`, `index-redesign.tsx`, `index-redesigned.tsx`
-- `components/command-palette.tsx`, `command-palette-enhanced.tsx` (enhanced is unused)
+
 
 ---
 
@@ -341,7 +340,7 @@ Jest + Testing Library are configured and runnable. No E2E tests. No visual regr
 | Real-time board sync | 100% | |
 | Presence + card locking | 100% | |
 | Sentry + error boundaries | 100% | |
-| Command palette | 100% | `command-palette-enhanced.tsx` exists but unused |
+| Command palette | 100% | |
 | Mobile responsive | 100% | |
 | PWA manifest | 90% | Icons referenced but not present |
 | Board backgrounds | 0% | Schema only, no UI |
