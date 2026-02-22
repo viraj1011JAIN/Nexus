@@ -421,14 +421,21 @@ Create a `.env.local` file in the root directory:
 
 ```bash
 # Database
+# App role (RLS enforced) — used for all normal queries
 DATABASE_URL="postgresql://..."
 DIRECT_URL="postgresql://..."
+# Service role (bypasses RLS) — used only for system-level ops (provisioning)
+SYSTEM_DATABASE_URL="postgresql://..."
 
 # Authentication (Clerk)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 CLERK_SECRET_KEY="sk_test_..."
 NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
 NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
+
+# Supabase (for Realtime + Presence)
+NEXT_PUBLIC_SUPABASE_URL="https://<project>.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
 
 # Payments (Stripe)
 STRIPE_API_KEY="sk_test_..."
@@ -442,6 +449,9 @@ UNSPLASH_ACCESS_KEY="..."
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NODE_ENV="development"
 
+# Demo workspace (read-only org for unauthenticated previews)
+DEMO_ORG_ID="demo-org-id"
+
 # Monitoring
 NEXT_PUBLIC_SENTRY_DSN="..."
 NEXT_PUBLIC_POSTHOG_KEY="..."
@@ -451,9 +461,36 @@ NEXT_PUBLIC_POSTHOG_KEY="..."
 <summary><b>🔑 How to Get API Keys</b></summary>
 
 1. **Supabase**: Sign up at [supabase.com](https://supabase.com) → Create project → Copy connection string
+   - `DATABASE_URL` — connection pooler URL (Transaction mode, port 6543)
+   - `DIRECT_URL` — direct connection URL (port 5432, used by Prisma migrations)
+   - `SYSTEM_DATABASE_URL` — same direct URL but with the **service role** key instead of anon — used only for tenant provisioning (bypasses RLS)
+   - `NEXT_PUBLIC_SUPABASE_URL` — Project Settings → API → Project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Project Settings → API → anon/public key
 2. **Clerk**: Sign up at [clerk.com](https://clerk.com) → Create application → Copy API keys
 3. **Stripe**: Sign up at [stripe.com](https://stripe.com) → Developers → API keys
 4. **Unsplash**: Register at [unsplash.com/developers](https://unsplash.com/developers) → Create app
+
+</details>
+
+<details>
+<summary><b>⚡ Enable Supabase Realtime (presence + live board updates)</b></summary>
+
+Nexus uses Clerk JWTs to authenticate Supabase Realtime channels. One dashboard step is required:
+
+1. Open your **Clerk Dashboard** → **JWT Templates** → **New template**
+2. Name it exactly **`supabase`** (case-sensitive)
+3. Set the **Signing algorithm** to `HS256`
+4. Set the **Signing key** to your Supabase project's **JWT Secret**
+   (Supabase Dashboard → Project Settings → API → JWT Secret)
+5. Add this claim in the template body:
+   ```json
+   {
+     "org_id": "{{org.id}}"
+   }
+   ```
+6. Save. No code change needed — the app detects the template automatically.
+
+> **Without this step:** Realtime still works (presence channels are isolated by org ID in the channel name), but Supabase RLS policies cannot verify the JWT claim. All board data is still protected by the app-level tenant context.
 
 </details>
 
