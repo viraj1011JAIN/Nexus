@@ -52,13 +52,16 @@ export function OnlineUsers({ users, totalOnline, isTracking }: OnlineUsersProps
                     style={{ borderColor: user.color }}
                   >
                     <AvatarImage src={user.userAvatar} alt={user.userName} />
-                    <AvatarFallback style={{ backgroundColor: user.color + "20" }}>
-                      {user.userName[0]?.toUpperCase()}
+                    <AvatarFallback
+                      style={{ backgroundColor: user.color + "33", color: user.color }}
+                      className="text-xs font-semibold"
+                    >
+                      {user.userName?.[0]?.toUpperCase() ?? "?"}
                     </AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="font-medium">{user.userName}</p>
+                  <p className="font-medium">{user.userName ?? "Anonymous"}</p>
                   <p className="text-xs text-gray-500">Viewing now</p>
                 </TooltipContent>
               </Tooltip>

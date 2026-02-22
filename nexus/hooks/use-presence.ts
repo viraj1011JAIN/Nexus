@@ -183,13 +183,11 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         setOnlineUsers([]);
       }
     };
-  }, [boardId, enabled, user, getUserColor]);
-
-  // Filter out current user from online users list
-  const otherUsers = onlineUsers.filter((u) => u.userId !== user?.id);
+  }, [boardId, orgId, enabled, user, getUserColor]);
 
   return {
-    onlineUsers: otherUsers,
+    // All viewers including self — counted and displayed consistently
+    onlineUsers,
     currentUser: onlineUsers.find((u) => u.userId === user?.id),
     totalOnline: onlineUsers.length,
     isTracking,
