@@ -29,6 +29,14 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
           include: {
             cards: {
               orderBy: { order: "asc" },
+              include: {
+                checklists: {
+                  include: {
+                    items: { select: { id: true, isComplete: true } },
+                  },
+                },
+                _count: { select: { dependencies: true } },
+              },
             },
           },
         },

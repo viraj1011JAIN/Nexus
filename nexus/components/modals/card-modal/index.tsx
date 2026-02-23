@@ -52,17 +52,16 @@ import { LabelManager, CardLabels } from "@/components/label-manager";
 import { AssigneePicker, CardAssignee } from "@/components/assignee-picker";
 import { SmartDueDate } from "@/components/smart-due-date";
 import { RichComments, type Comment } from "@/components/rich-comments";
-import { FileAttachment } from "@/components/board/file-attachment";
 import { CardCoverPicker } from "@/components/board/card-cover-picker";
-import { ChecklistPanel } from "@/components/board/checklist-panel";
 import { TimeTrackingPanel } from "@/components/board/time-tracking-panel";
-import { DependencyPanel } from "@/components/board/dependency-panel";
+import { AttachmentsTab } from "./attachments";
+import { ChecklistsTab } from "./checklists";
+import { DependenciesTab } from "./dependencies";
 import { CustomFieldsPanel } from "@/components/board/custom-fields-panel";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";
 import { getOrganizationMembers } from "@/actions/assignee-actions";
-import { getCardAttachments, type AttachmentDto } from "@/actions/attachment-actions";
-import { getChecklists } from "@/actions/checklist-actions";
+
 import { 
   updateCardPriority, 
   setDueDate, 
@@ -117,8 +116,7 @@ export const CardModal = () => {
   const [cardLabels, setCardLabels] = useState<CardLabel[]>([]);
   const [orgMembers, setOrgMembers] = useState<Array<{ id: string; name: string; imageUrl: string | null; email: string }>>([]);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [attachments, setAttachments] = useState<AttachmentDto[]>([]);
-  const [checklists, setChecklists] = useState<Parameters<typeof ChecklistPanel>[0]["initialChecklists"]>([]);
+  const [attachmentCount, setAttachmentCount] = useState(0);
   
   const { user } = useUser();
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
@@ -133,19 +131,15 @@ export const CardModal = () => {
           setCharCount(card.description?.length || 0);
           
           if (organizationId) {
-            const [labels, cardLabelsList, members, attachmentsResult, checklistsResult] = await Promise.all([
+            const [labels, cardLabelsList, members] = await Promise.all([
               getOrganizationLabels(),
               getCardLabels(id),
               getOrganizationMembers(),
-              getCardAttachments(id),
-              getChecklists(id),
             ]);
             
             setOrgLabels(labels);
             setCardLabels(cardLabelsList);
             setOrgMembers(members);
-            if (attachmentsResult.data) setAttachments(attachmentsResult.data);
-            if (checklistsResult.data) setChecklists(checklistsResult.data as unknown as Parameters<typeof ChecklistPanel>[0]["initialChecklists"]);
           }
         }
 
@@ -697,9 +691,9 @@ export const CardModal = () => {
                   >
                     <Paperclip className="h-4 w-4 mr-2" />
                     Files
-                    {attachments.length > 0 && (
+                    {attachmentCount > 0 && (
                       <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                        {attachments.length}
+                        {attachmentCount}
                       </Badge>
                     )}
                   </TabsTrigger>
@@ -851,13 +845,10 @@ export const CardModal = () => {
                       transition={{ duration: 0.2 }}
                     >
                       {cardData && (
-                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load attachments.</p>}>
-                          <FileAttachment
-                            cardId={cardData.id}
-                            boardId={boardId}
-                            initialAttachments={attachments}
-                          />
-                        </ErrorBoundary>
+                        <AttachmentsTab
+                          cardId={cardData.id}
+                          boardId={boardId}
+                        />
                       )}
                     </motion.div>
                   </AnimatePresence>
@@ -874,13 +865,10 @@ export const CardModal = () => {
                       transition={{ duration: 0.2 }}
                     >
                       {cardData && (
-                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load checklists.</p>}>
-                          <ChecklistPanel
-                            cardId={cardData.id}
-                            boardId={boardId}
-                            initialChecklists={checklists}
-                          />
-                        </ErrorBoundary>
+                        <ChecklistsTab
+                          cardId={cardData.id}
+                          boardId={boardId}
+                        />
                       )}
                     </motion.div>
                   </AnimatePresence>
@@ -919,9 +907,10 @@ export const CardModal = () => {
                       transition={{ duration: 0.2 }}
                     >
                       {cardData && (
-                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load dependencies.</p>}>
-                          <DependencyPanel cardId={cardData.id} />
-                        </ErrorBoundary>
+                        <DependenciesTab
+                          cardId={cardData.id}
+                          boardId={boardId}
+                        />
                       )}
                     </motion.div>
                   </AnimatePresence>

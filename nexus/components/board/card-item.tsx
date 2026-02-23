@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
-import { MoreHorizontal, Trash2, Clock } from "lucide-react"; 
+import { MoreHorizontal, Trash2, Clock, Lock, CheckSquare } from "lucide-react"; 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { deleteCard } from "@/actions/delete-card"; 
@@ -20,7 +20,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface CardItemProps {
-  data: Card;
+  data: Card & {
+    checklists?: Array<{ items: Array<{ id: string; isComplete: boolean }> }>;
+    _count?: { dependencies?: number };
+  };
   index: number;
 }
 
@@ -134,7 +137,43 @@ export const CardItem = ({
               <span>{data.storyPoints}pt</span>
             </div>
           )}
+
+          {/* Dependency lock icon — card is blocked by others */}
+          {(data._count?.dependencies ?? 0) > 0 && (
+            <div
+              title={`Blocked by ${data._count!.dependencies} card${data._count!.dependencies === 1 ? "" : "s"}`}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+            >
+              <Lock className="w-3 h-3" />
+              <span>{data._count!.dependencies}</span>
+            </div>
+          )}
         </div>
+
+        {/* Checklist Progress Bar */}
+        {(() => {
+          if (!data.checklists || data.checklists.length === 0) return null;
+          const allItems = data.checklists.flatMap((cl) => cl.items);
+          if (allItems.length === 0) return null;
+          const done = allItems.filter((i) => i.isComplete).length;
+          const total = allItems.length;
+          const pct = Math.round((done / total) * 100);
+          return (
+            <div className="flex items-center gap-1.5 w-full">
+              <CheckSquare className="w-3 h-3 text-muted-foreground shrink-0" />
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    pct === 100 ? "bg-emerald-500" : "bg-blue-400"
+                  )}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground tabular-nums">{done}/{total}</span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* 3 DOTS MENU (Delete Only) */}

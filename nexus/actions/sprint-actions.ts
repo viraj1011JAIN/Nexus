@@ -90,6 +90,40 @@ export async function getActiveSprint(boardId: string) {
   }
 }
 
+export async function getBacklogCards(boardId: string) {
+  try {
+    const ctx = await getTenantContext();
+    await requireRole("MEMBER", ctx);
+
+    const board = await db.board.findFirst({
+      where: { id: boardId, orgId: ctx.orgId },
+    });
+    if (!board) return { error: "Board not found." };
+
+    const cards = await db.card.findMany({
+      where: {
+        sprintId: null,
+        list: { boardId },
+      },
+      select: {
+        id: true,
+        title: true,
+        storyPoints: true,
+        priority: true,
+        dueDate: true,
+        order: true,
+        list: { select: { title: true, id: true } },
+      },
+      orderBy: [{ list: { order: "asc" } }, { order: "asc" }],
+    });
+
+    return { data: cards };
+  } catch (e) {
+    console.error("[GET_BACKLOG_CARDS]", e);
+    return { error: "Failed to load backlog." };
+  }
+}
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export async function createSprint(boardId: string, name: string, goal?: string, startDate?: string, endDate?: string) {

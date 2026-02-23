@@ -13,6 +13,8 @@ import {
   Target,
   Loader2,
   BarChart2,
+  Inbox,
+  MoveRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,10 +39,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   getSprintsForBoard,
+  getBacklogCards,
   createSprint,
   startSprint,
   completeSprint,
   deleteSprint,
+  addCardToSprint,
 } from "@/actions/sprint-actions";
 import { format, differenceInDays } from "date-fns";
 import {
@@ -75,6 +79,16 @@ interface Sprint {
   completedAt?: Date | string | null;
   cards: SprintCard[];
   _count?: { cards: number };
+}
+
+interface BacklogCard {
+  id: string;
+  title: string;
+  storyPoints?: number | null;
+  priority?: string | null;
+  dueDate?: Date | string | null;
+  order: number;
+  list: { title: string; id: string } | null;
 }
 
 // ─── Status Helpers ───────────────────────────────────────────────────────────
@@ -306,8 +320,11 @@ function SprintCard({
 export function SprintPanel({ boardId }: { boardId: string }) {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [backlogCards, setBacklogCards] = useState<BacklogCard[]>([]);
+  const [backlogOpen, setBacklogOpen] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [movingCard, setMovingCard] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -315,12 +332,24 @@ export function SprintPanel({ boardId }: { boardId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await getSprintsForBoard(boardId);
-    if (result.data) setSprints(result.data as Sprint[]);
+    const [sprintsResult, backlogResult] = await Promise.all([
+      getSprintsForBoard(boardId),
+      getBacklogCards(boardId),
+    ]);
+    if (sprintsResult.data) setSprints(sprintsResult.data as Sprint[]);
+    if (backlogResult.data) setBacklogCards(backlogResult.data as BacklogCard[]);
     setLoading(false);
   }, [boardId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleMoveToSprint = async (cardId: string, sprintId: string) => {
+    setMovingCard(cardId);
+    const result = await addCardToSprint(cardId, sprintId);
+    if (result.error) { toast.error(result.error); }
+    else { toast.success("Card moved to sprint!"); await load(); }
+    setMovingCard(null);
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -407,6 +436,78 @@ export function SprintPanel({ boardId }: { boardId: string }) {
       {!loading && (
         <ScrollArea className="pr-1">
           <div className="space-y-3">
+            {/* ── Backlog Section ─────────────────────────────────────── */}
+            <Collapsible open={backlogOpen} onOpenChange={setBacklogOpen}>
+              <div className="flex items-center justify-between rounded-lg border border-dashed border-slate-200 dark:border-slate-700 px-3 py-2">
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                    {backlogOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <Inbox className="h-4 w-4 text-slate-400" />
+                    Backlog
+                    <span className="ml-1 text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-full">
+                      {backlogCards.length}
+                    </span>
+                  </button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent>
+                {backlogCards.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground/60">
+                    <p className="text-xs">No unassigned cards. All cards are in sprints.</p>
+                  </div>
+                ) : (
+                  <div className="mt-1 space-y-1 pl-2">
+                    {backlogCards.map((card) => {
+                      const planningsprints = sprints.filter((s) => s.status === "PLANNING" || s.status === "ACTIVE");
+                      return (
+                        <div
+                          key={card.id}
+                          className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors text-sm"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="block truncate text-sm font-medium text-card-foreground">{card.title}</span>
+                            {card.list && (
+                              <span className="text-xs text-muted-foreground">{card.list.title}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {planningsprints.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                {planningsprints.slice(0, 3).map((s) => (
+                                  <Button
+                                    key={s.id}
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-xs gap-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    disabled={movingCard === card.id}
+                                    onClick={() => handleMoveToSprint(card.id, s.id)}
+                                  >
+                                    {movingCard === card.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <MoveRight className="h-3 w-3" />
+                                    )}
+                                    {s.name}
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                            {card.storyPoints != null && (
+                              <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                                {card.storyPoints}pt
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+
+            {(grouped.ACTIVE.length > 0 || grouped.PLANNING.length > 0) && <Separator />}
+
             {grouped.ACTIVE.map((s) => (
               <SprintCard key={s.id} sprint={s} onStart={handleStart} onComplete={handleComplete} onDelete={handleDelete} canStartSprint={!hasActiveSprint} />
             ))}
