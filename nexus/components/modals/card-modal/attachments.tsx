@@ -38,7 +38,14 @@ export function AttachmentsTab({ cardId, boardId, onCountChange }: AttachmentsTa
         if (!res.ok) throw new Error("Failed to load attachments");
         const data = await res.json();
         if (!cancelled) {
-          const list: AttachmentDto[] = data.attachments ?? [];
+          // JSON serialization turns Date objects into ISO strings; convert back
+          // so formatDistanceToNow and any date comparisons receive real Date objects.
+          const list: AttachmentDto[] = (data.attachments ?? []).map(
+            (a: Omit<AttachmentDto, "createdAt"> & { createdAt: string }) => ({
+              ...a,
+              createdAt: new Date(a.createdAt),
+            })
+          );
           setAttachments(list);
           setLoading(false);
         }
