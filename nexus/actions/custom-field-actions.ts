@@ -112,6 +112,40 @@ export async function createCustomField(
   }
 }
 
+export async function updateCustomField(
+  fieldId: string,
+  data: { name?: string; isRequired?: boolean; options?: string[] }
+) {
+  try {
+    const ctx = await getTenantContext();
+    await requireRole("ADMIN", ctx);
+    if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
+
+    const existing = await db.customField.findFirst({
+      where: { id: fieldId, orgId: ctx.orgId },
+    });
+    if (!existing) return { error: "Field not found." };
+
+    const field = await db.customField.update({
+      where: { id: fieldId },
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.isRequired !== undefined ? { isRequired: data.isRequired } : {}),
+        ...(data.options !== undefined ? { options: data.options } : {}),
+      },
+    });
+
+    if (existing.boardId) {
+      revalidatePath(`/board/${existing.boardId}`);
+    }
+
+    return { data: field };
+  } catch (e) {
+    console.error("[UPDATE_CUSTOM_FIELD]", e);
+    return { error: "Failed to update custom field." };
+  }
+}
+
 export async function deleteCustomField(fieldId: string) {
   try {
     const ctx = await getTenantContext();

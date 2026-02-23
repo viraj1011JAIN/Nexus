@@ -3,7 +3,8 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
-import { MoreHorizontal, Trash2, Clock, Lock, CheckSquare } from "lucide-react"; 
+import { MoreHorizontal, Trash2, Clock, Lock, CheckSquare, Check } from "lucide-react";
+import { useBulkSelection } from "@/lib/bulk-selection-context";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { deleteCard } from "@/actions/delete-card"; 
@@ -31,8 +32,10 @@ export const CardItem = ({
   data,
   index,
 }: CardItemProps) => {
-  const params = useParams(); 
+  const params = useParams();
   const cardModal = useCardModal();
+  const { isBulkMode, selectedIds, toggleCard } = useBulkSelection();
+  const isSelected = selectedIds.includes(data.id);
 
   const {
     attributes,
@@ -81,9 +84,30 @@ export const CardItem = ({
         ease: [0.4, 0, 0.2, 1],
         delay: index * 0.05
       }}
-      onClick={() => cardModal.onOpen(data.id)}
-      className="group relative text-sm bg-muted hover:bg-accent rounded-lg hover:shadow-md cursor-pointer transition-all duration-200 touch-manipulation min-h-20 overflow-hidden"
+      onClick={() => {
+        if (isBulkMode) { toggleCard(data.id); return; }
+        cardModal.onOpen(data.id);
+      }}
+      className={cn(
+        "group relative text-sm bg-muted hover:bg-accent rounded-lg hover:shadow-md cursor-pointer transition-all duration-200 touch-manipulation min-h-20 overflow-hidden",
+        isSelected && "ring-2 ring-primary ring-offset-1"
+      )}
     >
+      {/* Bulk selection checkbox (top-left overlay) */}
+      {(isBulkMode || isSelected) && (
+        <div
+          className={cn(
+            "absolute top-1.5 left-1.5 z-20 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",
+            isSelected
+              ? "bg-primary border-primary"
+              : "bg-white/90 border-slate-300 group-hover:border-primary"
+          )}
+          onClick={(e) => { e.stopPropagation(); toggleCard(data.id); }}
+        >
+          {isSelected && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
+        </div>
+      )}
+
       {/* Cover Image / Color */}
       {(data.coverImageUrl || data.coverColor) && (
         <div

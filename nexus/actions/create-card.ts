@@ -12,6 +12,7 @@ import { generateNextOrder } from "@/lib/lexorank";
 import { logger } from "@/lib/logger";
 import { db } from "@/lib/db";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
+import { emitCardEvent } from "@/lib/event-bus";
 
 type InputType = z.infer<typeof CreateCard>;
 type ReturnType = ActionState<InputType, Card>;
@@ -57,6 +58,13 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     });
 
     revalidatePath(`/board/${boardId}`);
+
+    // Fire automations + webhooks (TASK-019/020) — fire-and-forget, never throws
+    void emitCardEvent(
+      { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
+      { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
+    ).catch(() => {});
+
     return { data: card };
   } catch (error) {
     logger.error("Failed to create card", { error, listId, boardId });

@@ -15,6 +15,8 @@ import {
   Trash2,
   Target,
   Layers,
+  LayoutList,
+  GanttChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +53,7 @@ import {
   createEpic,
   updateEpic,
 } from "@/actions/roadmap-actions";
-import { format, differenceInDays, isPast } from "date-fns";
+import { format, differenceInDays, isPast, startOfMonth, addMonths, eachMonthOfInterval, min as dateMin, max as dateMax } from "date-fns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,6 +137,162 @@ function EpicBar({ epic }: { epic: EpicData }) {
       <span className="text-xs text-muted-foreground w-16 text-right">
         {totalPoints > 0 ? `${totalPoints}pts` : `${total} cards`}
       </span>
+    </div>
+  );
+}
+
+// ─── Gantt / Timeline View (TASK-023) ─────────────────────────────────────────
+
+/**
+ * Renders a horizontal Gantt chart for all initiatives and their epics.
+ * Uses pure CSS percentage widths / left offsets — no external chart library.
+ */
+function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
+  // Collect all dates to derive the visible range
+  const allDates: Date[] = [];
+  for (const init of initiatives) {
+    if (init.startDate) allDates.push(new Date(init.startDate));
+    if (init.endDate)   allDates.push(new Date(init.endDate));
+    for (const epic of init.epics) {
+      if (epic.startDate) allDates.push(new Date(epic.startDate));
+      if (epic.dueDate)   allDates.push(new Date(epic.dueDate));
+    }
+  }
+
+  if (allDates.length === 0) {
+    return (
+      <div className="py-12 text-center text-muted-foreground text-sm">
+        No date ranges set on initiatives. Add start/end dates to see the Gantt chart.
+      </div>
+    );
+  }
+
+  // Expand view by one month on each side for breathing room
+  const rangeStart = startOfMonth(addMonths(dateMin(allDates), -1));
+  const rangeEnd   = startOfMonth(addMonths(dateMax(allDates),  1));
+  const totalDays  = differenceInDays(rangeEnd, rangeStart) || 1;
+
+  const months = eachMonthOfInterval({ start: rangeStart, end: rangeEnd });
+
+  /** Convert a date to a left-offset % */
+  const toPct = (d: Date | string) =>
+    Math.max(0, Math.min(100, (differenceInDays(new Date(d), rangeStart) / totalDays) * 100));
+
+  /** Convert a duration (days) to a width % */
+  const toWidthPct = (start: Date | string, end: Date | string) => {
+    const days = differenceInDays(new Date(end), new Date(start));
+    return Math.max(0.5, (days / totalDays) * 100);
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+      {/* Month header */}
+      <div className="flex border-b bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10 min-w-max">
+        {/* Label column */}
+        <div className="w-56 flex-shrink-0 border-r px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Initiative / Epic
+        </div>
+        {/* Month columns */}
+        <div className="flex-1 relative flex min-w-[600px]">
+          {months.map((m) => {
+            const leftPct = toPct(m);
+            const nextMonth = addMonths(m, 1);
+            const widthPct = Math.max(0, Math.min(100 - leftPct, toWidthPct(m, nextMonth)));
+            return (
+              <div
+                key={m.toISOString()}
+                className="absolute top-0 bottom-0 border-r border-slate-200 dark:border-slate-700 flex items-center px-2"
+                style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+              >
+                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                  {format(m, "MMM yyyy")}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Rows */}
+      <div className="min-w-max">
+        {initiatives.map((init) => {
+          const hasRange = init.startDate && init.endDate;
+          const statusInfo = INITIATIVE_STATUS[init.status as keyof typeof INITIATIVE_STATUS] ?? INITIATIVE_STATUS.ACTIVE;
+          const StatusIcon = statusInfo.icon;
+
+          return (
+            <div key={init.id} className="border-b last:border-0">
+              {/* Initiative row */}
+              <div className="flex items-center h-12 hover:bg-muted/20 transition-colors">
+                <div className="w-56 flex-shrink-0 border-r px-3 flex items-center gap-2 overflow-hidden">
+                  <StatusIcon className={cn("h-3.5 w-3.5 flex-shrink-0", statusInfo.className)} />
+                  <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: init.color ?? "#6366f1" }} />
+                  <span className="text-sm font-medium truncate">{init.title}</span>
+                </div>
+                <div className="flex-1 relative h-full flex items-center min-w-[600px] px-1">
+                  {/* Today marker */}
+                  <div
+                    className="absolute top-0 bottom-0 w-px bg-rose-400/60 z-10"
+                    style={{ left: `${toPct(new Date())}%` }}
+                    title="Today"
+                  />
+                  {/* Initiative bar */}
+                  {hasRange && (
+                    <div
+                      className="absolute h-6 rounded-full flex items-center px-2 overflow-hidden"
+                      style={{
+                        left: `${toPct(init.startDate!)}%`,
+                        width: `${toWidthPct(init.startDate!, init.endDate!)}%`,
+                        backgroundColor: init.color ?? "#6366f1",
+                        opacity: 0.85,
+                      }}
+                      title={`${format(new Date(init.startDate!), "MMM d")} → ${format(new Date(init.endDate!), "MMM d")}`}
+                    >
+                      <span className="text-[10px] text-white font-semibold truncate select-none">
+                        {init.title}
+                      </span>
+                    </div>
+                  )}
+                  {!hasRange && (
+                    <span className="text-[11px] text-muted-foreground/50 ml-2 italic">No dates</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Epic sub-rows */}
+              {init.epics.map((epic) => {
+                const epicHasRange = epic.startDate && epic.dueDate;
+                const epicStatus = EPIC_STATUS[epic.status as keyof typeof EPIC_STATUS] ?? EPIC_STATUS.BACKLOG;
+                return (
+                  <div key={epic.id} className="flex items-center h-9 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-muted/10 transition-colors">
+                    <div className="w-56 flex-shrink-0 border-r px-3 pl-8 flex items-center gap-2 overflow-hidden">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: epic.color ?? "#94a3b8" }} />
+                      <span className="text-xs text-muted-foreground truncate">{epic.title}</span>
+                      <Badge className={cn("text-[10px] ml-auto flex-shrink-0", epicStatus.className)}>
+                        {epicStatus.label}
+                      </Badge>
+                    </div>
+                    <div className="flex-1 relative h-full flex items-center min-w-[600px] px-1">
+                      {epicHasRange && (
+                        <div
+                          className="absolute h-4 rounded-full"
+                          style={{
+                            left: `${toPct(epic.startDate!)}%`,
+                            width: `${toWidthPct(epic.startDate!, epic.dueDate!)}%`,
+                            backgroundColor: epic.color ?? "#94a3b8",
+                            opacity: 0.7,
+                          }}
+                          title={`${epic.title}: ${format(new Date(epic.startDate!), "MMM d")} → ${format(new Date(epic.dueDate!), "MMM d")}`}
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -246,6 +404,7 @@ function InitiativeRow({
 export function RoadmapClient() {
   const [initiatives, setInitiatives] = useState<InitiativeData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
   const [showCreateInit, setShowCreateInit] = useState(false);
   const [showCreateEpic, setShowCreateEpic] = useState(false);
   const [targetInitiativeId, setTargetInitiativeId] = useState<string | null>(null);
@@ -346,9 +505,30 @@ export function RoadmapClient() {
             Plan and track long-term goals across initiatives and epics.
           </p>
         </div>
-        <Button onClick={() => setShowCreateInit(true)} className="gap-1">
-          <Plus className="h-4 w-4" /> New Initiative
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-8 px-3 gap-1.5"
+              onClick={() => setViewMode("list")}
+            >
+              <LayoutList className="h-3.5 w-3.5" /> List
+            </Button>
+            <Button
+              variant={viewMode === "gantt" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-8 px-3 gap-1.5 border-l"
+              onClick={() => setViewMode("gantt")}
+            >
+              <GanttChart className="h-3.5 w-3.5" /> Timeline
+            </Button>
+          </div>
+          <Button onClick={() => setShowCreateInit(true)} className="gap-1">
+            <Plus className="h-4 w-4" /> New Initiative
+          </Button>
+        </div>
       </div>
 
       <Separator />
@@ -372,7 +552,11 @@ export function RoadmapClient() {
         </div>
       )}
 
-      {!loading && (
+      {!loading && viewMode === "gantt" && (
+        <GanttView initiatives={initiatives} />
+      )}
+
+      {!loading && viewMode === "list" && (
         <div className="space-y-4">
           {initiatives.map((init) => (
             <InitiativeRow

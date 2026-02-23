@@ -3,6 +3,7 @@
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
+import { emitCardEvent } from "@/lib/event-bus";
 
 interface CardUpdate {
   id: string;
@@ -35,6 +36,14 @@ export async function updateCardOrder(items: CardUpdate[], boardId: string) {
       items.map(({ id, order, listId }) => ({ id, order, listId })),
       boardId
     );
+
+    // Fire automations + webhooks for each moved card (TASK-019/020) — fire-and-forget
+    for (const item of items) {
+      void emitCardEvent(
+        { type: "CARD_MOVED", orgId: ctx.orgId, boardId, cardId: item.id, context: { toListId: item.listId } },
+        { cardId: item.id, cardTitle: item.title, listId: item.listId, boardId, orgId: ctx.orgId }
+      ).catch(() => {});
+    }
 
     return { success: true };
   } catch (error) {
