@@ -77,7 +77,7 @@ jest.mock("@/lib/tenant-context", () => {
 import { createDAL } from "@/lib/dal";
 import { TenantError } from "@/lib/tenant-context";
 import { getTenantContext } from "@/lib/tenant-context";
-import { db } from "@/lib/db";
+import { db, setCurrentOrgId } from "@/lib/db";
 
 // ── Typed mock helpers ───────────────────────────────────────────────────────
 
@@ -126,8 +126,9 @@ beforeEach(() => {
   // Default: the caller belongs to ORG_A
   mockGetTenantContext.mockResolvedValue(callerContext());
 
-  // setCurrentOrgId is a no-op in tests
-  (db as unknown as { setCurrentOrgId: jest.Mock }).setCurrentOrgId?.mockResolvedValue(undefined);
+  // Restore setCurrentOrgId to return a resolved Promise after resetAllMocks() clears it.
+  // It is a named module export (not a property of `db`), so we cast the import directly.
+  (setCurrentOrgId as jest.Mock).mockResolvedValue(undefined);
 });
 
 // ════════════════════════════════════════════════════════════════════════════
