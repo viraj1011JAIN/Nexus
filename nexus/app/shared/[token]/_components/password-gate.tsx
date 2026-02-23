@@ -34,14 +34,16 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
     startTransition(async () => {
       const result = await getSharedBoardData(token, password);
       if (result.error) {
-        // Distinguish password failures from other errors (expired token, server errors, etc.)
-        const isPasswordError =
-          result.error.toLowerCase().includes("password") ||
-          result.error.toLowerCase().includes("invalid");
+        // Use the structured error code (set by getSharedBoardData) to determine message.
+        // Avoid surfacing raw server error text in the UI — log it instead.
+        const isPasswordError = (result as { code?: string }).code === "INVALID_PASSWORD";
+        if (!isPasswordError) {
+          console.error("[PasswordGate] access error:", result.error);
+        }
         setError(
           isPasswordError
             ? "Incorrect password. Please try again."
-            : `Unable to access board: ${result.error}`
+            : "Unable to access board. Please try again or contact support."
         );
         return;
       }
@@ -93,6 +95,7 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter board password"
                 autoFocus
+                autoComplete="current-password"
                 className={error ? "border-destructive focus-visible:ring-destructive" : ""}
                 disabled={isPending}
               />

@@ -48,7 +48,19 @@ export default async function BoardSettingsPage({ params }: BoardSettingsPagePro
   }
   if (!board) notFound();
 
-  const fieldsResult = await getCustomFieldsForBoard(boardId);
+  let fieldsResult: Awaited<ReturnType<typeof getCustomFieldsForBoard>>;
+  try {
+    fieldsResult = await getCustomFieldsForBoard(boardId);
+  } catch {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <p className="text-base font-medium text-destructive">Failed to load custom fields</p>
+          <p className="text-sm text-muted-foreground">Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
+  }
   if (fieldsResult.error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 flex items-center justify-center">

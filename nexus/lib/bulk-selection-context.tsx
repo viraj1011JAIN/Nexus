@@ -8,7 +8,7 @@
  * Consume with useBulkSelection().
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
 interface BulkSelectionState {
   selectedIds: string[];
@@ -25,7 +25,10 @@ const BulkSelectionContext = createContext<BulkSelectionState | null>(null);
 
 export function BulkSelectionProvider({ children }: { children: ReactNode }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isBulkMode, setIsBulkMode] = useState(false);
+  // forceBulkMode captures explicit enter/exit via enterBulkMode/exitBulkMode.
+  // isBulkMode is derived synchronously so there's no render lag.
+  const [forceBulkMode, setForceBulkMode] = useState(false);
+  const isBulkMode = forceBulkMode || selectedIds.size > 0;
 
   const isSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
 
@@ -41,24 +44,18 @@ export function BulkSelectionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Sync bulk mode with selection size via effect (avoids setState-inside-setState)
-  useEffect(() => {
-    setIsBulkMode(selectedIds.size > 0);
-  }, [selectedIds]);
-
   const selectAll = useCallback((ids: string[]) => {
     setSelectedIds(new Set(ids));
-    setIsBulkMode(ids.length > 0);
   }, []);
 
+  // clearSelection deselects all cards but stays in bulk mode (use exitBulkMode to leave).
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
-    setIsBulkMode(false);
   }, []);
 
-  const enterBulkMode = useCallback(() => setIsBulkMode(true), []);
+  const enterBulkMode = useCallback(() => setForceBulkMode(true), []);
   const exitBulkMode = useCallback(() => {
-    setIsBulkMode(false);
+    setForceBulkMode(false);
     setSelectedIds(new Set());
   }, []);
 

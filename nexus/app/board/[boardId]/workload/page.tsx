@@ -54,9 +54,9 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
       },
     });
   } catch (err) {
-    // Only mask genuine "not found" (null return) — rethrow real DB/permission failures
-    // so Next.js error boundary handles them instead of silently 404-ing.
-    console.error("[WorkloadPage] Failed to fetch board:", err);
+    // null returns from findUnique are handled by the if (!board) notFound() guard below;
+    // this catch rethrows unexpected DB/permission errors so Next.js can handle them.
+    console.error("[WorkloadPage] Failed to fetch board:", err instanceof Error ? err.message : String(err));
     throw err;
   }
 
@@ -83,11 +83,11 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
       </div>
 
       {/* Workload view */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <main className="max-w-7xl mx-auto px-6 py-6">
         <ErrorBoundary>
           <WorkloadView boardId={boardId} lists={board.lists} />
         </ErrorBoundary>
-      </div>
+      </main>
     </div>
   );
 }

@@ -64,7 +64,7 @@ export async function runAutomations(event: AutomationEvent): Promise<void> {
     if (automations.length === 0) return;
 
     // Fetch the card once so actions can reference it
-    const card = await db.card.findUnique({
+    let card = await db.card.findUnique({
       where: { id: event.cardId },
       include: {
         list: { select: { id: true, title: true, boardId: true } },
@@ -78,6 +78,16 @@ export async function runAutomations(event: AutomationEvent): Promise<void> {
     // next (e.g. ASSIGN_MEMBER followed by SEND_NOTIFICATION sees the updated assigneeId).
     for (const automation of automations) {
       await evaluateAndExecute(event, card, automation);
+      // Re-fetch card so the next automation in the sequence operates on the latest state
+      const refreshed = await db.card.findUnique({
+        where: { id: event.cardId },
+        include: {
+          list: { select: { id: true, title: true, boardId: true } },
+          labels: { include: { label: true } },
+          checklists: { include: { items: true } },
+        },
+      });
+      if (refreshed) card = refreshed;
     }
   } catch (err) {
     // Never let engine failure surface to the caller
@@ -111,9 +121,10 @@ async function evaluateAndExecute(event: AutomationEvent, card: any, automation:
   try {
     for (const action of actions) {
       await executeAction(action, event, card);
-      // Re-fetch for actions that mutate card state
+      // Re-fetch for actions that mutate card state (including relation changes)
       const mutatingTypes: ActionType[] = [
-        "MOVE_CARD", "SET_PRIORITY", "ASSIGN_MEMBER", "SET_DUE_DATE_OFFSET"
+        "MOVE_CARD", "SET_PRIORITY", "ASSIGN_MEMBER", "SET_DUE_DATE_OFFSET",
+        "ADD_LABEL", "REMOVE_LABEL", "COMPLETE_CHECKLIST",
       ];
       if (mutatingTypes.includes(action.type)) {
         const refreshed = await db.card.findUnique({
@@ -233,7 +244,9 @@ function conditionsPass(conditions: any[], card: any, _event: AutomationEvent): 
       case "contains":
         return typeof cardValue === "string" && cardValue.toLowerCase().includes(String(value).toLowerCase());
       case "not_contains":
-        return typeof cardValue === "string" && !cardValue.toLowerCase().includes(String(value).toLowerCase());
+        // null/undefined or non-string values do NOT contain the substring → true
+        if (typeof cardValue !== "string") return true;
+        return !cardValue.toLowerCase().includes(String(value).toLowerCase());
       case "gt":   return typeof cardValue === "number" && cardValue > Number(value);
       case "lt":   return typeof cardValue === "number" && cardValue < Number(value);
       case "is_null":   return cardValue == null;
@@ -249,6 +262,12 @@ function conditionsPass(conditions: any[], card: any, _event: AutomationEvent): 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function executeAction(action: ActionConfig, event: AutomationEvent, card: any) {
+  // CARD_DELETED automations never reach here (triggerMatches returns false),
+  // but guard defensively: only allow safe side-effect actions when card may not exist.
+  if (event.type === "CARD_DELETED") {
+    const safeTypes: ActionType[] = ["SEND_NOTIFICATION", "POST_COMMENT"];
+    if (!safeTypes.includes(action.type)) return;
+  }
   switch (action.type) {
     case "MOVE_CARD": {
       if (!action.listId) return;
@@ -393,11 +412,10 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Append "|" to place a card last in lexicographic order.
- * This is a simple "push to end" strategy. To prevent unbounded string growth,
- * we cap at a maximum length and reset to a compact timestamp-based rank.
- * For production use, integrate a full LexoRank library (e.g. lexorank npm package)
- * and call LexoRank.max() or similar to compute the successor cleanly.
+ * Append '~' (0x7E, the highest printable ASCII character) to place a card
+ * last in lexicographic order.  To prevent unbounded string growth, we cap at
+ * a maximum length and reset to a compact timestamp-based rank.
+ * For production use, integrate a full LexoRank library.
  */
 function incrementOrder(order: string): string {
   const MAX_ORDER_LENGTH = 32;
@@ -406,6 +424,7 @@ function incrementOrder(order: string): string {
     // with \uFFFF so it always sorts AFTER any printable-ASCII-based order string.
     return "\uFFFF" + Date.now().toString(36);
   }
-  // Append "|" (0x7C) which sorts after all printable ASCII to place the card last.
-  return order + "|";
+  // Append '~' (0x7E) which is the highest printable ASCII character,
+  // ensuring this card sorts last among any standard order strings.
+  return order + "~";
 }

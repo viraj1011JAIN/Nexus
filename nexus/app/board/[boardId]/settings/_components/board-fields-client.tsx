@@ -62,6 +62,8 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  // Track which fields have in-flight toggle-required requests to prevent double-submits
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   // New field form state
   const [newName, setNewName] = useState("");
@@ -114,11 +116,24 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
   };
 
   const handleToggleRequired = async (field: CustomField) => {
-    const result = await updateCustomField(field.id, { isRequired: !field.isRequired });
-    if (result.error) { toast.error(result.error); return; }
-    setFields((prev) =>
-      prev.map((f) => f.id === field.id ? { ...f, isRequired: !f.isRequired } : f)
-    );
+    if (togglingIds.has(field.id)) return;
+    setTogglingIds((prev) => { const next = new Set(prev); next.add(field.id); return next; });
+    try {
+      const result = await updateCustomField(field.id, { isRequired: !field.isRequired });
+      if (result.error) { toast.error(result.error); return; }
+      // Flip using current prev value to avoid stale-closure polarity bugs
+      setFields((prev) =>
+        prev.map((f) => {
+          if (f.id !== field.id) return f;
+          const current = prev.find((p) => p.id === field.id);
+          return { ...f, isRequired: !(current?.isRequired ?? f.isRequired) };
+        })
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update field.");
+    } finally {
+      setTogglingIds((prev) => { const next = new Set(prev); next.delete(field.id); return next; });
+    }
   };
 
   const handleDelete = async (fieldId: string) => {
@@ -130,6 +145,9 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
       toast.success("Field deleted.");
       setFields((prev) => prev.filter((f) => f.id !== fieldId));
       setDeleteTarget(null);
+    } catch (err) {
+      console.error("[BoardFieldsClient] handleDelete threw:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete field.");
     } finally {
       setDeleting(false);
     }
@@ -205,6 +223,7 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label={`Delete "${field.name}" field`}
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={() => setDeleteTarget(field.id)}
                   >
@@ -228,7 +247,7 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Estimate, Customer, Region"
-                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                onKeyDown={(e) => e.key === "Enter" && !saving && handleCreate()}
               />
             </div>
             <div className="space-y-1.5 col-span-2 sm:col-span-1">

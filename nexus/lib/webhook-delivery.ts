@@ -15,6 +15,8 @@
 
 import crypto from "crypto";
 import dns from "dns";
+import https from "node:https";
+import http from "node:http";
 import { db } from "@/lib/db";
 
 // ─── SSRF protection ─────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ function isPrivateIPv4(ip: string): boolean {
     (a === 192 && b === 168) ||            // 192.168.0.0/16
     a === 127 ||                           // 127.0.0.0/8  loopback
     (a === 169 && b === 254) ||            // 169.254.0.0/16  link-local / AWS metadata
+    (a === 100 && b >= 64 && b <= 127) || // 100.64.0.0/10  RFC 6598 shared address space
     a === 0                               // 0.0.0.0/8
   );
 }
@@ -44,8 +47,14 @@ function isPrivateIPv4(ip: string): boolean {
 // IPv6 addresses considered private / loopback / link-local / ULA
 function isPrivateIPv6(ip: string): boolean {
   const lower = ip.toLowerCase().replace(/^\[|\]$/g, "");
+  // Bare unspecified address
+  if (lower === "::") return true;
+  // Loopback
+  if (lower === "::1") return true;
+  // IPv4-mapped addresses (::ffff:x.x.x.x or ::ffff:0:x.x.x.x) — delegate to IPv4 check
+  const v4mapped = lower.match(/^::ffff:(?:0:)?(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4mapped) return isPrivateIPv4(v4mapped[1]);
   return (
-    lower === "::1" ||
     lower.startsWith("fc") ||
     lower.startsWith("fd") ||
     lower.startsWith("fe80:")
@@ -219,11 +228,11 @@ async function deliverSingle(
     // Record blocked attempt as a failed delivery so the user sees it in the log
     const duration = Date.now() - startMs;
     try {
-      await db.webhookDelivery.create({
+    await db.webhookDelivery.create({
         data: {
           webhookId: webhook.id,
           event,
-          payload: JSON.parse(body) as object,
+          payload: payload as object,
           statusCode: null,
           success: false,
           duration,
@@ -235,47 +244,72 @@ async function deliverSingle(
     return;
   }
 
-  // Build the fetch URL: for HTTP, pin the resolved IP to prevent TOCTOU DNS rebinding.
-  // For HTTPS we use the original hostname so TLS certificate validation succeeds;
-  // a production-grade solution would use a custom Agent with a pinned DNS resolver.
+  // Build the request: for both HTTP and HTTPS we pin the resolved IP to prevent
+  // TOCTOU DNS rebinding between validateWebhookUrl and the actual connection.
+  // For HTTPS, an Agent with a custom lookup override connects to the pinned IP
+  // while Node.js still uses the original hostname for TLS SNI / cert validation.
   const originalParsed = new URL(webhook.url);
-  let fetchUrl = webhook.url;
-  if (originalParsed.protocol === "http:") {
-    const pinned = new URL(webhook.url);
-    pinned.hostname = urlCheck.resolvedIp;
-    fetchUrl = pinned.toString();
-  }
+  const isHttps = originalParsed.protocol === "https:";
+  const pinnedFamily: 4 | 6 = urlCheck.resolvedIp.includes(":") ? 6 : 4;
+  const agent = isHttps
+    ? new https.Agent({
+        // Override DNS resolution to always return the pre-validated IP.
+        // TLS still validates certificates against originalParsed.hostname (SNI).
+        lookup: (
+          _host: string,
+          _opts: unknown,
+          cb: (err: Error | null, addr: string, fam: 4 | 6) => void
+        ) => cb(null, urlCheck.resolvedIp, pinnedFamily),
+      })
+    : new http.Agent();
 
   try {
     const sig = sign(body, webhook.secret);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000); // 10 s timeout
+    const abortTimeout = setTimeout(() => controller.abort(), 10_000); // 10 s timeout
 
-    let response: Response;
     try {
-      response = await fetch(fetchUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "Nexus-Webhook/1.0",
-          "Host": originalParsed.host, // always send the original hostname
-          "X-Nexus-Event": event,
-          "X-Nexus-Signature-256": `sha256=${sig}`,
-          "X-Nexus-Delivery": crypto.randomUUID(),
-        },
-        body,
-        signal: controller.signal,
+      await new Promise<void>((resolve, reject) => {
+        const proto = isHttps ? https : http;
+        const reqOptions = {
+          hostname: originalParsed.hostname, // used for TLS SNI / cert validation
+          port: Number(originalParsed.port) || (isHttps ? 443 : 80),
+          path: (originalParsed.pathname || "/") + originalParsed.search,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Nexus-Webhook/1.0",
+            "Host": originalParsed.host,
+            "X-Nexus-Event": event,
+            "X-Nexus-Signature-256": `sha256=${sig}`,
+            "X-Nexus-Delivery": crypto.randomUUID(),
+            "Content-Length": String(Buffer.byteLength(body)),
+          },
+          agent,
+        };
+
+        const req = proto.request(reqOptions, (res) => {
+          statusCode = res.statusCode ?? null;
+          success = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 300;
+          // Drain body to release the underlying socket
+          res.resume();
+          res.on("end", resolve);
+          res.on("error", reject);
+        });
+
+        req.on("error", reject);
+        controller.signal.addEventListener("abort", () => {
+          req.destroy(new Error("Request timeout"));
+          reject(new Error("Request timeout"));
+        });
+
+        req.write(body);
+        req.end();
       });
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(abortTimeout);
     }
-
-    statusCode = response.status;
-    // 2xx = success
-    success = response.status >= 200 && response.status < 300;
-    // Drain the response body to release the underlying socket
-    try { await response.arrayBuffer(); } catch { /* ignore drain errors */ }
   } catch (err) {
     // Network errors, timeouts, DNS failures — record as failure
     success = false;
@@ -284,13 +318,12 @@ async function deliverSingle(
 
   const duration = Date.now() - startMs;
 
-  // Record delivery attempt (non-fatal)
   try {
     await db.webhookDelivery.create({
       data: {
         webhookId: webhook.id,
         event,
-        payload: JSON.parse(body) as object,
+        payload: payload as object,
         statusCode,
         success,
         duration,

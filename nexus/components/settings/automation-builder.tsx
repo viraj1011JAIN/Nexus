@@ -58,7 +58,16 @@ const ACTION_LABELS: Record<ActionType, string> = {
 };
 
 const PRIORITY_OPTIONS = ["URGENT", "HIGH", "MEDIUM", "LOW", "NONE"] as Priority[];
-
+// Actions that require a live card record — must not execute for CARD_DELETED triggers
+const ACTIONS_BLOCKED_FOR_DELETED: ActionType[] = [
+  "MOVE_CARD",
+  "ASSIGN_MEMBER",
+  "ADD_LABEL",
+  "REMOVE_LABEL",
+  "COMPLETE_CHECKLIST",
+  "SET_PRIORITY",
+  "SET_DUE_DATE_OFFSET",
+];
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AutomationRecord {
@@ -84,12 +93,18 @@ function ActionItem({
   onChange,
   onRemove,
   index,
+  triggerType,
 }: {
   action: ActionConfig;
   onChange: (a: ActionConfig) => void;
   onRemove: () => void;
   index: number;
+  triggerType: TriggerType;
 }) {
+  // When CARD_DELETED is selected, filter out actions that require a live card record
+  const allowedActionEntries = (Object.entries(ACTION_LABELS) as [ActionType, string][]).filter(
+    ([v]) => triggerType !== "CARD_DELETED" || !ACTIONS_BLOCKED_FOR_DELETED.includes(v)
+  );
   return (
     <div className="flex items-start gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
       <div className="flex-shrink-0 h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-[10px] font-bold text-indigo-600 mt-0.5">
@@ -104,7 +119,7 @@ function ActionItem({
             <SelectValue placeholder="Choose action..." />
           </SelectTrigger>
           <SelectContent>
-            {(Object.entries(ACTION_LABELS) as [ActionType, string][]).map(([v, l]) => (
+            {allowedActionEntries.map(([v, l]) => (
               <SelectItem key={v} value={v}>{l}</SelectItem>
             ))}
           </SelectContent>
@@ -294,6 +309,7 @@ function CreateAutomationDialog({
                   key={i}
                   index={i}
                   action={action}
+                  triggerType={triggerType}
                   onChange={(a) => {
                     const next = [...actionList];
                     next[i] = a;

@@ -141,7 +141,10 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     });
   }, [allCards, filters]);
 
-  const showFilterBar = ["board", "table", "calendar"].includes(activeTab);
+  // Only calendar actually consumes filteredCards — board and table receive raw lists.
+  // Show the FilterBar only for views wired to filtered data, to avoid a filter bar
+  // that appears to work but has no effect on the rendered content.
+  const showFilterBar = activeTab === "calendar";
 
   // â”€â”€ Keyboard shortcuts (TASK-016) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -166,7 +169,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     // â”€â”€ Bulk selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "b", description: "Toggle bulk selection mode", action: () => bulk.isBulkMode ? bulk.exitBulkMode() : bulk.enterBulkMode(), ignoreInInput: true },
     { key: "a", modifiers: { ctrl: true } as const, description: "Select all visible cards", action: selectAllVisible, ignoreInInput: true },
-    { key: "Escape", description: "Clear selection / close modal", action: () => { bulk.clearSelection(); setShortcutsOpen(false); }, ignoreInInput: false },
+    { key: "Escape", description: "Clear selection / close modal", action: () => { bulk.clearSelection(); setShortcutsOpen(false); }, ignoreInInput: true },
     // â”€â”€ Help â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "?", description: "Show keyboard shortcuts", action: () => setShortcutsOpen(true), ignoreInInput: true },
   ], [switchToTab, bulk, selectAllVisible]);

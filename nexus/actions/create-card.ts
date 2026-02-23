@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
@@ -59,28 +60,25 @@ const handler = async (data: InputType): Promise<ReturnType> => {
 
     revalidatePath(`/board/${boardId}`);
 
-    // Fire automations + webhooks (TASK-019/020) — fire-and-forget, never throws
-    try {
-      void emitCardEvent(
-        { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
-        { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
-      ).catch((err) => {
-        logger.error("[create-card] emitCardEvent async rejection", {
+    // Fire automations + webhooks (TASK-019/020).
+    // `after` keeps the serverless function alive until the callback settles,
+    // preventing early termination before async work completes.
+    after(async () => {
+      try {
+        await emitCardEvent(
+          { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
+          { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
+        );
+      } catch (err) {
+        logger.error("[create-card] emitCardEvent failed", {
           err,
           cardId: card.id,
           boardId,
+          listId,
           orgId: ctx.orgId,
         });
-      });
-    } catch (err) {
-      // Synchronous throw from emitCardEvent (should not happen, but guard anyway)
-      logger.error("[create-card] emitCardEvent threw synchronously", {
-        err,
-        cardId: card.id,
-        boardId,
-        orgId: ctx.orgId,
-      });
-    }
+      }
+    });
 
     return { data: card };
   } catch (error) {

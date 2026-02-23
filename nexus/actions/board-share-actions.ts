@@ -96,12 +96,12 @@ export async function getSharedBoardData(token: string, password?: string) {
       },
     });
 
-    if (!share) return { error: "Share link not found or expired." };
+    if (!share) return { error: "Share link not found or expired.", code: "INVALID_TOKEN" as const };
 
     // Password check before returning board data
     if (share.passwordHash) {
       if (!password || !verifyPassword(password, share.passwordHash)) {
-        return { error: "Invalid or missing password" };
+        return { error: "Invalid or missing password", code: "INVALID_PASSWORD" as const };
       }
     }
 

@@ -43,8 +43,9 @@ export async function generateMetadata({ params }: SharedBoardPageProps) {
 export default async function SharedBoardPage({ params }: SharedBoardPageProps) {
   const { token } = await params;
 
-  // Verify the share record is valid (active + not expired) — minimal read
-  const share = await db.boardShare.findFirst({
+  // Step 1: lightweight query — just check validity and whether a password gate is needed.
+  // Avoids loading the full board payload (lists/cards) for password-protected shares.
+  const shareLight = await db.boardShare.findFirst({
     where: {
       token,
       isActive: true,
@@ -53,6 +54,27 @@ export default async function SharedBoardPage({ params }: SharedBoardPageProps) 
     select: {
       id: true,
       passwordHash: true,
+      board: { select: { title: true } },
+    },
+  });
+
+  if (!shareLight) notFound();
+
+  // Password-protected: render the gate without sending board data to the browser
+  if (shareLight.passwordHash) {
+    return (
+      <PasswordGate
+        token={token}
+        boardTitle={shareLight.board.title}
+      />
+    );
+  }
+
+  // Step 2: full query — only reached when share is public (no password required)
+  const share = await db.boardShare.findFirst({
+    where: { id: shareLight.id },
+    select: {
+      id: true,
       allowComments: true,
       allowCopyCards: true,
       viewCount: true,
@@ -76,16 +98,6 @@ export default async function SharedBoardPage({ params }: SharedBoardPageProps) 
   });
 
   if (!share) notFound();
-
-  // Password-protected: render the gate in the client without sending board data
-  if (share.passwordHash) {
-    return (
-      <PasswordGate
-        token={token}
-        boardTitle={share.board.title}
-      />
-    );
-  }
 
   // Increment view counter (fire-and-forget)
   void db.boardShare

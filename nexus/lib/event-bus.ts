@@ -29,9 +29,11 @@ export async function emitCardEvent(
   webhookData?: Record<string, unknown>
 ): Promise<void> {
   const webhookEvent = TRIGGER_TO_WEBHOOK[event.type];
-  const payload = webhookData ?? {
-    // Spread context first so explicit fields take priority over any context keys
+  // Always merge: context fields first, then caller-supplied data, then explicit
+  // identifiers — so cardId/boardId/type can never be accidentally omitted.
+  const payload: Record<string, unknown> = {
     ...event.context,
+    ...(webhookData ?? {}),
     cardId: event.cardId,
     boardId: event.boardId,
     type: event.type,
@@ -61,6 +63,9 @@ export async function emitCardEvent(
     );
   }
   if (webhookResult.status === "rejected") {
+    // Compute payload size safely — JSON.stringify can throw on circular refs / BigInt
+    let safePayloadSize: number | string;
+    try { safePayloadSize = JSON.stringify(payload).length; } catch { safePayloadSize = -1; }
     console.error(
       "[EventBus] fireWebhooks rejected unexpectedly",
       {
@@ -69,7 +74,7 @@ export async function emitCardEvent(
         cardId: event.cardId,
         orgId: event.orgId,
         // Omit full payload to avoid logging PII / free-form content
-        payloadSize: JSON.stringify(payload).length,
+        payloadSize: safePayloadSize,
       }
     );
   }

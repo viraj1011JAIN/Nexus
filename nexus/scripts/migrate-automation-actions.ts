@@ -50,6 +50,8 @@ async function main() {
 main()
   .catch((err) => {
     console.error("Migration failed:", err);
-    process.exit(1);
+    // Use process.exitCode instead of process.exit(1) so the promise chain
+    // can complete and db.$disconnect() in .finally() runs before exiting.
+    process.exitCode = 1;
   })
   .finally(() => db.$disconnect());

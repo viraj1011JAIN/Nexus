@@ -29,8 +29,11 @@ const SetValueSchema = z.object({
 const UpdateFieldSchema = z.object({
   name: z.string().min(1, "Name cannot be empty").max(100, "Name too long").optional(),
   isRequired: z.boolean().optional(),
-  options: z.array(z.string().min(1).max(100)).optional(),
-});
+  options: z.array(z.string().min(1).max(100)).max(100, "Too many options (max 100)").optional(),
+}).refine(
+  (data) => Object.values(data).some((v) => v !== undefined),
+  { message: "At least one field must be provided to update." }
+);
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 

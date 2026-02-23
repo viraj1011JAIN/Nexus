@@ -185,9 +185,10 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+    <div className="overflow-auto max-h-[70vh] rounded-xl border bg-white dark:bg-slate-900">
+      <div className="min-w-max">
       {/* Month header */}
-      <div className="flex border-b bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10 min-w-max">
+      <div className="flex border-b bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10">
         {/* Label column */}
         <div className="w-56 flex-shrink-0 border-r px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Initiative / Epic
@@ -214,7 +215,7 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
       </div>
 
       {/* Rows */}
-      <div className="min-w-max">
+      <div>
         {initiatives.map((init) => {
           const hasRange = init.startDate && init.endDate;
           const statusInfo = INITIATIVE_STATUS[init.status as keyof typeof INITIATIVE_STATUS] ?? INITIATIVE_STATUS.ACTIVE;
@@ -294,6 +295,7 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
@@ -554,7 +556,7 @@ export function RoadmapClient() {
         </div>
       )}
 
-      {!loading && viewMode === "gantt" && (
+      {!loading && viewMode === "gantt" && initiatives.length > 0 && (
         <GanttView initiatives={initiatives} />
       )}
 
