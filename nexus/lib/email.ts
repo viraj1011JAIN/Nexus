@@ -165,7 +165,7 @@ function mentionEmailHtml(opts: {
     <p style="font-size:18px;font-weight:600;margin-bottom:16px;">You were mentioned 👋</p>
     <p>Hi ${escHtml(opts.mentionedUserName)},</p>
     <p style="margin-top:12px;"><strong>${escHtml(opts.mentionerName)}</strong> mentioned you in a comment on the card <strong>"${escHtml(opts.cardTitle)}"</strong> on board <strong>"${escHtml(opts.boardTitle)}"</strong>.</p>
-    <a href="${allowUrl(opts.cardUrl)}" class="cta">View Card →</a>
+    <a href="${escHtml(allowUrl(opts.cardUrl))}" class="cta">View Card →</a>
   `;
   return baseLayout(content, `${opts.mentionerName} mentioned you`);
 }
@@ -181,7 +181,7 @@ function dueDateEmailHtml(opts: {
     <p style="font-size:18px;font-weight:600;margin-bottom:16px;">Due date reminder ⏰</p>
     <p>Hi ${escHtml(opts.userName)},</p>
     <p style="margin-top:12px;">The card <strong>"${escHtml(opts.cardTitle)}"</strong> on board <strong>"${escHtml(opts.boardTitle)}"</strong> is due on <strong>${escHtml(opts.formattedDate)}</strong>.</p>
-    <a href="${allowUrl(opts.cardUrl)}" class="cta">View Card →</a>
+    <a href="${escHtml(allowUrl(opts.cardUrl))}" class="cta">View Card →</a>
   `;
   return baseLayout(content, `Reminder: ${opts.cardTitle}`);
 }
@@ -201,7 +201,7 @@ function weeklyDigestHtml(opts: {
       <div class="stat-card"><div class="stat-value">${stats.overdueCards}</div><div class="stat-label">Overdue</div></div>
       <div class="stat-card"><div class="stat-value">${stats.activeBoards}</div><div class="stat-label">Active Boards</div></div>
     </div>
-    <a href="${allowUrl(opts.appUrl)}/dashboard" class="cta">Open Dashboard →</a>
+    <a href="${escHtml(allowUrl(opts.appUrl))}/dashboard" class="cta">Open Dashboard →</a>
   `;
   return baseLayout(content, "Your Nexus weekly summary");
 }

@@ -8,23 +8,31 @@ import { MentionList, type MentionUser, type MentionListRef } from "./mention-li
  * timer, preventing cross-editor race conditions when multiple editors coexist.
  */
 export function createMentionSuggestion(): Partial<SuggestionOptions<MentionUser>> {
-  // Timer is scoped to this suggestion config instance, not the module.
+  // Timer and pending resolve are scoped to this suggestion config instance.
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let latestResolve: ((users: MentionUser[]) => void) | null = null;
 
   return {
     char: "@",
     allowSpaces: false,
 
     items: async ({ query }: { query: string }): Promise<MentionUser[]> => {
-      // Debounce network fetch
-      if (debounceTimer) clearTimeout(debounceTimer);
+      // Cancel any pending debounce and resolve its promise with empty results
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+        latestResolve?.([]);
+        latestResolve = null;
+      }
 
       return new Promise((resolve) => {
+        latestResolve = resolve;
         debounceTimer = setTimeout(async () => {
+          latestResolve = null;
           try {
             const url = `/api/members?query=${encodeURIComponent(query)}`;
             const res = await fetch(url);
-            if (!res.ok) return resolve([]);
+            if (!res.ok) { resolve([]); return; }
             const data: MentionUser[] = await res.json();
             resolve(data);
           } catch {

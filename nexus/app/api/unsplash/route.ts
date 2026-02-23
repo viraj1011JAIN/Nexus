@@ -60,16 +60,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: result.errors[0] }, { status: 500 });
     }
 
-    const photos = result.response.results.map((photo) => ({
-      id: photo.id,
-      thumbUrl: photo.urls.small,
-      fullUrl: photo.urls.full,
-      regularUrl: photo.urls.regular,
-      userName: photo.user.name,
-      userLink: photo.user.links.html,
-      // Attribution HTML required by Unsplash guidelines (HTML-escaped to prevent XSS)
-      linkHtml: `Photo by <a href="${escUrl(photo.user.links.html)}?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">${escHtml(photo.user.name)}</a> on <a href="https://unsplash.com?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a>`,
-    }));
+    const photos = result.response.results.map((photo) => {
+      const safeName = String(photo.user?.name ?? "Unknown");
+      const safeLink = String(photo.user?.links?.html ?? "https://unsplash.com");
+      return {
+        id: photo.id,
+        thumbUrl: photo.urls.small,
+        fullUrl: photo.urls.full,
+        regularUrl: photo.urls.regular,
+        userName: safeName,
+        userLink: escUrl(safeLink),
+        // Attribution HTML required by Unsplash guidelines (HTML-escaped to prevent XSS)
+        linkHtml: `Photo by <a href="${escUrl(safeLink)}?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">${escHtml(safeName)}</a> on <a href="https://unsplash.com?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a>`,
+      };
+    });
 
     return NextResponse.json({
       photos,

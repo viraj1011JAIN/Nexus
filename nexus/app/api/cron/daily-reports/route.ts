@@ -101,9 +101,17 @@ export async function GET(request: Request) {
           let pageCount = 0;
           do {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const membershipsPage: { data: any[] } = await clerk.organizations
-              .getOrganizationMembershipList({ organizationId: org.id, limit: 100, offset })
-              .catch(() => ({ data: [] }));
+            let membershipsPage: { data: any[] };
+            try {
+              membershipsPage = await clerk.organizations
+                .getOrganizationMembershipList({ organizationId: org.id, limit: 100, offset });
+            } catch (clerkErr) {
+              console.warn(
+                `[daily-reports] Failed to fetch memberships for org ${org.id} at offset ${offset}:`,
+                clerkErr
+              );
+              break;
+            }
             allMemberships.push(...membershipsPage.data);
             offset += membershipsPage.data.length;
             pageCount = membershipsPage.data.length;

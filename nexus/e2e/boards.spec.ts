@@ -89,10 +89,13 @@ test.describe("Board Creation — Blank Board", () => {
       await createBtn.click();
       const errorInfo = page.locator('[data-testid="title-error"], .error, [aria-invalid]').first();
       // Validation error should be visible when form is submitted empty
-      await expect(errorInfo).toBeVisible({ timeout: 3_000 }).catch(() => {
+      const errorIsVisible = await errorInfo.isVisible().catch(() => false);
+      if (errorIsVisible) {
+        await expect(errorInfo).toBeVisible({ timeout: 3_000 });
+      } else {
         // At minimum, navigation should NOT have occurred
         expect(page.url()).not.toMatch(/\/board\//);
-      });
+      }
     }
   });
 });
