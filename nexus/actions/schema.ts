@@ -79,6 +79,8 @@ export const UpdateCard = z.object({
   storyPoints: z.number().int().min(0).max(999).nullable().optional(),
   startDate: z.string().datetime().nullable().optional(),
   estimatedMinutes: z.number().int().min(0).max(100000).nullable().optional(),
+  // Due date (used by calendar drag-drop, card modal)
+  dueDate: z.string().datetime().nullable().optional(),
 });
 
 // ============================================

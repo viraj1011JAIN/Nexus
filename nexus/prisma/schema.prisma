@@ -46,6 +46,7 @@ model Organization {
   initiatives Initiative[]
   epics       Epic[]
   customFields CustomField[]
+  boardShares  BoardShare[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -139,7 +140,7 @@ model Board {
   savedViews     SavedView[]
   customFields   CustomField[]
   automations    Automation[]
-  share          BoardShare?
+  shares         BoardShare[]
   epics          Epic[]
   
   createdAt      DateTime     @default(now())
@@ -927,14 +928,22 @@ model Epic {
 
 model BoardShare {
   id            String    @id @default(uuid())
-  boardId       String    @unique @map("board_id")
+  boardId       String    @map("board_id")
   board         Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  token         String    @unique @default(uuid())
-  isPublic      Boolean   @default(true)  @map("is_public")
-  allowedEmails String[]  @map("allowed_emails")
+  orgId         String    @map("org_id")
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  token         String    @unique
+  isActive      Boolean   @default(true) @map("is_active")
+  allowComments Boolean   @default(false) @map("allow_comments")
+  allowCopyCards Boolean  @default(false) @map("allow_copy_cards")
+  passwordHash  String?   @map("password_hash")
   expiresAt     DateTime? @map("expires_at")
+  viewCount     Int       @default(0) @map("view_count")
+  createdBy     String    @map("created_by")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt      @map("updated_at")
 
+  @@index([boardId])
+  @@index([orgId])
   @@map("board_shares")
 }

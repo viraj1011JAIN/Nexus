@@ -19,9 +19,10 @@ import {
   GitBranch,
   Timer,
   Link2,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useOrganization } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -56,6 +57,7 @@ import { CardCoverPicker } from "@/components/board/card-cover-picker";
 import { ChecklistPanel } from "@/components/board/checklist-panel";
 import { TimeTrackingPanel } from "@/components/board/time-tracking-panel";
 import { DependencyPanel } from "@/components/board/dependency-panel";
+import { CustomFieldsPanel } from "@/components/board/custom-fields-panel";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";
 import { getOrganizationMembers } from "@/actions/assignee-actions";
@@ -96,6 +98,8 @@ export const CardModal = () => {
   
   const organizationId = params.organizationId as string;
   const boardId = params.boardId as string;
+
+  const { membership } = useOrganization();
   
   const id = useCardModal((state) => state.id);
   const isOpen = useCardModal((state) => state.isOpen);
@@ -725,6 +729,13 @@ export const CardModal = () => {
                     <Link2 className="h-4 w-4 mr-2" />
                     Links
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="fields"
+                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-teal-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
+                  >
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Fields
+                  </TabsTrigger>
                 </TabsList>
               </motion.div>
 
@@ -910,6 +921,29 @@ export const CardModal = () => {
                       {cardData && (
                         <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load dependencies.</p>}>
                           <DependencyPanel cardId={cardData.id} />
+                        </ErrorBoundary>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
+
+                {/* CUSTOM FIELDS TAB */}
+                <TabsContent value="fields" className="mt-0 p-6 pt-4">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="fields-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {cardData && boardId && (
+                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load custom fields.</p>}>
+                          <CustomFieldsPanel
+                            boardId={boardId}
+                            cardId={cardData.id}
+                            isAdmin={membership?.role === "org:admin"}
+                          />
                         </ErrorBoundary>
                       )}
                     </motion.div>
