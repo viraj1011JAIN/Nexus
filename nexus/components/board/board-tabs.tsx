@@ -57,7 +57,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     if (tab !== "calendar") {
       setFilters({ assigneeIds: [], priorities: [], labelIds: [] });
     }
-  }, []);
+  }, [setActiveTab, setFilters]);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const tabListRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +78,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
       assigneeImageUrl?: string | null;
       assigneeName?: string | null;
       coverColor?: string | null;
+      labelIds: string[];
     }[] = [];
     for (const list of lists ?? []) {
       for (const card of list.cards ?? []) {
@@ -93,6 +94,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
           assigneeImageUrl: card.assignee?.imageUrl ?? null,
           assigneeName: card.assignee?.name ?? null,
           coverColor: card.coverColor ?? null,
+          labelIds: (card.labels ?? []).map((la: { label: { id: string } }) => la.label.id),
         });
       }
     }
@@ -135,12 +137,14 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     const hasActiveFilter =
       filters.assigneeIds.length > 0 ||
       filters.priorities.length > 0 ||
+      filters.labelIds.length > 0 ||
       (filters.listIds?.length ?? 0) > 0 ||
       !!filters.search;
     if (!hasActiveFilter) return allCards;
     return allCards.filter((card) => {
       if (filters.assigneeIds.length > 0 && !filters.assigneeIds.includes(card.assigneeId ?? "")) return false;
       if (filters.priorities.length > 0 && !filters.priorities.includes(card.priority ?? "")) return false;
+      if (filters.labelIds.length > 0 && !filters.labelIds.some((id) => card.labelIds.includes(id))) return false;
       if (filters.listIds?.length && !filters.listIds.includes(card.listId)) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
@@ -158,10 +162,12 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
   // â”€â”€ Keyboard shortcuts (TASK-016) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const switchToTab = useCallback((tab: TabValue) => {
-    setActiveTab(tab);
+    // Delegate to handleTabChange so filter state is reset when switching away
+    // from calendar via keyboard shortcut, matching the Tabs onValueChange behaviour.
+    handleTabChange(tab);
     // Brief visual focus to indicate the switch
     tabListRef.current?.querySelector<HTMLElement>(`[data-value="${tab}"]`)?.focus();
-  }, []);
+  }, [handleTabChange]);
 
   const selectAllVisible = useCallback(() => {
     bulk.selectAll(filteredCards.map((c) => c.id));

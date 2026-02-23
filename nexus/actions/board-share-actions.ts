@@ -103,7 +103,11 @@ export async function getSharedBoardData(token: string, password?: string) {
     // distinguishing whether the token was valid — avoids leaking token existence.
     if (share.passwordHash) {
       if (!password || !verifyPassword(password, share.passwordHash)) {
-        return { error: "Invalid or missing password", code: "INVALID_TOKEN" as const };
+        // Return the same error *message* as the not-found path so callers
+        // cannot distinguish a bad password from a non-existent token.
+        // The distinct *code* (INVALID_PASSWORD vs INVALID_TOKEN) is only
+        // used by trusted client UI to decide which prompt to show.
+        return { error: "Share link not found or expired.", code: "INVALID_PASSWORD" as const };
       }
     }
 

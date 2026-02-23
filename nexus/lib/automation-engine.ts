@@ -264,10 +264,15 @@ function conditionsPass(conditions: any[], card: any, _event: AutomationEvent): 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function executeAction(action: ActionConfig, event: AutomationEvent, card: any) {
-  // CARD_DELETED automations never reach here (triggerMatches returns false),
-  // but guard defensively: only allow safe side-effect actions when card may not exist.
+  // Defence-in-depth guard: CARD_DELETED events should not reach executeAction via two
+  // independent mechanisms — (1) runAutomations calls db.card.findUnique and returns early
+  // via `if (!card) return` when the card no longer exists, and (2) triggerMatches returns
+  // false for CARD_DELETED so the automation loop skips execution entirely.
+  // This guard is a tertiary line of defence in case executeAction is ever called directly.
+  // safeTypes is intentionally limited to ["SEND_NOTIFICATION"]: POST_COMMENT is excluded
+  // because it writes a comment.cardId FK that references the already-deleted card, which
+  // would cause a foreign-key constraint violation in Prisma/Postgres.
   if (event.type === "CARD_DELETED") {
-    // POST_COMMENT is also unsafe — it writes a comment.cardId FK referencing the deleted card
     const safeTypes: ActionType[] = ["SEND_NOTIFICATION"];
     if (!safeTypes.includes(action.type)) return;
   }

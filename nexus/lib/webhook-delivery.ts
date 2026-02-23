@@ -15,6 +15,7 @@
 
 import crypto from "crypto";
 import dns from "dns";
+import net from "node:net";
 import https from "node:https";
 import http from "node:http";
 import { db } from "@/lib/db";
@@ -253,14 +254,17 @@ async function deliverSingle(
   const pinnedFamily: 4 | 6 = urlCheck.resolvedIp.includes(":") ? 6 : 4;
   // Both HTTP and HTTPS use a pinned lookup to prevent TOCTOU DNS rebinding.
   // For HTTPS the Agent still uses originalParsed.hostname for TLS SNI / cert validation.
-  const pinnedLookup = (
+  // Typed as net.LookupFunction so it is compatible with both https.Agent and
+  // http.Agent without narrowing. The family parameter is widened to number
+  // (net.LookupFunction contract) even though pinnedFamily is always 4 or 6.
+  const pinnedLookup: net.LookupFunction = (
     _host: string,
-    _opts: unknown,
-    cb: (err: Error | null, addr: string, fam: 4 | 6) => void
+    _opts,
+    cb: (err: NodeJS.ErrnoException | null, address: string, family: number) => void
   ) => cb(null, urlCheck.resolvedIp, pinnedFamily);
   const agent = isHttps
     ? new https.Agent({ lookup: pinnedLookup })
-    : new http.Agent({ lookup: pinnedLookup } as http.AgentOptions);
+    : new http.Agent({ lookup: pinnedLookup });
 
   try {
     const sig = sign(body, webhook.secret);
