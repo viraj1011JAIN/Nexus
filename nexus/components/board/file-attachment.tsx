@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Paperclip, Trash2, Download, FileText, ImageIcon, File, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -26,13 +26,19 @@ interface FileAttachmentProps {
   cardId: string;
   boardId: string;
   initialAttachments?: AttachmentDto[];
+  onAttachmentsChange?: (attachments: AttachmentDto[]) => void;
 }
 
-export function FileAttachment({ cardId, boardId, initialAttachments = [] }: FileAttachmentProps) {
+export function FileAttachment({ cardId, boardId, initialAttachments = [], onAttachmentsChange }: FileAttachmentProps) {
   const [attachments, setAttachments] = useState<AttachmentDto[]>(initialAttachments);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Notify parent whenever the attachment list changes so badges/counts stay current
+  useEffect(() => {
+    onAttachmentsChange?.(attachments);
+  }, [attachments, onAttachmentsChange]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

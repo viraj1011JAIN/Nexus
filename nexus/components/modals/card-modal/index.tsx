@@ -848,6 +848,7 @@ export const CardModal = () => {
                         <AttachmentsTab
                           cardId={cardData.id}
                           boardId={boardId}
+                          onCountChange={setAttachmentCount}
                         />
                       )}
                     </motion.div>

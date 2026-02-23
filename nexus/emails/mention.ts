@@ -20,5 +20,6 @@ export function render(opts: MentionEmailOptions): string {
     </p>
     <a href="${allowUrl(opts.cardUrl)}" class="cta">View Card →</a>
   `;
-  return baseLayout(content, `${opts.mentionerName} mentioned you in "${opts.cardTitle}"`);
+  // escHtml prevents HTML injection in the <title> element rendered by baseLayout
+  return baseLayout(content, `${escHtml(opts.mentionerName)} mentioned you in "${escHtml(opts.cardTitle)}"`);
 }

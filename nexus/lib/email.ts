@@ -90,7 +90,7 @@ export async function sendDueDateReminderEmail(opts: DueSoonEmail.DueSoonEmailOp
     to: opts.userEmail,
     subject: `Reminder: "${opts.cardTitle}" is due soon`,
     html: DueSoonEmail.render(opts),
-    text: `Your card "${opts.cardTitle}" on "${opts.boardTitle}" is due on ${opts.dueDate.toLocaleDateString()}. View: ${opts.cardUrl}`,
+    text: `Your card "${opts.cardTitle}" on "${opts.boardTitle}" is due on ${opts.dueDate.toLocaleDateString("en-GB")}. View: ${opts.cardUrl}`,
   });
 }
 

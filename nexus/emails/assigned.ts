@@ -30,5 +30,6 @@ export function render(opts: AssignedEmailOptions): string {
     ${dueLine}
     <a href="${allowUrl(opts.cardUrl)}" class="cta">View Card →</a>
   `;
-  return baseLayout(content, `You've been assigned "${opts.cardTitle}"`);
+  // escHtml prevents HTML injection in the <title> element rendered by baseLayout
+  return baseLayout(content, `You've been assigned "${escHtml(opts.cardTitle)}"`);
 }

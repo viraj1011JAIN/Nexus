@@ -4,42 +4,59 @@ import { useState, useEffect } from "react";
 import { Paperclip, Loader2 } from "lucide-react";
 import { FileAttachment } from "@/components/board/file-attachment";
 import { ErrorBoundary } from "@/components/error-boundary";
-
-interface Attachment {
-  id: string;
-  filename: string;
-  fileUrl: string;
-  fileSize?: number | null;
-  mimeType?: string | null;
-  createdAt: Date | string;
-}
+import { type AttachmentDto } from "@/actions/attachment-actions";
 
 interface AttachmentsTabProps {
   cardId: string;
   boardId: string;
+  onCountChange?: (count: number) => void;
 }
 
-export function AttachmentsTab({ cardId, boardId }: AttachmentsTabProps) {
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+export function AttachmentsTab({ cardId, boardId, onCountChange }: AttachmentsTabProps) {
+  const [attachments, setAttachments] = useState<AttachmentDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/attachment?cardId=${encodeURIComponent(cardId)}`);
-      if (!res.ok) throw new Error("Failed to load attachments");
-      const data = await res.json();
-      setAttachments(data.attachments ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load attachments");
-    } finally {
-      setLoading(false);
+  // Propagate count to parent whenever attachments list changes (initial load + mutations)
+  useEffect(() => {
+    if (!loading) onCountChange?.(attachments.length);
+  }, [attachments, loading, onCountChange]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `/api/attachment?cardId=${encodeURIComponent(cardId)}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error("Failed to load attachments");
+        const data = await res.json();
+        if (!cancelled) {
+          const list: AttachmentDto[] = data.attachments ?? [];
+          setAttachments(list);
+          setLoading(false);
+        }
+      } catch (e) {
+        if ((e as DOMException).name === "AbortError") return;
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load attachments");
+          setLoading(false);
+        }
+      }
     }
-  };
 
-  useEffect(() => { load(); }, [cardId]); // eslint-disable-line react-hooks/exhaustive-deps
+    load();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [cardId, retryCount]);
 
   if (loading) {
     return (
@@ -55,7 +72,7 @@ export function AttachmentsTab({ cardId, boardId }: AttachmentsTabProps) {
         <Paperclip className="h-8 w-8 opacity-40" />
         <p className="text-sm">{error}</p>
         <button
-          onClick={load}
+          onClick={() => setRetryCount((c) => c + 1)}
           className="text-xs underline text-muted-foreground hover:text-foreground"
         >
           Retry
@@ -76,7 +93,9 @@ export function AttachmentsTab({ cardId, boardId }: AttachmentsTabProps) {
         cardId={cardId}
         boardId={boardId}
         initialAttachments={attachments}
-        onAttachmentsChange={setAttachments}
+        onAttachmentsChange={(updated) => {
+          setAttachments(updated);
+        }}
       />
     </ErrorBoundary>
   );

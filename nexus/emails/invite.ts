@@ -33,5 +33,6 @@ export function render(opts: InviteEmailOptions): string {
       If you have concerns, contact us at support@nexus.app
     </p>
   `;
-  return baseLayout(content, `${opts.inviterName} invited you to ${opts.orgName}`);
+  // escHtml prevents HTML injection in the <title> element rendered by baseLayout
+  return baseLayout(content, `${escHtml(opts.inviterName)} invited you to ${escHtml(opts.orgName)}`);
 }

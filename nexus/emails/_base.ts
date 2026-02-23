@@ -9,11 +9,14 @@ export function escHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Allow only http/https URLs; fall back to '#' for anything suspicious */
+/** Allow only http/https URLs; fall back to '#' for anything suspicious.
+ * Returns the canonicalized href from the URL object (not the raw input)
+ * to prevent smuggled control characters or encoding tricks.
+ */
 export function allowUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol === "https:" || parsed.protocol === "http:") return url;
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return parsed.href;
   } catch {
     // not a valid URL
   }
