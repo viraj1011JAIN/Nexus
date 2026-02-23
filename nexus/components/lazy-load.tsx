@@ -103,6 +103,13 @@ interface LazyImageProps {
   width?: number;
   height?: number;
   priority?: boolean;
+  /**
+   * CSS aspect-ratio value applied to the wrapper when width/height are not
+   * provided and next/image's fill mode is used. Without this the wrapper
+   * collapses to zero height. Defaults to "16/9".
+   * @example "4/3" | "1/1" | "16/9"
+   */
+  aspectRatio?: string;
 }
 
 export function LazyImage({
@@ -112,6 +119,7 @@ export function LazyImage({
   width,
   height,
   priority = false,
+  aspectRatio = "16/9",
 }: LazyImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -120,8 +128,12 @@ export function LazyImage({
   // Use fill (requires a positioned parent) when width/height are not supplied.
   const hasDimensions = !!(width && height);
 
+  // In fill mode the parent must have an explicit size; apply aspect-ratio so the
+  // wrapper never collapses to zero height when no intrinsic dimensions are given.
+  const wrapperStyle = hasDimensions ? undefined : { aspectRatio };
+
   return (
-    <div className="relative">
+    <div className="relative w-full" style={wrapperStyle}>
       {!loaded && !error && !priority && (
         <div className="absolute inset-0 animate-pulse bg-muted/20 rounded" />
       )}
