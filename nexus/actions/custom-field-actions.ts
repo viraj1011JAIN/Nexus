@@ -101,6 +101,10 @@ export async function createCustomField(
       },
     });
 
+    if (validated.boardId) {
+      revalidatePath(`/board/${validated.boardId}`);
+    }
+
     return { data: field };
   } catch (e) {
     console.error("[CREATE_CUSTOM_FIELD]", e);
@@ -120,6 +124,11 @@ export async function deleteCustomField(fieldId: string) {
     if (!field) return { error: "Field not found." };
 
     await db.customField.delete({ where: { id: fieldId } });
+
+    if (field.boardId) {
+      revalidatePath(`/board/${field.boardId}`);
+    }
+
     return { data: true };
   } catch (e) {
     console.error("[DELETE_CUSTOM_FIELD]", e);
@@ -147,7 +156,10 @@ export async function setCustomFieldValue(
 
     // Verify card and field ownership
     const [card, field] = await Promise.all([
-      db.card.findFirst({ where: { id: validated.cardId, list: { board: { orgId: ctx.orgId } } } }),
+      db.card.findFirst({
+        where: { id: validated.cardId, list: { board: { orgId: ctx.orgId } } },
+        select: { id: true, list: { select: { boardId: true } } },
+      }),
       db.customField.findFirst({ where: { id: validated.fieldId, orgId: ctx.orgId } }),
     ]);
     if (!card || !field) return { error: "Card or field not found." };
@@ -172,6 +184,8 @@ export async function setCustomFieldValue(
       },
     });
 
+    revalidatePath(`/board/${card.list.boardId}`);
+
     return { data: cfv };
   } catch (e) {
     console.error("[SET_CUSTOM_FIELD_VALUE]", e);
@@ -185,6 +199,11 @@ export async function clearCustomFieldValue(fieldId: string, cardId: string) {
     await requireRole("MEMBER", ctx);
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
+    const cardForPath = await db.card.findFirst({
+      where: { id: cardId, list: { board: { orgId: ctx.orgId } } },
+      select: { list: { select: { boardId: true } } },
+    });
+
     await db.customFieldValue.deleteMany({
       where: {
         fieldId,
@@ -193,6 +212,10 @@ export async function clearCustomFieldValue(fieldId: string, cardId: string) {
         card: { list: { board: { orgId: ctx.orgId } } },
       },
     });
+
+    if (cardForPath) {
+      revalidatePath(`/board/${cardForPath.list.boardId}`);
+    }
 
     return { data: true };
   } catch (e) {

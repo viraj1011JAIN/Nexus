@@ -70,7 +70,10 @@ function percentile(sorted: number[], p: number): number {
 }
 
 function dateKey(d: Date): string {
-  return d.toISOString().split("T")[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function addDays(d: Date, n: number): Date {
@@ -137,9 +140,13 @@ export async function getAdvancedBoardAnalytics(
       const createdByDay = allCards.filter(
         (c) => dateKey(new Date(c.createdAt)) <= dayStr,
       ).length;
-      const completedByDay = completedCards.filter(
-        (c) => c.updatedAt && dateKey(new Date(c.updatedAt)) <= dayStr,
-      ).length;
+      const completedByDay = completedCards.filter((c) => {
+        // Prefer a dedicated completedAt timestamp when available; fall back to
+        // updatedAt for boards that don't yet track it explicitly.
+        const completedDate =
+          (c as unknown as { completedAt?: Date | null }).completedAt ?? c.updatedAt;
+        return completedDate && dateKey(new Date(completedDate)) <= dayStr;
+      }).length;
 
       const remaining = Math.max(0, createdByDay - completedByDay);
       const ideal = Math.max(

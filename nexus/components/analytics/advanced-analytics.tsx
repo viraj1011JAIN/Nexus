@@ -417,6 +417,8 @@ function CycleTimeTab({ d }: { d: AdvancedBoardAnalytics }) {
 // ─── Tab: Flow ────────────────────────────────────────────────────────────────
 
 function FlowTab({ d }: { d: AdvancedBoardAnalytics }) {
+  const maxCardCount = d.listStats.reduce((m, s) => Math.max(m, s.cardCount), 0);
+
   return (
     <div className="space-y-6">
       {/* Cumulative flow */}
@@ -525,7 +527,7 @@ function FlowTab({ d }: { d: AdvancedBoardAnalytics }) {
                         ls.cardCount > 10 ? "bg-red-400" : ls.cardCount > 5 ? "bg-amber-400" : "bg-emerald-400",
                       )}
                       style={{
-                        width: `${Math.min(100, (ls.cardCount / Math.max(1, ...d.listStats.map((s) => s.cardCount))) * 100)}%`,
+                        width: `${Math.min(100, (ls.cardCount / Math.max(1, maxCardCount)) * 100)}%`,
                       }}
                     />
                   </div>

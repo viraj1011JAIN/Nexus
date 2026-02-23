@@ -2,9 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Priority } from "@prisma/client";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { db } from "@/lib/db";
+
+// Single source of truth for Priority values — avoids drift with the Prisma
+// enum while keeping the code free of a runtime @prisma/client import.
+export const PRIORITY_VALUES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
+export type PriorityValue = typeof PRIORITY_VALUES[number];
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -12,7 +16,7 @@ const BulkUpdateSchema = z.object({
   cardIds: z.array(z.string().uuid()).min(1).max(200),
   update: z.object({
     listId: z.string().uuid().optional(),
-    priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"] as const).optional(),
+    priority: z.enum(PRIORITY_VALUES).optional(),
     assigneeId: z.string().optional().nullable(),
     dueDate: z.string().datetime().optional().nullable(),
     labelIds: z.array(z.string().uuid()).optional(),
@@ -52,7 +56,7 @@ export async function bulkUpdateCards(
   cardIds: string[],
   update: {
     listId?: string;
-    priority?: Priority;
+    priority?: PriorityValue;
     assigneeId?: string | null;
     dueDate?: string | null;
     labelIds?: string[];
