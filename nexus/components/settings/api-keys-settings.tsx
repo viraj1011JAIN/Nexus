@@ -45,8 +45,8 @@ import {
   createApiKey,
   revokeApiKey,
   deleteApiKey,
-  API_SCOPES,
 } from "@/actions/api-key-actions";
+import { API_SCOPES } from "@/lib/api-key-constants";
 import { format, isPast } from "date-fns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

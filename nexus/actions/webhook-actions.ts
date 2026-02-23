@@ -12,18 +12,6 @@ const WebhookSchema = z.object({
   events: z.array(z.string()).min(1, "Select at least one event"),
 });
 
-export const WEBHOOK_EVENTS = [
-  { value: "card.created", label: "Card Created" },
-  { value: "card.updated", label: "Card Updated" },
-  { value: "card.deleted", label: "Card Deleted" },
-  { value: "card.moved", label: "Card Moved" },
-  { value: "comment.created", label: "Comment Added" },
-  { value: "board.created", label: "Board Created" },
-  { value: "sprint.started", label: "Sprint Started" },
-  { value: "sprint.completed", label: "Sprint Completed" },
-  { value: "member.invited", label: "Member Invited" },
-];
-
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 export async function getWebhooks() {

@@ -13,15 +13,6 @@ const CreateKeySchema = z.object({
   expiresAt: z.string().datetime().optional(),
 });
 
-export const API_SCOPES = [
-  { value: "boards:read", label: "Boards — Read", description: "List and view boards" },
-  { value: "boards:write", label: "Boards — Write", description: "Create and update boards" },
-  { value: "cards:read", label: "Cards — Read", description: "List and view cards" },
-  { value: "cards:write", label: "Cards — Write", description: "Create, update, delete cards" },
-  { value: "members:read", label: "Members — Read", description: "List organization members" },
-  { value: "webhooks:write", label: "Webhooks — Write", description: "Manage webhooks" },
-];
-
 function hashKey(rawKey: string) {
   return crypto.createHash("sha256").update(rawKey).digest("hex");
 }

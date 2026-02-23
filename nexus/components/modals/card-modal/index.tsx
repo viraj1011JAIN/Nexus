@@ -703,11 +703,6 @@ export const CardModal = () => {
                   >
                     <CheckSquare className="h-4 w-4 mr-2" />
                     Checklist
-                    {checklists.length > 0 && (
-                      <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                        {checklists.length}
-                      </Badge>
-                    )}
                   </TabsTrigger>
                   <TabsTrigger
                     value="time"

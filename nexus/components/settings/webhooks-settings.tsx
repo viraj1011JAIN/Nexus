@@ -47,8 +47,8 @@ import {
   updateWebhook,
   deleteWebhook,
   rotateWebhookSecret,
-  WEBHOOK_EVENTS,
 } from "@/actions/webhook-actions";
+import { WEBHOOK_EVENTS } from "@/lib/webhook-constants";
 import { format } from "date-fns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

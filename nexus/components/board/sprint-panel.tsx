@@ -337,7 +337,7 @@ export function SprintPanel({ boardId }: { boardId: string }) {
       getBacklogCards(boardId),
     ]);
     if (sprintsResult.data) setSprints(sprintsResult.data as Sprint[]);
-    if (backlogResult.data) setBacklogCards(backlogResult.data as BacklogCard[]);
+    if (backlogResult.data) setBacklogCards(backlogResult.data as unknown as BacklogCard[]);
     setLoading(false);
   }, [boardId]);
 
