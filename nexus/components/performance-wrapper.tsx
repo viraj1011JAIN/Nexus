@@ -23,7 +23,7 @@ export function PerformanceWrapper({ children }: { children: React.ReactNode }) 
       // Example: Send to your analytics service
       // window.gtag?.("event", name, {
       //   value: Math.round(value),
-      //   metric_id: id,
+      //   metric_id: _id,
       //   metric_value: value,
       //   metric_rating: rating,
       // });

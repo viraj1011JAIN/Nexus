@@ -82,7 +82,6 @@ export const CommandPalette = () => {
   const [boards, setBoards] = React.useState<Board[]>([]);
   const [cards, setCards] = React.useState<Card[]>([]);
   const [loading, setLoading] = React.useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = React.useState<string | null>(null);
   const { recentItems, addRecentItem } = useRecentItems();
 
@@ -211,6 +210,12 @@ export const CommandPalette = () => {
             <CommandPrimitive.Empty className="py-6 text-center text-sm text-muted-foreground">
               No results found.
             </CommandPrimitive.Empty>
+
+            {error && (
+              <div className="py-6 text-center text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
             {loading ? (
               <div className="flex items-center justify-center py-12">

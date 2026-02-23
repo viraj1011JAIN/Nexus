@@ -188,6 +188,10 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         setOnlineUsers([]);
       }
     };
+  // getToken is intentionally excluded from the dependency array.
+  // Clerk guarantees that getToken's function reference is identity-stable across
+  // renders — adding it would cause unnecessary channel teardowns on every auth
+  // state change without any behavioural benefit.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId, orgId, enabled, user, getUserColor]);
 

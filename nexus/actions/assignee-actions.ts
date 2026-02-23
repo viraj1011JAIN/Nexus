@@ -7,6 +7,32 @@ import { createSafeAction } from "@/lib/create-safe-action";
 import { z } from "zod";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
+/** Minimal typed shape returned by any card operation that includes its list. */
+type CardWithList = {
+  title: string;
+  list: { boardId: string } | null;
+};
+
+/**
+ * Records an UPDATE audit log entry for a card and revalidates the board path.
+ * Centralises the repeated audit + revalidate pattern in assign/unassign handlers.
+ */
+async function logCardUpdateAndRevalidate(
+  dal: Awaited<ReturnType<typeof createDAL>>,
+  card: CardWithList,
+  cardId: string,
+) {
+  await dal.auditLogs.create({
+    action: "UPDATE",
+    entityId: cardId,
+    entityType: "CARD",
+    entityTitle: card.title ?? cardId,
+  });
+  if (card.list?.boardId) {
+    revalidatePath(`/board/${card.list.boardId}`);
+  }
+}
+
 // ============================================
 // ASSIGN USER TO CARD — MEMBER+
 // ============================================
@@ -28,17 +54,7 @@ async function assignUserHandler(data: z.infer<typeof AssignUserSchema>) {
 
   // DAL verifies Card->List->Board->orgId === ctx.orgId before assigning
   const card = await dal.assignees.assign(data.cardId, data.assigneeId);
-
-  await dal.auditLogs.create({
-    action: "UPDATE",
-    entityId: data.cardId,
-    entityType: "CARD",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    entityTitle: (card as any).title ?? data.cardId,
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  revalidatePath(`/board/${(card as any).list?.boardId}`);
+  await logCardUpdateAndRevalidate(dal, card, data.cardId);
   return { data: card };
 }
 
@@ -63,17 +79,7 @@ async function unassignUserHandler(data: z.infer<typeof UnassignUserSchema>) {
   const dal = await createDAL(ctx);
 
   const card = await dal.assignees.unassign(data.cardId);
-
-  await dal.auditLogs.create({
-    action: "UPDATE",
-    entityId: data.cardId,
-    entityType: "CARD",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    entityTitle: (card as any).title ?? data.cardId,
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  revalidatePath(`/board/${(card as any).list?.boardId}`);
+  await logCardUpdateAndRevalidate(dal, card, data.cardId);
   return { data: card };
 }
 

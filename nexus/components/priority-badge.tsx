@@ -1,7 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Priority } from "@prisma/client";
-import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowUp, Minus, ArrowDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,15 +55,18 @@ export function PriorityBadge({
   autoEscalated = false,
   className,
 }: PriorityBadgeProps) {
-  // Calculate if deadline is approaching (<24h)
-  const isDeadlineNear = useMemo(
-    () =>
-      dueDate && !isOverdue
-        ? // eslint-disable-next-line react-hooks/purity
-          (new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60) < 24
-        : false,
-    [dueDate, isOverdue]
-  );
+  // Track current time via state+effect so the deadline badge stays accurate as time
+  // passes without calling Date.now() directly in the render body (react-hooks/purity).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000); // refresh every minute
+    return () => clearInterval(id);
+  }, []);
+
+  const isDeadlineNear =
+    dueDate && !isOverdue
+      ? (new Date(dueDate).getTime() - now) / (1000 * 60 * 60) < 24
+      : false;
 
   // Size variants
   const sizeClasses = {

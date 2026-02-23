@@ -92,7 +92,7 @@ export function SmartDueDate({
         shouldShake: false,
       };
 
-  const _Icon = stateConfig.icon;
+  const Icon = stateConfig.icon;
 
   // Format display text
   const _displayText = !dueDate 
@@ -163,7 +163,7 @@ export function SmartDueDate({
             )}
 
             <span className="relative z-10 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
+              <Icon className="w-4 h-4" />
               <span className="font-semibold">
                 {showRelativeTime ? getRelativeTimeText(dueDate) : format(dueDate, "MMM d, yyyy")}
               </span>

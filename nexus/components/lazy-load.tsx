@@ -1,7 +1,7 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import Image from "next/image";
 
 interface LazyLoadProps {
   children: ReactNode;
@@ -116,38 +116,34 @@ export function LazyImage({
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
-  if (priority) {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        width={width}
-        height={height}
-        loading="eager"
-        decoding="async"
-      />
-    );
-  }
+  // next/image requires explicit dimensions or fill mode.
+  // Use fill (requires a positioned parent) when width/height are not supplied.
+  const hasDimensions = !!(width && height);
 
   return (
     <div className="relative">
-      {!loaded && !error && (
+      {!loaded && !error && !priority && (
         <div className="absolute inset-0 animate-pulse bg-muted/20 rounded" />
       )}
-      <img
-        src={src}
-        alt={alt}
-        className={`${className} transition-opacity duration-300 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
-        width={width}
-        height={height}
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setLoaded(true)}
-        onError={() => setError(true)}
-      />
+      {!error && (
+        <Image
+          src={src}
+          alt={alt}
+          {...(hasDimensions
+            ? { width: width!, height: height! }
+            : { fill: true, sizes: "(max-width: 768px) 100vw, 50vw" })}
+          className={`${className}${
+            priority
+              ? ""
+              : ` transition-opacity duration-300 ${
+                  loaded ? "opacity-100" : "opacity-0"
+                }`
+          }`}
+          priority={priority}
+          onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
+        />
+      )}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded">
           <span className="text-xs text-muted-foreground">Failed to load</span>

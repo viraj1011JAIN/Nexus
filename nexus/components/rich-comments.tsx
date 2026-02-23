@@ -27,7 +27,7 @@ export interface Comment {
   parentId: string | null;
   replies: Comment[];
   reactions: CommentReaction[];
-  mentions: string[]; // Array of mentioned user IDs
+  mentions: string[]; // Array of mentioned user IDs (stored in DB, UI display only)
   isDraft: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -47,13 +47,12 @@ export interface CommentReaction {
  * 
  * **Enhancements Beyond Proposal:**
  * 1. **TipTap Rich Text** - Bold, italic, lists, links (not just plain text)
- * 2. **@Mention System** - Autocomplete with user search
- * 3. **Comment Threading** - Nested replies up to 3 levels
- * 4. **Emoji Reactions** - Slack-style reactions with aggregation
- * 5. **Draft Auto-Save** - Never lose partially written comments
- * 6. **Typing Indicators** - "John is typing..." via Supabase Presence
- * 7. **Edit/Delete** - Full CRUD with optimistic updates
- * 8. **Activity Feed** - Merge comments with audit logs
+ * 2. **Comment Threading** - Nested replies up to 3 levels
+ * 3. **Emoji Reactions** - Slack-style reactions with aggregation
+ * 4. **Draft Auto-Save** - Never lose partially written comments
+ * 5. **Typing Indicators** - "John is typing..." via Supabase Presence
+ * 6. **Edit/Delete** - Full CRUD with optimistic updates
+ * 7. **Activity Feed** - Merge comments with audit logs
  * 
  * @example
  * ```tsx
