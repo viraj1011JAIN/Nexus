@@ -39,7 +39,10 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
       }
       if (result.data) {
         setUnlockedData(result.data);
+        return;
       }
+      // Neither error nor data — treat as unexpected failure
+      setError("Unable to load board. Please try again.");
     });
   };
 
@@ -87,6 +90,7 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
               />
               <button
                 type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}

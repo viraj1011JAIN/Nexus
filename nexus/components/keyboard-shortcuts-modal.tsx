@@ -74,8 +74,6 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 /* ── Modal ─────────────────────────────────────────────────────────────────── */
 
-/* ── Modal ─────────────────────────────────────────────────────────────────── */
-
 interface KeyboardShortcutsModalProps {
   /** Controlled open state (from parent). When omitted the component manages its own state. */
   open?: boolean;

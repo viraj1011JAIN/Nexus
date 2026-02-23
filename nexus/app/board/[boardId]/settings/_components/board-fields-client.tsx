@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Plus, Trash2, GripVertical, Loader2, Text, Hash, Calendar, CheckSquare, List, Link2, Mail, Phone, ChevronDown, ToggleLeft } from "lucide-react";
+import { Plus, Trash2, Loader2, Text, Hash, Calendar, CheckSquare, List, Link2, Mail, Phone, ChevronDown, ToggleLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -75,17 +75,24 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
+
+    // Validate options for SELECT / MULTI_SELECT before touching saving state
+    const options = ["SELECT", "MULTI_SELECT"].includes(newType)
+      ? newOptions.split(",").map((s) => s.trim()).filter(Boolean)
+      : undefined;
+    if ((newType === "SELECT" || newType === "MULTI_SELECT") && (!options || options.length === 0)) {
+      toast.error("Please add at least one option (comma-separated).");
+      return;
+    }
+
     setSaving(true);
     try {
-      const options = ["SELECT", "MULTI_SELECT"].includes(newType)
-        ? newOptions.split(",").map((s) => s.trim()).filter(Boolean)
-        : undefined;
 
       const result = await createCustomField(
         newName.trim(),
         newType,
         boardId,
-        options,
+        options,   // already computed above
         newRequired
       );
       if (result.error) { toast.error(result.error); return; }
@@ -151,7 +158,6 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
                 key={field.id}
                 className="flex items-center gap-3 p-4 rounded-xl border bg-white dark:bg-slate-900 hover:shadow-sm transition-shadow"
               >
-                <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab" />
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <Icon className="h-4 w-4 text-indigo-500 shrink-0" />
                   <span className="font-medium truncate">{field.name}</span>
@@ -269,7 +275,13 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setShowCreate(false); setNewName(""); setNewType("TEXT"); }}
+              onClick={() => {
+                setShowCreate(false);
+                setNewName("");
+                setNewType("TEXT");
+                setNewRequired(false);
+                setNewOptions("");
+              }}
             >
               Cancel
             </Button>

@@ -14,7 +14,134 @@
  */
 
 import crypto from "crypto";
+import dns from "dns";
 import { db } from "@/lib/db";
+
+// ─── SSRF protection ─────────────────────────────────────────────────────────
+
+// Hostnames that must never be contacted (regardless of what the stored URL says)
+const BLOCKED_HOSTNAMES = new Set([
+  "localhost",
+  "0.0.0.0",
+  "metadata.google.internal",
+]);
+
+// IPv4 CIDR ranges considered private / link-local / loopback
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((n) => isNaN(n))) return false;
+  const [a, b] = parts;
+  return (
+    a === 10 ||                           // 10.0.0.0/8
+    (a === 172 && b >= 16 && b <= 31) ||  // 172.16.0.0/12
+    (a === 192 && b === 168) ||            // 192.168.0.0/16
+    a === 127 ||                           // 127.0.0.0/8  loopback
+    (a === 169 && b === 254) ||            // 169.254.0.0/16  link-local / AWS metadata
+    a === 0                               // 0.0.0.0/8
+  );
+}
+
+// IPv6 addresses considered private / loopback / link-local / ULA
+function isPrivateIPv6(ip: string): boolean {
+  const lower = ip.toLowerCase().replace(/^\[|\]$/g, "");
+  return (
+    lower === "::1" ||
+    lower.startsWith("fc") ||
+    lower.startsWith("fd") ||
+    lower.startsWith("fe80:")
+  );
+}
+
+/**
+ * Validate a webhook target URL before delivery.
+ *
+ * Blocks:
+ *   - Non-parseable URLs
+ *   - Non-HTTPS URLs in production
+ *   - Blocked / private hostnames (SSRF prevention)
+ *   - Hostnames that resolve to private / internal IP ranges
+ *
+ * Returns `{ valid: true }` if the URL is safe to call, or
+ * `{ valid: false, reason: "..." }` explaining why it was blocked.
+ */
+async function validateWebhookUrl(
+  url: string
+): Promise<{ valid: boolean; reason?: string }> {
+  // 1. Parse
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { valid: false, reason: `Malformed URL: ${url}` };
+  }
+
+  // 2. Protocol — require https in production
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction && parsed.protocol !== "https:") {
+    return {
+      valid: false,
+      reason: `Protocol '${parsed.protocol}' not allowed in production (must be https)`,
+    };
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return { valid: false, reason: `Unsupported protocol: ${parsed.protocol}` };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // 3. Known-blocked hostnames
+  if (BLOCKED_HOSTNAMES.has(hostname)) {
+    return { valid: false, reason: `Blocked hostname: ${hostname}` };
+  }
+
+  // Also block bare IPs that are obviously private without DNS lookup
+  if (isPrivateIPv4(hostname)) {
+    return { valid: false, reason: `Blocked private IPv4 address: ${hostname}` };
+  }
+  if (isPrivateIPv6(hostname)) {
+    return { valid: false, reason: `Blocked private IPv6 address: ${hostname}` };
+  }
+
+  // 4. DNS resolution — reject if hostname resolves to any private range
+  try {
+    const [v4Results, v6Results] = await Promise.allSettled([
+      dns.promises.resolve4(hostname),
+      dns.promises.resolve6(hostname),
+    ]);
+
+    const ipv4s = v4Results.status === "fulfilled" ? v4Results.value : [];
+    const ipv6s = v6Results.status === "fulfilled" ? v6Results.value : [];
+
+    for (const ip of ipv4s) {
+      if (isPrivateIPv4(ip)) {
+        return {
+          valid: false,
+          reason: `Hostname '${hostname}' resolves to private IPv4 ${ip}`,
+        };
+      }
+    }
+    for (const ip of ipv6s) {
+      if (isPrivateIPv6(ip)) {
+        return {
+          valid: false,
+          reason: `Hostname '${hostname}' resolves to private IPv6 ${ip}`,
+        };
+      }
+    }
+
+    // Require at least one resolved address (paranoid: avoids ephemeral DNS tricks)
+    if (ipv4s.length === 0 && ipv6s.length === 0) {
+      return { valid: false, reason: `Hostname '${hostname}' did not resolve` };
+    }
+  } catch (dnsErr) {
+    return {
+      valid: false,
+      reason: `DNS lookup failed for '${hostname}': ${String(dnsErr)}`,
+    };
+  }
+
+  return { valid: true };
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +211,31 @@ async function deliverSingle(
   const startMs = Date.now();
   let statusCode: number | null = null;
   let success = false;
+
+  // ── SSRF guard ─────────────────────────────────────────────────────────────
+  const urlCheck = await validateWebhookUrl(webhook.url);
+  if (!urlCheck.valid) {
+    console.warn(
+      `[WebhookDelivery] Blocked delivery to webhook ${webhook.id} — ${urlCheck.reason}`
+    );
+    // Record blocked attempt as a failed delivery so the user sees it in the log
+    const duration = Date.now() - startMs;
+    try {
+      await db.webhookDelivery.create({
+        data: {
+          webhookId: webhook.id,
+          event,
+          payload: JSON.parse(body) as object,
+          statusCode: null,
+          success: false,
+          duration,
+        },
+      });
+    } catch (dbErr) {
+      console.error("[WebhookDelivery] Failed to save blocked-delivery record:", dbErr);
+    }
+    return;
+  }
 
   try {
     const sig = sign(body, webhook.secret);

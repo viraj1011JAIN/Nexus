@@ -53,7 +53,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
   SET_DUE_DATE_OFFSET: "Set due date (days from now)",
   POST_COMMENT: "Post a comment",
   SEND_NOTIFICATION: "Send notification to assignee",
-  COMPLETE_CHECKLIST_ITEM: "Mark checklist item complete",
+  COMPLETE_CHECKLIST: "Mark checklist item complete",
 };
 
 const PRIORITY_OPTIONS = ["URGENT", "HIGH", "MEDIUM", "LOW", "NONE"] as Priority[];

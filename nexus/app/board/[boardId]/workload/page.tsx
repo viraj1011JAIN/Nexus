@@ -53,8 +53,11 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
         },
       },
     });
-  } catch {
-    notFound();
+  } catch (err) {
+    // Only mask genuine "not found" (null return) — rethrow real DB/permission failures
+    // so Next.js error boundary handles them instead of silently 404-ing.
+    console.error("[WorkloadPage] Failed to fetch board:", err);
+    throw err;
   }
 
   if (!board) notFound();

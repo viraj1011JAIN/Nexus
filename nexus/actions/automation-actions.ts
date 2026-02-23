@@ -28,7 +28,7 @@ export type ActionType =
   | "SET_DUE_DATE_OFFSET"
   | "POST_COMMENT"
   | "SEND_NOTIFICATION"
-  | "COMPLETE_CHECKLIST_ITEM";
+  | "COMPLETE_CHECKLIST";
 
 export interface TriggerConfig {
   type: TriggerType;
@@ -47,8 +47,8 @@ export interface ActionConfig {
   daysOffset?: number;          // SET_DUE_DATE_OFFSET
   comment?: string;             // POST_COMMENT
   notificationMessage?: string; // SEND_NOTIFICATION
-  checklistId?: string;         // COMPLETE_CHECKLIST_ITEM
-  itemId?: string;              // COMPLETE_CHECKLIST_ITEM (optional: specific item)
+  checklistId?: string;         // COMPLETE_CHECKLIST
+  itemId?: string;              // COMPLETE_CHECKLIST (optional: target a specific item)
 }
 
 export interface ConditionConfig {
@@ -480,7 +480,7 @@ async function executeAction(
       }
       break;
 
-    case "COMPLETE_CHECKLIST_ITEM":
+    case "COMPLETE_CHECKLIST":
       if (action.checklistId) {
         // Mark a specific item (if itemId given) or all incomplete items on the checklist
         await db.checklistItem.updateMany({

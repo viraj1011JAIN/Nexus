@@ -282,11 +282,22 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 
     case "POST_COMMENT": {
       if (!action.comment) return;
+      // Comment.userId is a required FK — we need a real user row.
+      // Configure SYSTEM_USER_ID in env to point to a dedicated automation user.
+      // If unset we skip comment creation rather than violating the FK constraint.
+      const systemUserId = process.env.SYSTEM_USER_ID;
+      if (!systemUserId) {
+        console.warn(
+          "[AutomationEngine] POST_COMMENT skipped: SYSTEM_USER_ID env var is not set. "
+          + "Create a dedicated automation user and set its DB id in SYSTEM_USER_ID."
+        );
+        return;
+      }
       await db.comment.create({
         data: {
           text: action.comment,
           cardId: event.cardId,
-          userId: "automation",
+          userId: systemUserId,
           userName: "Automation Bot",
           userImage: null,
           mentions: [],
@@ -298,9 +309,10 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 
     case "SEND_NOTIFICATION": {
       if (!action.notificationMessage || !card.assigneeId) return;
-      // Notify the card assignee
+      // card.assigneeId stores the DB user.id (set by ASSIGN_MEMBER which stores action.assigneeId
+      // directly). Query by primary key, not by clerkUserId.
       const assignedUser = await db.user.findFirst({
-        where: { clerkUserId: card.assigneeId },
+        where: { id: card.assigneeId },
         select: { id: true, name: true },
       });
       if (!assignedUser) break;
@@ -322,11 +334,16 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
       break;
     }
 
-    case "COMPLETE_CHECKLIST_ITEM": {
+    case "COMPLETE_CHECKLIST": {
       if (!action.checklistId) return;
-      // Mark all items in the checklist as complete
+      // Mark all incomplete items in the checklist as complete.
+      // "COMPLETE_CHECKLIST" completes the entire checklist; for single-item targeting
+      // callers should use action.itemId (which is passed through as-is in ActionConfig).
       await db.checklistItem.updateMany({
-        where: { checklistId: action.checklistId },
+        where: {
+          checklistId: action.checklistId,
+          ...(action.itemId ? { id: action.itemId } : {}),
+        },
         data: { isComplete: true },
       });
       break;
@@ -340,10 +357,19 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Increment a LexoRank-style order string by appending "n" (mid of alphabet).
- * Works as a simple "append to end" when we just want to place a card last.
+ * Append "|" to place a card last in lexicographic order.
+ * This is a simple "push to end" strategy. To prevent unbounded string growth,
+ * we cap at a maximum length and reset to a compact timestamp-based rank.
+ * For production use, integrate a full LexoRank library (e.g. lexorank npm package)
+ * and call LexoRank.max() or similar to compute the successor cleanly.
  */
 function incrementOrder(order: string): string {
-  // Simple approach: append "|" to sort after the current last item
+  const MAX_ORDER_LENGTH = 32;
+  if (order.length >= MAX_ORDER_LENGTH) {
+    // String has grown too long — fall back to a compact timestamp-based rank.
+    // This ensures the card still appears last while keeping strings bounded.
+    return Date.now().toString(36);
+  }
+  // Append "|" (0x7C) which sorts after all printable ASCII to place the card last.
   return order + "|";
 }

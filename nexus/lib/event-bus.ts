@@ -26,18 +26,44 @@ export async function emitCardEvent(
   event: AutomationEvent,
   webhookData?: Record<string, unknown>
 ): Promise<void> {
+  const webhookEvent = TRIGGER_TO_WEBHOOK[event.type] ?? "card.updated";
+  const payload = webhookData ?? {
+    cardId: event.cardId,
+    boardId: event.boardId,
+    type: event.type,
+    ...event.context,
+  };
+
   // Automations and webhooks are fully independent — run in parallel
-  await Promise.allSettled([
+  const results = await Promise.allSettled([
     runAutomations(event),
-    fireWebhooks(
-      event.orgId,
-      TRIGGER_TO_WEBHOOK[event.type] ?? "card.updated",
-      webhookData ?? {
-        cardId: event.cardId,
-        boardId: event.boardId,
-        type: event.type,
-        ...event.context,
-      }
-    ),
+    fireWebhooks(event.orgId, webhookEvent, payload),
   ]);
+
+  // Log any rejections so they are observable (engine functions should not reject,
+  // but this guards against unexpected throws)
+  const [automationResult, webhookResult] = results;
+  if (automationResult.status === "rejected") {
+    console.error(
+      "[EventBus] runAutomations rejected unexpectedly",
+      {
+        reason: automationResult.reason,
+        eventType: event.type,
+        cardId: event.cardId,
+        orgId: event.orgId,
+      }
+    );
+  }
+  if (webhookResult.status === "rejected") {
+    console.error(
+      "[EventBus] fireWebhooks rejected unexpectedly",
+      {
+        reason: webhookResult.reason,
+        webhookEvent,
+        cardId: event.cardId,
+        orgId: event.orgId,
+        webhookData: payload,
+      }
+    );
+  }
 }
