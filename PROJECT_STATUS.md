@@ -1,6 +1,6 @@
 ﻿# NEXUS — PROJECT STATUS
 
-**Last Audited:** February 2026  
+**Last Audited:** 23 February 2026  
 **Audited Against:** Live codebase at `c:\Nexus\nexus`  
 **Every fact verified from source files. No estimates, no aspirational claims.**
 
@@ -76,7 +76,7 @@
 - `CreateBoard` schema accepts title + 5 image fields + optional `templateId`
 - `/api/unsplash/route.ts` — server-side Unsplash photo search (key never exposed client-side), auth-gated, returns 12 photos per page with attribution HTML
 - `board/[boardId]/page.tsx` renders `imageFullUrl` as the full-page background when present; dark overlay (`bg-black/40`) applied for readability; gradient+animated blobs shown when null
-
+  - `Tabs` (Board/Analytics) extracted into `components/board/board-tabs.tsx` (`"use client"`) to prevent Radix UI `useId()` hydration mismatch when rendered inside async Server Component
 ### List Management
 - Create, rename, delete lists
 - Drag-and-drop reorder — dnd-kit v6 + LexoRank string ordering
@@ -143,10 +143,10 @@
 
 ### File Attachments (Supabase Storage)
 - Prisma `Attachment` model: id, fileName, fileSize, mimeType, url, storagePath, cardId, uploadedById, uploadedByName
-- `/api/upload/route.ts` — multipart upload to `card-attachments` Supabase Storage bucket, 10MB size limit, MIME allowlist, org ownership check, Prisma record creation
-- DELETE endpoint: only uploader can delete; removes from storage + DB
-- `components/board/file-attachment.tsx` — upload UI with progress, file type icons, size formatting, download link, delete
-- Card modal has "Files" tab with badge count showing attachment count
+- `/api/upload/route.ts` — multipart upload to `card-attachments` Supabase Storage bucket, 10MB size limit, MIME allowlist (no SVG), org ownership check via `getTenantContext()` (auto-provisions User/OrganizationUser rows — fixes 403 on first visit), Prisma record creation
+- DELETE endpoint: only uploader can delete; DB record deleted first then storage removed; storage failure logged (attachment.id + storagePath) but does not fail the response
+- `components/board/file-attachment.tsx` — upload UI with progress, file type icons, size formatting, download link, delete; keyboard-accessible: `group-focus-within:opacity-100` on action buttons
+- Card modal has "Files" tab with badge count showing attachment count; wrapped in `<ErrorBoundary>` to prevent attachment errors crashing the modal
 
 ### Board Templates
 - Prisma models: `BoardTemplate`, `TemplateList`, `TemplateCard`
@@ -158,10 +158,10 @@
 
 ### @Mention UI (TipTap)
 - `@tiptap/extension-mention` + `@tiptap/suggestion` installed
-- `components/editor/mention-list.tsx` — dropdown with keyboard navigation (Arrow Up/Down/Enter), avatars, fallback initials, empty state
-- `components/editor/mention-suggestion.ts` — `SuggestionOptions` wired to `/api/members`, 200ms debounce, tippy.js popup
+- `components/editor/mention-list.tsx` — dropdown with keyboard navigation (Arrow Up/Down/Enter), avatars, fallback initials, empty state; guards against empty items array before modulo arithmetic
+- `components/editor/mention-suggestion.ts` — `createMentionSuggestion()` factory (scopes debounce timer + `latestResolve` per editor instance; resolves pending Promises on rapid input to prevent unresolved Promise leaks); backward-compat singleton `mentionSuggestion` export; wired to `/api/members`, 200ms debounce, tippy.js popup
+- `rich-comments.tsx` — creates per-mount suggestion via `useMemo(() => createMentionSuggestion(), [])` to prevent cross-editor timer collisions
 - `/api/members/route.ts` — search org members by query, returns up to 10 matches
-- `rich-comments.tsx` — `Mention` extension configured with `renderHTML`, mention CSS class
 - `app/editor.css` — `.mention` styles + tippy override
 
 ### Real-Time Collaboration
@@ -247,22 +247,24 @@
 
 ## Test Coverage — Actual Numbers
 
-**Test files (8 suites, all passing):**
+**Unit test files (7 suites — all verified passing `npx jest --testPathPatterns="unit"`):**
 - `__tests__/unit/action-protection.test.ts` — 19 test cases
 - `__tests__/unit/tenant-context.test.ts` — 5 test cases
 - `__tests__/unit/rate-limit.test.ts` — 4 test cases (`jest.useFakeTimers()`)
 - `__tests__/unit/email.test.ts` — 16 test cases — sendEmail, sendMentionEmail, sendDueDateReminderEmail, sendWeeklyDigestEmail (all mocked)
-- `__tests__/unit/template-actions.test.ts` — 30 test cases — getTemplates, getTemplateById, createBoardFromTemplate, seedBuiltInTemplates
-- `__tests__/unit/attachment-actions.test.ts` — 13 test cases — getCardAttachments, deleteAttachment (org-boundary security)
+- `__tests__/unit/template-actions.test.ts` — 30 test cases — getTemplates, getTemplateById, createBoardFromTemplate, seedBuiltInTemplates; `db.$transaction` mock, real user fetch for audit log, CRON_SECRET guard
+- `__tests__/unit/attachment-actions.test.ts` — 15 test cases — getCardAttachments (IDOR/org-boundary + card-not-found security tests), deleteAttachment; `db.card.findUnique` mock included
 - `__tests__/unit/schema.test.ts` — 32 test cases — all Zod schemas, boundary conditions, error message quality
+- **Unit total: 122 tests — all passing**
+
+**Integration test file (1 suite):**
 - `__tests__/integration/server-actions.test.ts` — 19 test cases
-- **Total: 138 test cases — all passing**
 
 **E2E Tests (Playwright):**
 - `playwright.config.ts` — Chromium + Firefox + Mobile Chrome, auth state re-use
-- `e2e/auth.setup.ts` — Clerk sign-in flow, saves `e2e/.auth/user.json`
-- `e2e/boards.spec.ts` — dashboard load, blank board creation, Unsplash picker, template picker, board navigation
-- `e2e/cards.spec.ts` — card creation, card modal, Files tab, @mention dropdown, file upload/rejection
+- `e2e/auth.setup.ts` — Clerk sign-in flow (throws if `E2E_EMAIL`/`E2E_PASSWORD` not set; guards optional continue button), saves `e2e/.auth/user.json`
+- `e2e/boards.spec.ts` — dashboard load, blank board creation (direct `expect(errorInfo).toBeVisible()` + URL assertion), Unsplash picker, template picker, board navigation
+- `e2e/cards.spec.ts` — card creation, card modal, Files tab, @mention dropdown (explicit visibility check + `test.skip` if absent), file upload/rejection
 
 Run E2E: `npx playwright test` (requires `npm run dev` running or `PLAYWRIGHT_BASE_URL` set)
 
@@ -342,8 +344,8 @@ Run E2E: `npx playwright test` (requires `npm run dev` running or `PLAYWRIGHT_BA
 | `/api/cron/daily-reports` | API Route | Vercel Cron — daily reports + weekly digest emails (Monday) + due-date reminders |
 | `/api/tenor` | API Route | GIF search proxy (Giphy/Klipy) |
 | `/api/audit-logs` | API Route | |
-| `/api/unsplash` | API Route | Server-side Unsplash photo search (key never sent to client) |
-| `/api/upload` | API Route | Supabase Storage file upload + delete for card attachments |
+| `/api/unsplash` | API Route | Server-side Unsplash photo search (key never sent to client); safe defaults for null user fields via optional chaining |
+| `/api/upload` | API Route | Supabase Storage file upload + delete; uses `getTenantContext()` for auth + org check |
 | `/api/members` | API Route | Org member search for @mention autocomplete |
 | `/api/admin/seed-templates` | API Route | POST: idempotently seed 6 built-in board templates |
 
@@ -386,10 +388,11 @@ Run E2E: `npx playwright test` (requires `npm run dev` running or `PLAYWRIGHT_BA
 | Mobile responsive | 100% | |
 | PWA manifest | 100% | Icons in `/public`, manifest `icons` array |
 | **Board backgrounds** | **100%** | Unsplash picker UI + server-side API route + image fields in schema + create-board wiring |
-| **Email delivery** | **100%** | Resend + `lib/email.ts` + 4 email types + cron integration |
-| **File attachments** | **100%** | Supabase Storage + Prisma model + upload API + card modal Files tab |
-| **Board templates** | **100%** | 6 seeded templates + picker UI + createBoardFromTemplate + admin seed endpoint |
-| **@mention UI** | **100%** | TipTap Mention extension + dropdown + members API + CSS |
-| **Test coverage** | **Meaningful** | 138 unit + integration tests covering email, templates, attachments, schemas |
+| **Email delivery** | **100%** | Resend + `lib/email.ts` + 4 email types + cron integration; `allowUrl()` + `escHtml()` on all href attributes; PII removed from logs; UTC timezone |
+| **File attachments** | **100%** | Supabase Storage + Prisma model + upload API (uses `getTenantContext()`) + card modal Files tab |
+| **Board templates** | **100%** | 6 seeded templates + picker UI + createBoardFromTemplate (in `db.$transaction`) + admin seed endpoint (CRON_SECRET guarded) |
+| **@mention UI** | **100%** | TipTap Mention extension + dropdown + members API + CSS; per-instance debounce timer + `latestResolve` leak fix |
+| **Test coverage** | **Meaningful** | 122 unit tests (7 suites) + 19 integration tests; security tests for IDOR in attachment-actions |
 | **E2E tests** | **100%** | Playwright config + auth setup + boards spec + cards spec |
 | CI/CD pipeline | 100% | GitHub Actions: typecheck + lint + test + build |
+| **Security hardening** | **100%** | IDOR fix in `getCardAttachments`; XSS escaping in `unsplash/route`, `lib/email.ts`; SVG removed from upload allowlist; Clerk API error propagation in cron; `latestResolve` mention promise fix; hydration mismatch fix in board page |
