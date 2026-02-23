@@ -1,10 +1,6 @@
 import { notFound } from "next/navigation";
-import { ListContainer } from "@/components/board/list-container";
-import { ErrorBoundary } from "@/components/error-boundary";
 import { BoardHeader } from "@/components/board/board-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
-import { BarChart3, LayoutDashboard } from "lucide-react";
+import { BoardTabs } from "@/components/board/board-tabs";
 import { getTenantContext } from "@/lib/tenant-context";
 import { createDAL } from "@/lib/dal";
 
@@ -69,32 +65,12 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
       </div>
 
       {/* Tabs for Board / Analytics */}
-      <Tabs defaultValue="board" className="w-full relative z-10">
-        <div className="px-6 pt-4">
-          <TabsList className="bg-white/80 backdrop-blur-sm shadow-sm">
-            <TabsTrigger value="board" className="gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              Board
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="board" className="mt-0 p-6 pt-4">
-          <ErrorBoundary>
-            <ListContainer boardId={params.boardId} orgId={board.orgId} data={board.lists} />
-          </ErrorBoundary>
-        </TabsContent>
-        
-        <TabsContent value="analytics" className="mt-0">
-          <ErrorBoundary>
-            <AnalyticsDashboard boardId={params.boardId} boardName={board.title} orgId={board.orgId} />
-          </ErrorBoundary>
-        </TabsContent>
-      </Tabs>
+      <BoardTabs
+        boardId={params.boardId}
+        boardTitle={board.title}
+        orgId={board.orgId}
+        lists={board.lists}
+      />
     </div>
   );
 }
