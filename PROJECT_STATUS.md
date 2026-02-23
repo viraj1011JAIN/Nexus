@@ -241,7 +241,7 @@
 | @mention email notifications | **Built** | Trigger wired in `createComment` (phase3-actions.ts): parses `mentions[]` (Clerk user IDs), queries `db.user` per mentioned user, calls `sendMentionEmail()` fire-and-forget; skips self-mentions; only fires on non-draft comments |
 | Dedicated search page | Not built | Command palette searches API; no full-text search results page. |
 | PostHog / product analytics | Not integrated | |
-| Supabase Storage bucket setup | Manual step | `card-attachments` bucket must be created in Supabase dashboard |
+| Supabase Storage bucket setup | **Scriptable** | Run `npm run setup:storage` after adding `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` (Supabase Dashboard → Settings → API → service_role). Script creates the `card-attachments` bucket with public access, 10 MB limit, and MIME allowlist. Idempotent — safe to re-run. |
 | Uptime monitoring | Not configured | |
 | Preview deployments | Not configured | |
 
