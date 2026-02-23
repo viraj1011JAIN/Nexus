@@ -122,7 +122,7 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
           "absolute inset-0 opacity-0 transition-opacity duration-500",
           isActive && "opacity-100"
         )}>
-          <div className="absolute inset-0 bg-gradient-to-br from-[#7C3AED]/10 via-[#A855F7]/5 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-[#7C3AED]/10 via-[#A855F7]/5 to-transparent" />
         </div>
 
         {/* Icon Container */}
@@ -203,7 +203,7 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
         <div className={cn(
           "w-11 h-6 rounded-full transition-all duration-200 relative",
           checked 
-            ? "bg-gradient-to-r from-[#7C3AED] to-[#A855F7]" 
+            ? "bg-linear-to-r from-[#7C3AED] to-[#A855F7]" 
             : "bg-[#E5E7EB] dark:bg-[#252B3A]"
         )}>
           <motion.div
@@ -226,12 +226,12 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
         className="space-y-3"
       >
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <div className="relative flex-shrink-0">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
+          <div className="relative shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
               <SettingsIcon className="h-6 w-6 text-white" />
             </div>
             <motion.div
-              className="absolute -inset-1 bg-gradient-to-br from-[#7C3AED] to-[#A855F7] rounded-xl opacity-20 blur-lg"
+              className="absolute -inset-1 bg-linear-to-br from-[#7C3AED] to-[#A855F7] rounded-xl opacity-20 blur-lg"
               animate={{ opacity: [0.2, 0.4, 0.2] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
@@ -422,14 +422,14 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
         
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-4 bg-[#ECFDF5] dark:bg-[#064E3B] rounded-xl border-2 border-[#10B981]/20">
-            <div className="w-10 h-10 rounded-full bg-[#10B981] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#10B981] flex items-center justify-center shrink-0">
               <Lock className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-[15px] text-[#0F172A] dark:text-[#F1F5F9]">Two-Factor Authentication</p>
               <p className="text-[14px] text-[#64748B] dark:text-[#94A3B8] mt-1">Your account is protected with 2FA via Clerk</p>
             </div>
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center">
                 <Check className="h-4 w-4 text-white" />
               </div>
@@ -437,14 +437,14 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
           </div>
 
           <div className="flex items-start gap-3 p-4 bg-[#ECFDF5] dark:bg-[#064E3B] rounded-xl border-2 border-[#10B981]/20">
-            <div className="w-10 h-10 rounded-full bg-[#10B981] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#10B981] flex items-center justify-center shrink-0">
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-[15px] text-[#0F172A] dark:text-[#F1F5F9]">End-to-End Encryption</p>
               <p className="text-[14px] text-[#64748B] dark:text-[#94A3B8] mt-1">All data is encrypted in transit and at rest</p>
             </div>
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center">
                 <Check className="h-4 w-4 text-white" />
               </div>
@@ -452,14 +452,14 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
           </div>
 
           <div className="flex items-start gap-3 p-4 bg-[#ECFDF5] dark:bg-[#064E3B] rounded-xl border-2 border-[#10B981]/20">
-            <div className="w-10 h-10 rounded-full bg-[#10B981] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#10B981] flex items-center justify-center shrink-0">
               <Globe className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-[15px] text-[#0F172A] dark:text-[#F1F5F9]">Session Management</p>
               <p className="text-[14px] text-[#64748B] dark:text-[#94A3B8] mt-1">Active session monitoring and auto-logout enabled</p>
             </div>
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center">
                 <Check className="h-4 w-4 text-white" />
               </div>
@@ -500,7 +500,7 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:brightness-110 text-white shadow-[0_2px_8px_rgba(124,58,237,0.25)] hover:shadow-[0_4px_12px_rgba(124,58,237,0.35)] font-medium px-6"
+          className="bg-linear-to-r from-[#7C3AED] to-[#A855F7] hover:brightness-110 text-white shadow-[0_2px_8px_rgba(124,58,237,0.25)] hover:shadow-[0_4px_12px_rgba(124,58,237,0.35)] font-medium px-6"
         >
           {isSaving ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />

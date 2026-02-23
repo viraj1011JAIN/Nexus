@@ -27,7 +27,7 @@ export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
         >
           ← Back
         </Link>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
           {boardTitle}
         </h1>
       </div>

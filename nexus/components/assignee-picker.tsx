@@ -100,7 +100,7 @@ export function AssigneePicker({
           {assignee ? (
             <div className="flex items-center gap-2">
               <UserAvatar user={assignee} size="sm" />
-              <span className="max-w-[100px] truncate">{assignee.name}</span>
+              <span className="max-w-25 truncate">{assignee.name}</span>
             </div>
           ) : (
             'Assign'
@@ -108,7 +108,7 @@ export function AssigneePicker({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-96 max-h-[500px] overflow-y-auto">
+      <PopoverContent className="w-96 max-h-125 overflow-y-auto">
         <div className="space-y-3">
           <h3 className="font-semibold text-sm">Assign Member</h3>
 

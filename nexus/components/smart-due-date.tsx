@@ -66,14 +66,14 @@ export function SmartDueDate({
   // Visual configuration
   const stateConfig = isOverdue
     ? {
-        bgClass: "bg-gradient-to-r from-red-500 to-red-600 text-white",
+        bgClass: "bg-linear-to-r from-red-500 to-red-600 text-white",
         icon: AlertCircle,
         label: "Overdue",
         shouldShake: true,
       }
     : isUrgent
     ? {
-        bgClass: "bg-gradient-to-r from-amber-400 to-amber-500 text-white",
+        bgClass: "bg-linear-to-r from-amber-400 to-amber-500 text-white",
         icon: Clock,
         label: "Due soon",
         shouldShake: false,
@@ -136,9 +136,9 @@ export function SmartDueDate({
               "relative inline-flex items-center gap-2 rounded-lg font-medium transition-all shadow-sm",
               sizeClasses[size],
               isOverdue
-                ? "bg-gradient-to-r from-red-500 to-red-600 text-white"
+                ? "bg-linear-to-r from-red-500 to-red-600 text-white"
                 : isUrgent
-                ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white"
+                ? "bg-linear-to-r from-amber-400 to-amber-500 text-white"
                 : isComfortable
                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                 : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
@@ -259,6 +259,8 @@ function DueDatePicker({ initialDate, onSelect, onClear }: DueDatePickerProps) {
         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Date & Time</label>
         <input
           type="datetime-local"
+          aria-label="Select date and time"
+          title="Select date and time"
           value={selectedDate.toISOString().slice(0, 16)}
           onChange={(e) => {
             const date = new Date(e.target.value);
