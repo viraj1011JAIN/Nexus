@@ -2,13 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { PRIORITY_VALUES, type PriorityValue } from "@/lib/priority-values";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { db } from "@/lib/db";
-
-// Single source of truth for Priority values — avoids drift with the Prisma
-// enum while keeping the code free of a runtime @prisma/client import.
-export const PRIORITY_VALUES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
-export type PriorityValue = typeof PRIORITY_VALUES[number];
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 

@@ -2,13 +2,19 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Script from "next/script";
+import dynamic from "next/dynamic";
 
 import { ModalProvider } from "@/components/providers/modal-provider";
 import { ThemeProvider, themeScript } from "@/components/theme-provider";
 import { PerformanceWrapper } from "@/components/performance-wrapper";
 import { CommandPalette } from "@/components/command-palette";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "sonner";
+// Sonner must be client-only: it portals to <body> on the client but renders
+// inline during SSR, which causes a structural hydration mismatch.
+const Sonner = dynamic(
+  () => import("sonner").then((m) => m.Toaster),
+  { ssr: false }
+);
 import "./globals.css";
 import "./editor.css";
 
