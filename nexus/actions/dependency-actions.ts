@@ -4,14 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { db } from "@/lib/db";
-import { DependencyType } from "@prisma/client";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
 const AddDependencySchema = z.object({
   blockerId: z.string().uuid(),
   blockedId: z.string().uuid(),
-  type: z.nativeEnum(DependencyType).default("BLOCKS"),
+  type: z.enum(["BLOCKS", "RELATES_TO", "DUPLICATES"] as const).default("BLOCKS"),
   boardId: z.string().uuid().optional(),
 });
 
