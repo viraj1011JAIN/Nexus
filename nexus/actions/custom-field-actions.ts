@@ -2,15 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { CustomFieldType } from "@prisma/client";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { db } from "@/lib/db";
-import { CustomFieldType } from "@prisma/client";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
 const CreateFieldSchema = z.object({
   name: z.string().min(1).max(100),
-  type: z.nativeEnum(CustomFieldType),
+  type: z.enum(["TEXT", "NUMBER", "DATE", "CHECKBOX", "SELECT", "MULTI_SELECT", "URL", "EMAIL", "PHONE"] as const),
   boardId: z.string().uuid().optional(),
   options: z.array(z.string()).optional(),
   isRequired: z.boolean().default(false),

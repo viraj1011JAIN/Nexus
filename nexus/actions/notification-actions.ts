@@ -4,14 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getTenantContext, requireRole } from "@/lib/tenant-context";
 import { db } from "@/lib/db";
-import { NotificationType } from "@prisma/client";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
 const CreateNotificationSchema = z.object({
   orgId: z.string(),
   userId: z.string(),          // recipient
-  type: z.nativeEnum(NotificationType),
+  type: z.enum(["MENTIONED", "ASSIGNED", "CARD_DUE_SOON", "CARD_OVERDUE", "COMMENT_ON_ASSIGNED_CARD", "BOARD_SHARED", "SPRINT_STARTED", "DEPENDENCY_RESOLVED"] as const),
   title: z.string().max(200),
   body: z.string().optional(),
   entityType: z.string().optional(),

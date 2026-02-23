@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRealtimeAnalytics } from "@/hooks/use-realtime-analytics";
+import { Button } from "@/components/ui/button";
 import {
   TrendingUp,
   TrendingDown,
@@ -14,6 +15,8 @@ import {
   Clock,
   AlertCircle,
   Minus,
+  BarChart2,
+  LayoutDashboard,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -68,6 +71,11 @@ const ExportPDF = dynamic(() =>
   import("./export-pdf").then((mod) => mod.ExportPDF)
 );
 
+// Lazy load Advanced Analytics (heavy charting)
+const AdvancedAnalytics = dynamic(() =>
+  import("./advanced-analytics").then((mod) => mod.AdvancedAnalytics)
+);
+
 interface AnalyticsDashboardProps {
   boardId: string;
   boardName: string;
@@ -79,6 +87,7 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"basic" | "advanced">("basic");
   const { isConnected } = useRealtimeAnalytics(boardId, orgId);
 
   const fetchMetrics = async () => {
@@ -148,6 +157,27 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
           <p className="text-muted-foreground mt-1">{boardName}</p>
         </div>
         <div className="flex items-center gap-4">
+          {/* View toggle */}
+          <div className="flex items-center rounded-lg border p-0.5 gap-0.5">
+            <Button
+              variant={view === "basic" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5 text-xs px-2.5"
+              onClick={() => setView("basic")}
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Basic
+            </Button>
+            <Button
+              variant={view === "advanced" ? "default" : "ghost"}
+              size="sm"
+              className="h-7 gap-1.5 text-xs px-2.5"
+              onClick={() => setView("advanced")}
+            >
+              <BarChart2 className="h-3.5 w-3.5" />
+              Advanced
+            </Button>
+          </div>
           {/* Real-time indicator */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div
@@ -157,10 +187,18 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
             />
             {isConnected ? "Live" : "Offline"}
           </div>
-          <ExportPDF metrics={metrics} boardName={boardName} />
+          {view === "basic" && <ExportPDF metrics={metrics} boardName={boardName} />}
         </div>
       </div>
 
+      {/* Advanced Analytics View */}
+      {view === "advanced" && (
+        <AdvancedAnalytics boardId={boardId} boardName={boardName} />
+      )}
+
+      {/* Basic Analytics View */}
+      {view !== "advanced" && (
+      <>
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -359,6 +397,8 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
           </CardContent>
         </Card>
       </div>
+      </>
+      )}
     </div>
   );
 }

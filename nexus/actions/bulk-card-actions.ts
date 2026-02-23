@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Priority } from "@prisma/client";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { db } from "@/lib/db";
-import { Priority } from "@prisma/client";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -12,7 +12,7 @@ const BulkUpdateSchema = z.object({
   cardIds: z.array(z.string().uuid()).min(1).max(200),
   update: z.object({
     listId: z.string().uuid().optional(),
-    priority: z.nativeEnum(Priority).optional(),
+    priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"] as const).optional(),
     assigneeId: z.string().optional().nullable(),
     dueDate: z.string().datetime().optional().nullable(),
     labelIds: z.array(z.string().uuid()).optional(),

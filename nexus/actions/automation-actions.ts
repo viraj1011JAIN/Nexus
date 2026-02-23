@@ -70,7 +70,7 @@ const TriggerSchema = z.object({
 const ActionSchema = z.object({
   type: z.string(),
   listId: z.string().uuid().optional(),
-  priority: z.nativeEnum(Priority).optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"] as const).optional(),
   assigneeId: z.string().optional(),
   labelId: z.string().uuid().optional(),
   daysOffset: z.number().min(-365).max(365).optional(),
