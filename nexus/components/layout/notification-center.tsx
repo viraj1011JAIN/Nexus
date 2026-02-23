@@ -236,7 +236,7 @@ export function NotificationCenter() {
         router.push(`/board/${notification.entityId}`);
       }
     },
-    []
+    [router]
   );
 
   const handleMarkAllRead = useCallback(async () => {

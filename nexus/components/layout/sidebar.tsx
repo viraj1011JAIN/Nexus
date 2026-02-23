@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NotificationCenter } from "@/components/notification-center";
+import { NotificationCenter } from "@/components/layout/notification-center";
 
 export const Sidebar = () => {
   const pathname = usePathname();
