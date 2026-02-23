@@ -356,7 +356,7 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
             orgId,
             userId: mentionedUser.id,
             type: "MENTIONED",
-            title: `${mentionerName} mentioned you in \"${card.title}\"",
+            title: `${mentionerName} mentioned you in "${card.title}"`,
             body: text.replace(/<[^>]+>/g, "").slice(0, 200),
             entityType: "CARD",
             entityId: cardId,
