@@ -3,33 +3,39 @@ import type { SuggestionOptions } from "@tiptap/suggestion";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import { MentionList, type MentionUser, type MentionListRef } from "./mention-list";
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+/**
+ * Factory — call once per editor instance so each editor has its own debounce
+ * timer, preventing cross-editor race conditions when multiple editors coexist.
+ */
+export function createMentionSuggestion(): Partial<SuggestionOptions<MentionUser>> {
+  // Timer is scoped to this suggestion config instance, not the module.
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-export const mentionSuggestion: Partial<SuggestionOptions<MentionUser>> = {
-  char: "@",
-  allowSpaces: false,
+  return {
+    char: "@",
+    allowSpaces: false,
 
-  items: async ({ query }: { query: string }): Promise<MentionUser[]> => {
-    // Debounce network fetch
-    if (debounceTimer) clearTimeout(debounceTimer);
+    items: async ({ query }: { query: string }): Promise<MentionUser[]> => {
+      // Debounce network fetch
+      if (debounceTimer) clearTimeout(debounceTimer);
 
-    return new Promise((resolve) => {
-      debounceTimer = setTimeout(async () => {
-        try {
-          const url = `/api/members?query=${encodeURIComponent(query)}`;
-          const res = await fetch(url);
-          if (!res.ok) return resolve([]);
-          const data: MentionUser[] = await res.json();
-          resolve(data);
-        } catch {
-          resolve([]);
-        }
-      }, 200);
-    });
-  },
+      return new Promise((resolve) => {
+        debounceTimer = setTimeout(async () => {
+          try {
+            const url = `/api/members?query=${encodeURIComponent(query)}`;
+            const res = await fetch(url);
+            if (!res.ok) return resolve([]);
+            const data: MentionUser[] = await res.json();
+            resolve(data);
+          } catch {
+            resolve([]);
+          }
+        }, 200);
+      });
+    },
 
-  render: () => {
-    let renderer: ReactRenderer<MentionListRef> | null = null;
+    render: () => {
+      let renderer: ReactRenderer<MentionListRef> | null = null;
     let popup: TippyInstance[] | null = null;
 
     return {
@@ -75,4 +81,8 @@ export const mentionSuggestion: Partial<SuggestionOptions<MentionUser>> = {
       },
     };
   },
-};
+  };
+}
+
+// Convenience singleton for single-editor use-cases.
+export const mentionSuggestion = createMentionSuggestion();

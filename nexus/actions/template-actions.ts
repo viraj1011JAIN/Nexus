@@ -62,7 +62,7 @@ export async function getTemplateById(
     },
     include: {
       lists: {
-        include: { cards: true },
+        include: { cards: { orderBy: { order: "asc" } } },
         orderBy: { order: "asc" },
       },
     },
@@ -99,7 +99,7 @@ export async function createBoardFromTemplate(opts: {
   imageThumbUrl?: string;
   imageFullUrl?: string;
   imageUserName?: string;
-  imageLinkHTML?: string;
+  imageLinkUrl?: string;
 }): Promise<{ data?: { boardId: string }; error?: string }> {
   const ctx = await getTenantContext();
   await requireRole("MEMBER", ctx);
@@ -112,50 +112,59 @@ export async function createBoardFromTemplate(opts: {
   const template = templateResult.data;
 
   try {
-    const board = await db.board.create({
-      data: {
-        title: opts.title,
-        orgId: ctx.orgId,
-        imageId: opts.imageId,
-        imageThumbUrl: opts.imageThumbUrl,
-        imageFullUrl: opts.imageFullUrl,
-        imageUserName: opts.imageUserName,
-        imageLinkHTML: opts.imageLinkHTML,
-      },
-    });
+    // Fetch caller's profile for the audit log (TenantContext has no name/image)
+    const user = await db.user.findFirst({ where: { clerkUserId: ctx.userId } });
+    const userName = user?.name ?? ctx.userId;
+    const userImage = user?.imageUrl ?? "";
 
-    // Create lists with their cards in sequence (LexoRank preserved from template)
-    for (const list of template.lists) {
-      const createdList = await db.list.create({
+    const board = await db.$transaction(async (tx) => {
+      const b = await tx.board.create({
         data: {
-          title: list.title,
-          order: list.order,
-          boardId: board.id,
+          title: opts.title,
+          orgId: ctx.orgId,
+          imageId: opts.imageId,
+          imageThumbUrl: opts.imageThumbUrl,
+          imageFullUrl: opts.imageFullUrl,
+          imageUserName: opts.imageUserName,
+          imageLinkHTML: opts.imageLinkUrl,
         },
       });
 
-      if (list.cards.length > 0) {
-        await db.card.createMany({
-          data: list.cards.map((c) => ({
-            title: c.title,
-            order: c.order,
-            listId: createdList.id,
-          })),
+      // Create lists with their cards in sequence (LexoRank preserved from template)
+      for (const list of template.lists) {
+        const createdList = await tx.list.create({
+          data: {
+            title: list.title,
+            order: list.order,
+            boardId: b.id,
+          },
         });
-      }
-    }
 
-    await db.auditLog.create({
-      data: {
-        orgId: ctx.orgId,
-        entityId: board.id,
-        entityType: "BOARD",
-        entityTitle: board.title,
-        action: "CREATE",
-        userId: ctx.userId,
-        userImage: "",
-        userName: "System",
-      },
+        if (list.cards.length > 0) {
+          await tx.card.createMany({
+            data: list.cards.map((c) => ({
+              title: c.title,
+              order: c.order,
+              listId: createdList.id,
+            })),
+          });
+        }
+      }
+
+      await tx.auditLog.create({
+        data: {
+          orgId: ctx.orgId,
+          entityId: b.id,
+          entityType: "BOARD",
+          entityTitle: b.title,
+          action: "CREATE",
+          userId: ctx.userId,
+          userImage,
+          userName,
+        },
+      });
+
+      return b;
     });
 
     logger.info("Board created from template", {
@@ -172,8 +181,14 @@ export async function createBoardFromTemplate(opts: {
   }
 }
 
-/** Seed built-in templates if they don't exist yet. Called from a server action / admin route. */
-export async function seedBuiltInTemplates(): Promise<void> {
+/** Seed built-in templates if they don't exist yet. Called from the admin API route.
+ *  Requires the caller to pass the CRON_SECRET to prevent unauthenticated
+ *  server-action invocations from the client. */
+export async function seedBuiltInTemplates(callerSecret?: string): Promise<void> {
+  const expected = process.env.CRON_SECRET;
+  if (!expected || callerSecret !== expected) {
+    throw new Error("Unauthorized: valid CRON_SECRET required to seed templates");
+  }
   const BUILT_IN: Array<{
     title: string;
     description: string;

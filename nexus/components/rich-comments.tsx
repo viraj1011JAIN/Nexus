@@ -6,7 +6,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Mention from "@tiptap/extension-mention";
-import { mentionSuggestion } from "@/components/editor/mention-suggestion";
+import { createMentionSuggestion } from "@/components/editor/mention-suggestion";
 import { MessageSquare, Reply, Smile, MoreVertical, Edit2, Trash2, X, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -445,6 +445,9 @@ function CommentEditor({
   onCancel,
 }: CommentEditorProps) {
   const [isFocused, setIsFocused] = useState(false);
+  // Create a per-instance suggestion config to avoid debounce timer races when
+  // multiple editors exist on the same page.
+  const mentionSuggestion = useMemo(() => createMentionSuggestion(), []);
 
   const editor = useEditor({
     immediatelyRender: false,

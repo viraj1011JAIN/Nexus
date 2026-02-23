@@ -1,6 +1,6 @@
 ﻿# NEXUS — PROJECT STATUS
 
-**Last Audited:** June 2026  
+**Last Audited:** February 2026  
 **Audited Against:** Live codebase at `c:\Nexus\nexus`  
 **Every fact verified from source files. No estimates, no aspirational claims.**
 
@@ -26,6 +26,7 @@
 | recharts | 3.7.0 |
 | jspdf | 4.1.0 |
 | date-fns | 4.1.0 |
+| resend | 6.9.2 |
 | jest | 30.2.0 |
 
 ---

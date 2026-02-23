@@ -9,6 +9,7 @@
 const mockAttachmentFindMany = jest.fn();
 const mockAttachmentFindFirst = jest.fn();
 const mockAttachmentDelete = jest.fn();
+const mockCardFindUnique = jest.fn();
 
 jest.mock("@/lib/db", () => ({
   db: {
@@ -16,6 +17,9 @@ jest.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => mockAttachmentFindMany(...args),
       findFirst: (...args: unknown[]) => mockAttachmentFindFirst(...args),
       delete: (...args: unknown[]) => mockAttachmentDelete(...args),
+    },
+    card: {
+      findUnique: (...args: unknown[]) => mockCardFindUnique(...args),
     },
   },
 }));
@@ -80,6 +84,13 @@ beforeEach(() => {
 });
 
 describe("getCardAttachments", () => {
+  beforeEach(() => {
+    mockCardFindUnique.mockResolvedValue({
+      id: "card_xyz",
+      list: { board: { orgId: mockCtx.orgId } },
+    });
+  });
+
   it("returns AttachmentDto array for a card", async () => {
     mockAttachmentFindMany.mockResolvedValue([makeAttachmentRow()]);
 
@@ -134,6 +145,23 @@ describe("getCardAttachments", () => {
     ]);
     const result = await getCardAttachments("card_xyz");
     expect(result.data).toHaveLength(3);
+  });
+
+  it("returns Card not found when card does not exist", async () => {
+    mockCardFindUnique.mockResolvedValue(null);
+    const result = await getCardAttachments("nonexistent_card");
+    expect(result.error).toBe("Card not found");
+    expect(mockAttachmentFindMany).not.toHaveBeenCalled();
+  });
+
+  it("returns Forbidden when card belongs to a different org", async () => {
+    mockCardFindUnique.mockResolvedValue({
+      id: "card_xyz",
+      list: { board: { orgId: "org_other" } },
+    });
+    const result = await getCardAttachments("card_xyz");
+    expect(result.error).toBe("Forbidden");
+    expect(mockAttachmentFindMany).not.toHaveBeenCalled();
   });
 });
 

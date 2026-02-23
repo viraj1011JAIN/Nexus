@@ -732,11 +732,13 @@ export const CardModal = () => {
                       transition={{ duration: 0.2 }}
                     >
                       {cardData && (
-                        <FileAttachment
-                          cardId={cardData.id}
-                          boardId={boardId}
-                          initialAttachments={attachments}
-                        />
+                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load attachments.</p>}>
+                          <FileAttachment
+                            cardId={cardData.id}
+                            boardId={boardId}
+                            initialAttachments={attachments}
+                          />
+                        </ErrorBoundary>
                       )}
                     </motion.div>
                   </AnimatePresence>

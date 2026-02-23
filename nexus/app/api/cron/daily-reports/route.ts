@@ -22,7 +22,11 @@ export async function GET(request: Request) {
           include: {
             lists: {
               include: {
-                cards: true,
+                cards: {
+                  include: {
+                    assignee: { select: { email: true, name: true } },
+                  },
+                },
               },
             },
           },
@@ -89,25 +93,54 @@ export async function GET(request: Request) {
       const isMonday = new Date().getDay() === 1;
       if (isMonday) {
         try {
-          // Fetch org members from Clerk to get email addresses
+          // Fetch ALL org members from Clerk (paginated) to get email addresses
           const clerk = await clerkClient();
-          const memberships = await clerk.organizations
-            .getOrganizationMembershipList({ organizationId: org.id, limit: 100 })
-            .catch(() => ({ data: [] }));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const allMemberships: any[] = [];
+          let offset = 0;
+          let pageCount = 0;
+          do {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const membershipsPage: { data: any[] } = await clerk.organizations
+              .getOrganizationMembershipList({ organizationId: org.id, limit: 100, offset })
+              .catch(() => ({ data: [] }));
+            allMemberships.push(...membershipsPage.data);
+            offset += membershipsPage.data.length;
+            pageCount = membershipsPage.data.length;
+          } while (pageCount === 100);
+
+          // Compute actual 7-day completed count
+          const sevenDaysAgo = new Date(today);
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          const doneListIds = new Set(
+            org.boards
+              .flatMap((b) => b.lists)
+              .filter(
+                (l) =>
+                  l.title.toLowerCase().includes("done") ||
+                  l.title.toLowerCase().includes("complete")
+              )
+              .map((l) => l.id)
+          );
+          const cardsCompletedLast7Days = allCards.filter((c) => {
+            if (!c.updatedAt) return false;
+            const d = new Date(c.updatedAt);
+            return doneListIds.has(c.listId) && d >= sevenDaysAgo && d < today;
+          }).length;
 
           const weekStats = {
             cardsCreated: allCards.filter((c) => {
               const d = new Date(c.createdAt);
-              const sevenDaysAgo = new Date(today);
-              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-              return d >= sevenDaysAgo;
+              const sevenDaysAgo2 = new Date(today);
+              sevenDaysAgo2.setDate(sevenDaysAgo2.getDate() - 7);
+              return d >= sevenDaysAgo2;
             }).length,
-            cardsCompleted: cardsCompletedYesterday * 7, // approximation
+            cardsCompleted: cardsCompletedLast7Days,
             overdueCards: reportData.metrics.overdueCards,
             activeBoards: org.boards.length,
           };
 
-          for (const membership of memberships.data) {
+          for (const membership of allMemberships) {
             const user = membership.publicUserData;
             if (!user?.identifier) continue;
             await sendWeeklyDigestEmail({
@@ -134,13 +167,10 @@ export async function GET(request: Request) {
         );
 
         if (dueSoonCards.length > 0) {
-          const clerk = await clerkClient();
-          const memberships = await clerk.organizations
-            .getOrganizationMembershipList({ organizationId: org.id, limit: 100 })
-            .catch(() => ({ data: [] }));
-
           for (const card of dueSoonCards) {
-            // Find which list+board this card belongs to
+            // Only notify the assigned user — skip unassigned cards
+            if (!card.assignee) continue;
+
             const parentBoard = org.boards.find((b) =>
               b.lists.some((l) => l.cards.some((c) => c.id === card.id))
             );
@@ -148,18 +178,14 @@ export async function GET(request: Request) {
               ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app"}/board/${parentBoard.id}`
               : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app"}/dashboard`;
 
-            for (const membership of memberships.data) {
-              const user = membership.publicUserData;
-              if (!user?.identifier) continue;
-              await sendDueDateReminderEmail({
-                userEmail: user.identifier,
-                userName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.identifier,
-                cardTitle: card.title,
-                boardTitle: parentBoard?.title ?? "Your board",
-                dueDate: new Date(card.dueDate!),
-                cardUrl,
-              }).catch(() => null);
-            }
+            await sendDueDateReminderEmail({
+              userEmail: card.assignee.email,
+              userName: card.assignee.name,
+              cardTitle: card.title,
+              boardTitle: parentBoard?.title ?? "Your board",
+              dueDate: new Date(card.dueDate!),
+              cardUrl,
+            }).catch(() => null);
           }
         }
       } catch {

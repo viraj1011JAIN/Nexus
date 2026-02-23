@@ -20,7 +20,6 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/png",
   "image/gif",
   "image/webp",
-  "image/svg+xml",
   // Archives
   "application/zip",
 ]);
@@ -74,9 +73,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
   }
 
-  // Get the uploader's User record
+  // Verify the uploader is a member of the org that owns this card
   const user = await db.user.findUnique({ where: { clerkUserId: userId } });
-  const uploaderName = user?.name ?? "Unknown";
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 403 });
+  }
+  const orgMembership = await db.organizationUser.findFirst({
+    where: { userId: user.id, organizationId: card.list.board.orgId, isActive: true },
+  });
+  if (!orgMembership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Get the uploader's User record
+  const uploaderName = user.name;
 
   const supabase = getServiceClient();
   const storagePath = `attachments/${cardId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
@@ -87,7 +97,8 @@ export async function POST(req: NextRequest) {
     .upload(storagePath, arrayBuffer, { contentType: file.type, upsert: false });
 
   if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    console.error("[UPLOAD] Supabase storage error:", uploadError.message);
+    return NextResponse.json({ error: "File upload failed. Please try again." }, { status: 500 });
   }
 
   const { data: publicData } = supabase.storage
@@ -134,8 +145,11 @@ export async function DELETE(req: NextRequest) {
   }
 
   const supabase = getServiceClient();
-  await supabase.storage.from("card-attachments").remove([attachment.storagePath]);
+
+  // Delete DB record first, then remove from storage
+  // (if storage remove fails the DB record is already gone — safer than leaving orphaned DB rows)
   await db.attachment.delete({ where: { id } });
+  await supabase.storage.from("card-attachments").remove([attachment.storagePath]);
 
   return NextResponse.json({ success: true });
 }

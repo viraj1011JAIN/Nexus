@@ -169,10 +169,16 @@ test.describe("@Mention in Comments", () => {
       .first();
 
     // The dropdown may take a brief moment (debounce)
-    await dropdown.waitFor({ state: "visible", timeout: 5_000 }).catch(() => {
-      // If RESEND_API_KEY or members API isn't configured in dev, dropdown may not appear
-      // Acceptable skip scenario
-    });
+    const dropdownVisible = await dropdown
+      .waitFor({ state: "visible", timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!dropdownVisible) {
+      // Members API not configured in this environment — skip assertion
+      test.skip();
+      return;
+    }
+    await expect(dropdown).toBeVisible();
   });
 });
 

@@ -14,7 +14,7 @@ export const CreateBoard = z.object({
   imageThumbUrl: z.string().url().optional(),
   imageFullUrl:  z.string().url().optional(),
   imageUserName: z.string().optional(),
-  imageLinkHTML: z.string().optional(),
+  imageLinkUrl:  z.string().url().optional(),
   // Board template (optional)
   templateId:    z.string().uuid().optional(),
 });

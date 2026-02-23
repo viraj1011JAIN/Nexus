@@ -39,9 +39,9 @@ describe("sendEmail", () => {
 
   it("accepts array of recipients", async () => {
     const { Resend } = await import("resend");
-    const { sendEmail } = await import("@/lib/email");
     const mockSend = jest.fn().mockResolvedValue({ data: { id: "abc" }, error: null });
     (Resend as jest.Mock).mockImplementation(() => ({ emails: { send: mockSend } }));
+    const { sendEmail } = await import("@/lib/email");
 
     await sendEmail({ to: ["a@x.com", "b@x.com"], subject: "Multi", html: "<p>Hi</p>" });
     expect(mockSend).toHaveBeenCalledWith(
@@ -61,12 +61,15 @@ describe("sendEmail", () => {
     expect(result.error).toBe("Invalid key");
   });
 
-  it("throws when RESEND_API_KEY is not set", async () => {
+  it("returns an error when RESEND_API_KEY is not set", async () => {
     delete process.env.RESEND_API_KEY;
-    const { sendEmail } = await import("@/lib/email");
-    const result = await sendEmail({ to: "x@x.com", subject: "x", html: "<p>x</p>" });
-    expect(result.error).toMatch(/RESEND_API_KEY/);
-    process.env.RESEND_API_KEY = "re_test_key";
+    try {
+      const { sendEmail } = await import("@/lib/email");
+      const result = await sendEmail({ to: "x@x.com", subject: "x", html: "<p>x</p>" });
+      expect(result.error).toMatch(/RESEND_API_KEY/);
+    } finally {
+      process.env.RESEND_API_KEY = "re_test_key";
+    }
   });
 });
 

@@ -18,7 +18,15 @@ export interface AttachmentDto {
 export async function getCardAttachments(
   cardId: string
 ): Promise<{ data?: AttachmentDto[]; error?: string }> {
-  await getTenantContext(); // auth check
+  const ctx = await getTenantContext();
+
+  // IDOR protection: verify the card belongs to the caller's org
+  const card = await db.card.findUnique({
+    where: { id: cardId },
+    include: { list: { include: { board: { select: { orgId: true } } } } },
+  });
+  if (!card) return { error: "Card not found" };
+  if (card.list.board.orgId !== ctx.orgId) return { error: "Forbidden" };
 
   const attachments = await db.attachment.findMany({
     where: { cardId },

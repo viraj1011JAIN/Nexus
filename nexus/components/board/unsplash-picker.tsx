@@ -55,11 +55,21 @@ export function UnsplashPicker({ onSelect, onClear, selectedId }: UnsplashPicker
     }
 }, []);
 
+  // Fetch when the picker opens (initial load only).
+  // Subsequent query changes are handled by the debounced handler below.
   useEffect(() => {
     if (!open) return;
     setPage(1);
     fetchPhotos(query, 1);
-  }, [open, query, fetchPhotos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, fetchPhotos]); // intentionally exclude `query` — changes come through handleQueryChange
+
+  // Clear pending debounce timer on unmount to avoid state updates on dead components.
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

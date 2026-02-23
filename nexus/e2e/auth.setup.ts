@@ -20,8 +20,14 @@ setup("authenticate", async ({ page }) => {
   // Ensure directory exists
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
 
-  const email = process.env.E2E_EMAIL ?? "test@nexus-e2e.dev";
-  const password = process.env.E2E_PASSWORD ?? "TestPassword123!";
+  const email = process.env.E2E_EMAIL;
+  const password = process.env.E2E_PASSWORD;
+  if (!email || !password) {
+    throw new Error(
+      "E2E_EMAIL and E2E_PASSWORD environment variables must be set for auth.setup.ts. " +
+        "Do not use hardcoded fallback credentials."
+    );
+  }
 
   await page.goto("/sign-in");
 
@@ -37,9 +43,11 @@ setup("authenticate", async ({ page }) => {
     .first();
   await identifier.fill(email);
 
-  // Press continue / next button if it exists (Clerk 2-step)
+  // Press continue / next button if it exists and is visible (Clerk 2-step)
   const continueBtn = page.locator('button[type="submit"]').or(page.getByRole("button", { name: /continue/i })).first();
-  await continueBtn.click();
+  if (await continueBtn.isVisible().catch(() => false)) {
+    await continueBtn.click();
+  }
 
   // Fill password
   const passwordInput = page.locator('input[type="password"]').first();

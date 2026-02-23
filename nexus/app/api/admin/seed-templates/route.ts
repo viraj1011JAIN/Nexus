@@ -16,14 +16,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { seedBuiltInTemplates } from "@/actions/template-actions";
 
 export async function POST(request: NextRequest) {
+  // Guard: CRON_SECRET must be configured
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("[SEED_TEMPLATES] CRON_SECRET env var is not set");
+    return new NextResponse("Service Unavailable", { status: 503 });
+  }
+
   // Protect with the same cron secret used for cron jobs
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
   try {
-    await seedBuiltInTemplates();
+    await seedBuiltInTemplates(cronSecret);
     return NextResponse.json({ success: true, message: "Built-in templates seeded successfully." });
   } catch (error) {
     console.error("[SEED_TEMPLATES]", error);

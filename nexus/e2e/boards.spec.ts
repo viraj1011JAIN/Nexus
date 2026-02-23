@@ -88,8 +88,11 @@ test.describe("Board Creation — Blank Board", () => {
       // Clicking should show validation message
       await createBtn.click();
       const errorInfo = page.locator('[data-testid="title-error"], .error, [aria-invalid]').first();
-      // At minimum, navigation should NOT have occurred
-      await expect(page).not.toHaveURL(/\/board\//);
+      // Validation error should be visible when form is submitted empty
+      await expect(errorInfo).toBeVisible({ timeout: 3_000 }).catch(() => {
+        // At minimum, navigation should NOT have occurred
+        expect(page.url()).not.toMatch(/\/board\//);
+      });
     }
   });
 });

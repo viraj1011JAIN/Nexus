@@ -30,11 +30,18 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    getTemplates().then(({ data }) => {
-      if (cancelled) return;
-      setLoading(false);
-      if (data) setTemplates(data);
-    });
+    const run = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await getTemplates();
+        if (cancelled) return;
+        setLoading(false);
+        if (!error && data) setTemplates(data);
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
     return () => { cancelled = true; };
   }, [open]);
 

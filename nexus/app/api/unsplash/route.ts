@@ -12,6 +12,25 @@ function getUnsplashClient() {
   return createApi({ accessKey, fetch: globalThis.fetch });
 }
 
+/** Escape HTML entities to prevent XSS in generated attribution HTML. */
+function escHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Allow only https:// URLs to prevent protocol-injection in href attributes. */
+function escUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" ? url : "https://unsplash.com";
+  } catch {
+    return "https://unsplash.com";
+  }
+}
+
 /**
  * GET /api/unsplash?query=mountains&page=1
  * Returns paginated Unsplash photos for board background selection.
@@ -24,7 +43,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("query")?.trim() || "nature landscape";
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const rawPage = parseInt(searchParams.get("page") ?? "1", 10);
+  const page = Number.isFinite(rawPage) ? Math.max(1, rawPage) : 1;
   const perPage = 12;
 
   try {
@@ -47,8 +67,8 @@ export async function GET(req: NextRequest) {
       regularUrl: photo.urls.regular,
       userName: photo.user.name,
       userLink: photo.user.links.html,
-      // Attribution HTML required by Unsplash guidelines
-      linkHtml: `Photo by <a href="${photo.user.links.html}?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">${photo.user.name}</a> on <a href="https://unsplash.com?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a>`,
+      // Attribution HTML required by Unsplash guidelines (HTML-escaped to prevent XSS)
+      linkHtml: `Photo by <a href="${escUrl(photo.user.links.html)}?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">${escHtml(photo.user.name)}</a> on <a href="https://unsplash.com?utm_source=nexus&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a>`,
     }));
 
     return NextResponse.json({

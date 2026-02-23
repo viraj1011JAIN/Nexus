@@ -111,7 +111,7 @@ export function BoardList() {
           imageThumbUrl: selectedPhoto.thumbUrl,
           imageFullUrl:  selectedPhoto.fullUrl,
           imageUserName: selectedPhoto.userName,
-          imageLinkHTML: selectedPhoto.linkHtml,
+          imageLinkUrl: selectedPhoto.userLink,
         } : {}),
         ...(selectedTemplate ? { templateId: selectedTemplate.id } : {}),
       });
@@ -172,10 +172,26 @@ export function BoardList() {
               style={{ backgroundImage: `url(${selectedPhoto.thumbUrl})` }}
             >
               <div className="absolute inset-0 bg-black/20" />
-              <p
-                className="absolute bottom-1.5 right-2 text-[10px] text-white/70"
-                dangerouslySetInnerHTML={{ __html: selectedPhoto.linkHtml }}
-              />
+              <p className="absolute bottom-1.5 right-2 text-[10px] text-white/70">
+                Photo by{" "}
+                <a
+                  href={selectedPhoto.userLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {selectedPhoto.userName}
+                </a>{" "}
+                on{" "}
+                <a
+                  href="https://unsplash.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  Unsplash
+                </a>
+              </p>
             </div>
           )}
 

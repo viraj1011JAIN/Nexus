@@ -83,6 +83,7 @@ export async function sendDueDateReminderEmail(opts: {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "UTC",
   });
 
   return sendEmail({
@@ -120,7 +121,7 @@ function baseLayout(content: string, previewText: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${previewText}</title>
+  <title>${escHtml(previewText)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f4f5; color: #18181b; }
@@ -164,7 +165,7 @@ function mentionEmailHtml(opts: {
     <p style="font-size:18px;font-weight:600;margin-bottom:16px;">You were mentioned 👋</p>
     <p>Hi ${escHtml(opts.mentionedUserName)},</p>
     <p style="margin-top:12px;"><strong>${escHtml(opts.mentionerName)}</strong> mentioned you in a comment on the card <strong>"${escHtml(opts.cardTitle)}"</strong> on board <strong>"${escHtml(opts.boardTitle)}"</strong>.</p>
-    <a href="${opts.cardUrl}" class="cta">View Card →</a>
+    <a href="${allowUrl(opts.cardUrl)}" class="cta">View Card →</a>
   `;
   return baseLayout(content, `${opts.mentionerName} mentioned you`);
 }
@@ -180,7 +181,7 @@ function dueDateEmailHtml(opts: {
     <p style="font-size:18px;font-weight:600;margin-bottom:16px;">Due date reminder ⏰</p>
     <p>Hi ${escHtml(opts.userName)},</p>
     <p style="margin-top:12px;">The card <strong>"${escHtml(opts.cardTitle)}"</strong> on board <strong>"${escHtml(opts.boardTitle)}"</strong> is due on <strong>${escHtml(opts.formattedDate)}</strong>.</p>
-    <a href="${opts.cardUrl}" class="cta">View Card →</a>
+    <a href="${allowUrl(opts.cardUrl)}" class="cta">View Card →</a>
   `;
   return baseLayout(content, `Reminder: ${opts.cardTitle}`);
 }
@@ -200,7 +201,7 @@ function weeklyDigestHtml(opts: {
       <div class="stat-card"><div class="stat-value">${stats.overdueCards}</div><div class="stat-label">Overdue</div></div>
       <div class="stat-card"><div class="stat-value">${stats.activeBoards}</div><div class="stat-label">Active Boards</div></div>
     </div>
-    <a href="${opts.appUrl}/dashboard" class="cta">Open Dashboard →</a>
+    <a href="${allowUrl(opts.appUrl)}/dashboard" class="cta">Open Dashboard →</a>
   `;
   return baseLayout(content, "Your Nexus weekly summary");
 }
@@ -211,4 +212,15 @@ function escHtml(str: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** Allow only https:// and http:// URLs in email hrefs; fall back to '#' for anything suspicious. */
+function allowUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return url;
+  } catch {
+    // not a valid URL
+  }
+  return "#";
 }

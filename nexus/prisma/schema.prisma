@@ -37,6 +37,7 @@ model Organization {
   boards     Board[]
   auditLogs  AuditLog[]
   members    OrganizationUser[]
+  templates  BoardTemplate[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -450,6 +451,7 @@ model BoardTemplate {
 
   // Template can be global (built-in) or org-specific
   orgId       String?  @map("org_id")
+  org         Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   // Preview image (optional)
   imageThumbUrl String? @map("image_thumb_url") @db.Text

@@ -72,7 +72,7 @@ describe("CreateBoard", () => {
       imageThumbUrl: "https://images.unsplash.com/thumb.jpg",
       imageFullUrl: "https://images.unsplash.com/full.jpg",
       imageUserName: "photographer",
-      imageLinkHTML: '<a href="https://unsplash.com/@p">Photo</a>',
+      imageLinkUrl: 'https://unsplash.com/@p',
     };
     expectValid(CreateBoard, data);
   });

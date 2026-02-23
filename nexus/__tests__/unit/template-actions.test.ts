@@ -14,6 +14,7 @@ const mockBoardCreate = jest.fn();
 const mockListCreate = jest.fn();
 const mockCardCreateMany = jest.fn();
 const mockAuditLogCreate = jest.fn();
+const mockUserFindFirst = jest.fn().mockResolvedValue({ name: "Test User", imageUrl: null });
 
 jest.mock("@/lib/db", () => ({
   db: {
@@ -34,6 +35,19 @@ jest.mock("@/lib/db", () => ({
     auditLog: {
       create: (...args: unknown[]) => mockAuditLogCreate(...args),
     },
+    user: {
+      findFirst: (...args: unknown[]) => mockUserFindFirst(...args),
+    },
+    $transaction: jest.fn().mockImplementation(async (fn) => {
+      // run the callback with the same mocked tx object
+      const tx = {
+        board: { create: (...args: unknown[]) => mockBoardCreate(...args) },
+        list: { create: (...args: unknown[]) => mockListCreate(...args) },
+        card: { createMany: (...args: unknown[]) => mockCardCreateMany(...args) },
+        auditLog: { create: (...args: unknown[]) => mockAuditLogCreate(...args) },
+      };
+      return fn(tx);
+    }),
   },
 }));
 
@@ -53,6 +67,10 @@ jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }));
+
+// Provide a CRON_SECRET for seedBuiltInTemplates tests
+const TEST_CRON_SECRET = "test_cron_secret";
+process.env.CRON_SECRET = TEST_CRON_SECRET;
 
 // ─── Import AFTER mocks are in place ─────────────────────────────────────────
 
@@ -239,7 +257,7 @@ describe("createBoardFromTemplate", () => {
       imageThumbUrl: "https://thumb.example.com",
       imageFullUrl: "https://full.example.com",
       imageUserName: "photographer",
-      imageLinkHTML: '<a href="#">Photo</a>',
+      imageLinkUrl: 'https://unsplash.com/@photographer',
     });
 
     expect(mockBoardCreate).toHaveBeenCalledWith(
@@ -304,7 +322,7 @@ describe("seedBuiltInTemplates", () => {
     // All templates "exist"
     mockBoardTemplateFindFirst.mockResolvedValue({ id: "existing" });
 
-    await seedBuiltInTemplates();
+    await seedBuiltInTemplates(TEST_CRON_SECRET);
 
     expect(mockBoardTemplateCreate).not.toHaveBeenCalled();
   });
@@ -314,7 +332,7 @@ describe("seedBuiltInTemplates", () => {
     mockBoardTemplateFindFirst.mockResolvedValue(null);
     mockBoardTemplateCreate.mockResolvedValue({});
 
-    await seedBuiltInTemplates();
+    await seedBuiltInTemplates(TEST_CRON_SECRET);
 
     expect(mockBoardTemplateCreate).toHaveBeenCalledTimes(6);
   });
@@ -323,7 +341,7 @@ describe("seedBuiltInTemplates", () => {
     mockBoardTemplateFindFirst.mockResolvedValue(null);
     mockBoardTemplateCreate.mockResolvedValue({});
 
-    await seedBuiltInTemplates();
+    await seedBuiltInTemplates(TEST_CRON_SECRET);
 
     const firstCall = mockBoardTemplateCreate.mock.calls[0][0];
     expect(firstCall.data.orgId).toBeNull();
@@ -333,7 +351,7 @@ describe("seedBuiltInTemplates", () => {
     mockBoardTemplateFindFirst.mockResolvedValue(null);
     mockBoardTemplateCreate.mockResolvedValue({});
 
-    await seedBuiltInTemplates();
+    await seedBuiltInTemplates(TEST_CRON_SECRET);
 
     const firstCall = mockBoardTemplateCreate.mock.calls[0][0];
     expect(firstCall.data.lists?.create).toBeDefined();
@@ -350,9 +368,14 @@ describe("seedBuiltInTemplates", () => {
     });
     mockBoardTemplateCreate.mockResolvedValue({});
 
-    await seedBuiltInTemplates();
+    await seedBuiltInTemplates(TEST_CRON_SECRET);
 
     // 6 total templates, 3 exist -> 3 created
     expect(mockBoardTemplateCreate).toHaveBeenCalledTimes(3);
+  });
+
+  it("throws when called without a valid CRON_SECRET", async () => {
+    await expect(seedBuiltInTemplates("wrong_secret")).rejects.toThrow("Unauthorized");
+    await expect(seedBuiltInTemplates()).rejects.toThrow("Unauthorized");
   });
 });

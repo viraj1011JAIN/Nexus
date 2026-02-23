@@ -64,7 +64,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
       ...(data.imageThumbUrl ? { imageThumbUrl: data.imageThumbUrl } : {}),
       ...(data.imageFullUrl  ? { imageFullUrl: data.imageFullUrl } : {}),
       ...(data.imageUserName ? { imageUserName: data.imageUserName } : {}),
-      ...(data.imageLinkHTML ? { imageLinkHTML: data.imageLinkHTML } : {}),
+      ...(data.imageLinkUrl ? { imageLinkHTML: data.imageLinkUrl } : {}),
     };
 
     let board: Board;
