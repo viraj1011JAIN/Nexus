@@ -38,6 +38,14 @@ model Organization {
   auditLogs  AuditLog[]
   members    OrganizationUser[]
   templates  BoardTemplate[]
+  notifications Notification[]
+  webhooks   Webhook[]
+  apiKeys    ApiKey[]
+  automations Automation[]
+  savedViews  SavedView[]
+  initiatives Initiative[]
+  epics       Epic[]
+  customFields CustomField[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -55,7 +63,20 @@ model User {
   organizations  OrganizationUser[]
   assignedCards  Card[]   @relation("CardAssignee")
   preferences    UserPreference?
-  
+
+  // Notifications (TASK-006)
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsActed    Notification[] @relation("NotificationActor")
+
+  // Time tracking (TASK-025)
+  timeLogs       TimeLog[]
+
+  // API Keys (TASK-021)
+  apiKeys        ApiKey[]
+
+  // Push subscription (TASK-029)
+  pushSubscription String? @map("push_subscription") @db.Text
+
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   
@@ -114,6 +135,12 @@ model Board {
 
   lists          List[]
   analytics      BoardAnalytics?
+  sprints        Sprint[]
+  savedViews     SavedView[]
+  customFields   CustomField[]
+  automations    Automation[]
+  share          BoardShare?
+  epics          Epic[]
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -162,14 +189,40 @@ model Card {
   labels      CardLabelAssignment[]
   comments    Comment[]
   attachments Attachment[]
-  
+  checklists  Checklist[]
+  timeLogs    TimeLog[]
+  dependencies CardDependency[] @relation("BlockedCard")
+  blocking     CardDependency[] @relation("BlockerCard")
+
+  // Card Cover (TASK-010)
+  coverColor    String?  @map("cover_color")
+  coverImageUrl String?  @map("cover_image_url") @db.Text
+
+  // Agile fields (TASK-013)
+  sprintId      String?  @map("sprint_id")
+  sprint        Sprint?  @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  storyPoints   Int?     @map("story_points")
+  startDate     DateTime? @map("start_date")
+
+  // Roadmap/Epic link (TASK-023)
+  epicId        String?  @map("epic_id")
+  epic          Epic?    @relation(fields: [epicId], references: [id], onDelete: SetNull)
+
+  // Time tracking (TASK-025)
+  estimatedMinutes Int?  @map("estimated_minutes")
+
+  // Custom field values (TASK-018)
+  customFieldValues CustomFieldValue[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([listId])
   @@index([assigneeId])
-  @@index([dueDate]) // Index for due date queries
-  @@index([priority]) // Index for priority filtering
+  @@index([dueDate])
+  @@index([priority])
+  @@index([sprintId])
+  @@index([epicId])
   @@map("cards")
 }
 
@@ -403,6 +456,13 @@ model UserPreference {
   compactMode          Boolean  @default(false) @map("compact_mode")
   showArchived         Boolean  @default(false) @map("show_archived")
 
+  // Onboarding tracking (TASK-034)
+  onboardingStep       Int      @default(0) @map("onboarding_step")
+  onboardingCompleted  Boolean  @default(false) @map("onboarding_completed")
+
+  // GDPR / Cookie consent (TASK-033)
+  cookieConsent        String?  @map("cookie_consent") // "accepted" | "declined"
+
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt      @map("updated_at")
 
@@ -489,4 +549,392 @@ model TemplateCard {
 
   @@index([listId])
   @@map("template_cards")
+}
+
+// ============================================
+// TASK-009: CARD CHECKLISTS
+// ============================================
+
+model Checklist {
+  id        String          @id @default(uuid())
+  cardId    String          @map("card_id")
+  card      Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  title     String          @default("Checklist")
+  order     String          @default("m")
+  items     ChecklistItem[]
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt      @map("updated_at")
+
+  @@index([cardId])
+  @@map("checklists")
+}
+
+model ChecklistItem {
+  id          String    @id @default(uuid())
+  checklistId String    @map("checklist_id")
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  title       String
+  isComplete  Boolean   @default(false) @map("is_complete")
+  order       String    @default("m")
+  assigneeId  String?   @map("assignee_id")
+  dueDate     DateTime? @map("due_date")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt      @map("updated_at")
+
+  @@index([checklistId])
+  @@map("checklist_items")
+}
+
+// ============================================
+// TASK-013: SPRINTS
+// ============================================
+
+enum SprintStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+}
+
+model Sprint {
+  id          String       @id @default(uuid())
+  boardId     String       @map("board_id")
+  board       Board        @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  name        String
+  goal        String?      @db.Text
+  status      SprintStatus @default(PLANNING)
+  startDate   DateTime?    @map("start_date")
+  endDate     DateTime?    @map("end_date")
+  completedAt DateTime?    @map("completed_at")
+  cards       Card[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt      @map("updated_at")
+
+  @@index([boardId])
+  @@map("sprints")
+}
+
+// ============================================
+// TASK-014: CARD DEPENDENCIES
+// ============================================
+
+enum DependencyType {
+  BLOCKS
+  RELATES_TO
+  DUPLICATES
+}
+
+model CardDependency {
+  id        String         @id @default(uuid())
+  blockerId String         @map("blocker_id")
+  blocker   Card           @relation("BlockerCard", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String         @map("blocked_id")
+  blocked   Card           @relation("BlockedCard", fields: [blockedId], references: [id], onDelete: Cascade)
+  type      DependencyType @default(BLOCKS)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("card_dependencies")
+}
+
+// ============================================
+// TASK-006 / TASK-032: IN-APP NOTIFICATIONS
+// ============================================
+
+enum NotificationType {
+  MENTIONED
+  ASSIGNED
+  CARD_DUE_SOON
+  CARD_OVERDUE
+  COMMENT_ON_ASSIGNED_CARD
+  BOARD_SHARED
+  SPRINT_STARTED
+  DEPENDENCY_RESOLVED
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  orgId       String           @map("org_id")
+  org         Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId      String           @map("user_id")
+  user        User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  body        String?          @db.Text
+  entityType  String?          @map("entity_type")
+  entityId    String?          @map("entity_id")
+  entityTitle String?          @map("entity_title")
+  actorId     String           @map("actor_id")
+  actor       User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  actorName   String           @map("actor_name")
+  actorImage  String?          @map("actor_image")
+  isRead      Boolean          @default(false) @map("is_read")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, isRead, createdAt])
+  @@index([orgId])
+  @@map("notifications")
+}
+
+// ============================================
+// TASK-012: SAVED VIEWS / FILTERS
+// ============================================
+
+model SavedView {
+  id        String       @id @default(uuid())
+  orgId     String       @map("org_id")
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  boardId   String?      @map("board_id")
+  board     Board?       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId    String       @map("user_id")
+  name      String
+  filters   Json
+  viewType  String       @default("kanban") @map("view_type")
+  isShared  Boolean      @default(false)    @map("is_shared")
+  createdAt DateTime     @default(now())    @map("created_at")
+  updatedAt DateTime     @updatedAt         @map("updated_at")
+
+  @@index([orgId])
+  @@index([boardId])
+  @@map("saved_views")
+}
+
+// ============================================
+// TASK-018: CUSTOM FIELDS
+// ============================================
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  CHECKBOX
+  SELECT
+  MULTI_SELECT
+  URL
+  EMAIL
+  PHONE
+}
+
+model CustomField {
+  id         String           @id @default(uuid())
+  orgId      String           @map("org_id")
+  org        Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  boardId    String?          @map("board_id")
+  board      Board?           @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  name       String
+  type       CustomFieldType
+  options    Json?
+  isRequired Boolean          @default(false) @map("is_required")
+  order      Int              @default(0)
+  values     CustomFieldValue[]
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt      @map("updated_at")
+
+  @@index([orgId])
+  @@index([boardId])
+  @@map("custom_fields")
+}
+
+model CustomFieldValue {
+  id           String      @id @default(uuid())
+  fieldId      String      @map("field_id")
+  field        CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  cardId       String      @map("card_id")
+  card         Card        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  valueText    String?     @map("value_text") @db.Text
+  valueNumber  Float?      @map("value_number")
+  valueDate    DateTime?   @map("value_date")
+  valueBoolean Boolean?    @map("value_boolean")
+  valueOptions String[]    @map("value_options")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt      @map("updated_at")
+
+  @@unique([fieldId, cardId])
+  @@index([cardId])
+  @@map("custom_field_values")
+}
+
+// ============================================
+// TASK-019: AUTOMATION ENGINE
+// ============================================
+
+model Automation {
+  id         String          @id @default(uuid())
+  orgId      String          @map("org_id")
+  org        Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  boardId    String?         @map("board_id")
+  board      Board?          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  name       String
+  isEnabled  Boolean         @default(true)  @map("is_enabled")
+  trigger    Json
+  conditions Json
+  actions    Json
+  runCount   Int             @default(0)     @map("run_count")
+  lastRunAt  DateTime?       @map("last_run_at")
+  logs       AutomationLog[]
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt      @map("updated_at")
+
+  @@index([orgId])
+  @@index([boardId])
+  @@map("automations")
+}
+
+model AutomationLog {
+  id           String     @id @default(uuid())
+  automationId String     @map("automation_id")
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  cardId       String?    @map("card_id")
+  success      Boolean
+  error        String?    @db.Text
+  ranAt        DateTime   @default(now()) @map("ran_at")
+
+  @@index([automationId])
+  @@map("automation_logs")
+}
+
+// ============================================
+// TASK-020: OUTBOUND WEBHOOKS
+// ============================================
+
+model Webhook {
+  id         String            @id @default(uuid())
+  orgId      String            @map("org_id")
+  org        Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  url        String            @db.Text
+  secret     String
+  events     String[]
+  isEnabled  Boolean           @default(true) @map("is_enabled")
+  deliveries WebhookDelivery[]
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt      @map("updated_at")
+
+  @@index([orgId])
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id          String   @id @default(uuid())
+  webhookId   String   @map("webhook_id")
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event       String
+  payload     Json
+  statusCode  Int?     @map("status_code")
+  success     Boolean
+  duration    Int?
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+
+  @@index([webhookId])
+  @@map("webhook_deliveries")
+}
+
+// ============================================
+// TASK-021: PUBLIC REST API KEYS
+// ============================================
+
+model ApiKey {
+  id         String       @id @default(uuid())
+  orgId      String       @map("org_id")
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId     String       @map("user_id")
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String       @unique @map("key_hash")
+  keyPrefix  String       @map("key_prefix")
+  scopes     String[]
+  lastUsedAt DateTime?    @map("last_used_at")
+  expiresAt  DateTime?    @map("expires_at")
+  revokedAt  DateTime?    @map("revoked_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  @@index([orgId])
+  @@index([userId])
+  @@map("api_keys")
+}
+
+// ============================================
+// TASK-025: TIME TRACKING
+// ============================================
+
+model TimeLog {
+  id          String   @id @default(uuid())
+  cardId      String   @map("card_id")
+  card        Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId       String   @map("org_id")
+  minutes     Int
+  description String?  @db.Text
+  loggedAt    DateTime @default(now()) @map("logged_at")
+
+  @@index([cardId])
+  @@index([userId])
+  @@index([orgId])
+  @@map("time_logs")
+}
+
+// ============================================
+// TASK-023: ROADMAP — INITIATIVES & EPICS
+// ============================================
+
+model Initiative {
+  id          String       @id @default(uuid())
+  orgId       String       @map("org_id")
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  title       String
+  description String?      @db.Text
+  status      String       @default("ACTIVE")
+  startDate   DateTime?    @map("start_date")
+  endDate     DateTime?    @map("end_date")
+  color       String?
+  epics       Epic[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt      @map("updated_at")
+
+  @@index([orgId])
+  @@map("initiatives")
+}
+
+model Epic {
+  id           String      @id @default(uuid())
+  orgId        String      @map("org_id")
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  boardId      String?     @map("board_id")
+  board        Board?      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  initiativeId String?     @map("initiative_id")
+  initiative   Initiative? @relation(fields: [initiativeId], references: [id], onDelete: SetNull)
+  title        String
+  description  String?     @db.Text
+  status       String      @default("IN_PROGRESS")
+  startDate    DateTime?   @map("start_date")
+  dueDate      DateTime?   @map("due_date")
+  color        String?
+  cards        Card[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt      @map("updated_at")
+
+  @@index([orgId])
+  @@index([boardId])
+  @@index([initiativeId])
+  @@map("epics")
+}
+
+// ============================================
+// TASK-030: BOARD SHARING & GUEST ACCESS
+// ============================================
+
+model BoardShare {
+  id            String    @id @default(uuid())
+  boardId       String    @unique @map("board_id")
+  board         Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  token         String    @unique @default(uuid())
+  isPublic      Boolean   @default(true)  @map("is_public")
+  allowedEmails String[]  @map("allowed_emails")
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt      @map("updated_at")
+
+  @@map("board_shares")
 }

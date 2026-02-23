@@ -101,12 +101,12 @@ export function useRealtimeBoard({
       switch (eventType) {
         case "INSERT":
           if (newRecord && onCardCreated) {
-            onCardCreated(newRecord as Card);
+            onCardCreated(newRecord as unknown as Card);
           }
           break;
         case "UPDATE":
           if (newRecord && onCardUpdated) {
-            onCardUpdated(newRecord as Card);
+            onCardUpdated(newRecord as unknown as Card);
           }
           break;
         case "DELETE":
