@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Multi-provider GIF API support
 // Supports: Giphy (recommended), Klipy
-const GIF_PROVIDER = process.env.GIF_PROVIDER || "giphy"; // Default to Giphy
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY || "";
 const KLIPY_API_KEY = process.env.KLIPY_API_KEY || "";
 

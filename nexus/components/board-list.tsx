@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { deleteBoard } from "@/actions/delete-board";
 import Link from "next/link";
 import { Board } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -38,13 +37,12 @@ function formatRelativeDate(date: string | Date | null | undefined): string {
     }
 
     return formatDistanceToNow(dateObj, { addSuffix: true });
-  } catch (error) {
+  } catch {
     return "Recently";
   }
 }
 
 export function BoardList() {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [boards, setBoards] = useState<Board[]>([]);
@@ -195,7 +193,6 @@ export function BoardList() {
                   <div className="bg-card rounded-lg hover:shadow-md hover:ring-2 hover:ring-primary/20 transition-all duration-200 overflow-hidden">
                     {/* Board Header — image when available, gradient fallback */}
                     {board.imageThumbUrl ? (
-                      // eslint-disable-next-line react/forbid-component-props
                       <div
                         className="h-24 w-full bg-cover bg-center"
                         style={{ backgroundImage: `url(${board.imageThumbUrl})` }}

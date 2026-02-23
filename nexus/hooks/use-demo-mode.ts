@@ -16,7 +16,7 @@ import { useEffect } from "react";
 declare global {
   interface Window {
     analytics?: {
-      track: (event: string, properties?: Record<string, any>) => void;
+      track: (event: string, properties?: Record<string, unknown>) => void;
     };
   }
 }
@@ -58,7 +58,8 @@ export function useDemoMode(): UseDemoModeReturn {
 
   const showDemoWarning = () => {
     // Toast notification (requires sonner)
-    if (typeof window !== "undefined" && (window as any).toast) {
+    if (typeof window !== "undefined" && (window as Window & { toast?: unknown }).toast) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).toast.info(
         "This is a demo workspace. Changes are not saved.",
         {

@@ -110,7 +110,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <AlertTriangle className="w-12 h-12 text-red-600 mb-4" />
           <h2 className="text-xl font-bold text-red-900 mb-2">Something went wrong</h2>
           <p className="text-sm text-red-700 mb-6 text-center max-w-md">
-            We've been notified and are working on a fix. Try refreshing the page or contact support if the problem
+            We&apos;ve been notified and are working on a fix. Try refreshing the page or contact support if the problem
             persists.
           </p>
 

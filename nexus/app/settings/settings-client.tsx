@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ElementType } from "react";
 import { 
   Settings as SettingsIcon, 
   Bell, 
@@ -13,7 +13,6 @@ import {
   Sun,
   Monitor,
   Check,
-  Sparkles,
   Loader2,
   RotateCcw
 } from "lucide-react";
@@ -34,8 +33,136 @@ interface SettingsClientProps {
   initialPreferences: UserPreferences;
 }
 
-export default function SettingsClient({ initialPreferences }: SettingsClientProps) {
+// ─── Sub-components declared OUTSIDE parent to avoid re-creation on each render ─
+
+function ThemeButton({
+  value,
+  icon: Icon,
+  label,
+  description,
+}: {
+  value: "light" | "dark" | "system";
+  icon: ElementType;
+  label: string;
+  description: string;
+}) {
   const { theme, setTheme } = useTheme();
+  const isActive = theme === value;
+
+  return (
+    <button
+      onClick={() => setTheme(value)}
+      className={cn(
+        "group relative flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-[1.02] overflow-hidden",
+        isActive
+          ? "border-[#7C3AED] bg-[#F5F3FF] dark:bg-[#2E1A2E] shadow-[0_4px_12px_rgba(124,58,237,0.15)]"
+          : "border-[#E5E7EB] dark:border-[#252B3A] bg-white dark:bg-[#1A1F2E] hover:border-[#7C3AED]/50 hover:bg-[#F5F3FF]/50 dark:hover:bg-[#2E1A2E]/50"
+      )}
+    >
+      {/* Animated Background Gradient */}
+      <div className={cn(
+        "absolute inset-0 opacity-0 transition-opacity duration-500",
+        isActive && "opacity-100"
+      )}>
+        <div className="absolute inset-0 bg-linear-to-br from-[#7C3AED]/10 via-[#A855F7]/5 to-transparent" />
+      </div>
+
+      {/* Icon Container */}
+      <div className={cn(
+        "relative z-10 w-16 h-16 rounded-xl flex items-center justify-center transition-all duration-300",
+        isActive 
+          ? "bg-[#7C3AED]/10 ring-2 ring-[#7C3AED]/20" 
+          : "bg-[#F3F4F6] dark:bg-[#252B3A] group-hover:bg-[#7C3AED]/5"
+      )}>
+        <Icon 
+          className={cn(
+            "h-8 w-8 transition-all duration-300",
+            isActive 
+              ? "text-[#7C3AED] scale-110" 
+              : "text-[#64748B] dark:text-[#94A3B8] group-hover:text-[#7C3AED] group-hover:scale-105"
+          )} 
+        />
+      </div>
+
+      {/* Label */}
+      <div className="relative z-10 text-center space-y-1">
+        <div className={cn(
+          "text-base font-semibold transition-colors duration-300",
+          isActive 
+            ? "text-[#7C3AED]" 
+            : "text-[#0F172A] dark:text-[#F1F5F9] group-hover:text-[#7C3AED]"
+        )}>
+          {label}
+        </div>
+        <div className="text-xs text-[#64748B] dark:text-[#94A3B8] px-2">
+          {description}
+        </div>
+      </div>
+
+      {/* Active Indicator */}
+      {isActive && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="absolute top-3 right-3 z-10 flex items-center justify-center h-6 w-6 rounded-full bg-[#7C3AED] text-white shadow-lg"
+        >
+          <Check className="h-3.5 w-3.5" />
+        </motion.div>
+      )}
+    </button>
+  );
+}
+
+function ToggleSwitch({
+  checked,
+  onChange,
+  label,
+  description,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  description?: string;
+}) {
+  return (
+    <label className="flex items-center justify-between cursor-pointer group py-2">
+      <div className="flex-1">
+        <div className="font-medium text-[15px] text-[#0F172A] dark:text-[#F1F5F9] group-hover:text-[#7C3AED] transition-colors">
+          {label}
+        </div>
+        {description && (
+          <div className="text-[14px] text-[#64748B] dark:text-[#94A3B8] mt-0.5">
+            {description}
+          </div>
+        )}
+      </div>
+      <div className="relative ml-4">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="sr-only peer"
+        />
+        <div className={cn(
+          "w-11 h-6 rounded-full transition-all duration-200 relative",
+          checked 
+            ? "bg-linear-to-r from-[#7C3AED] to-[#A855F7]" 
+            : "bg-[#E5E7EB] dark:bg-[#252B3A]"
+        )}>
+          <motion.div
+            className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md"
+            animate={{ left: checked ? "calc(100% - 22px)" : "2px" }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          />
+        </div>
+      </div>
+    </label>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function SettingsClient({ initialPreferences }: SettingsClientProps) {
   const [emailNotifications, setEmailNotifications] = useState(initialPreferences.emailNotifications);
   const [desktopNotifications, setDesktopNotifications] = useState(initialPreferences.desktopNotifications);
   const [boardActivity, setBoardActivity] = useState(initialPreferences.boardActivity);
@@ -93,128 +220,6 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
       toast.error("Failed to reset settings");
     }
   };
-
-  const ThemeButton = ({ 
-    value, 
-    icon: Icon, 
-    label,
-    description 
-  }: { 
-    value: "light" | "dark" | "system"; 
-    icon: any; 
-    label: string;
-    description: string;
-  }) => {
-    const isActive = theme === value;
-    
-    return (
-      <button
-        onClick={() => setTheme(value)}
-        className={cn(
-          "group relative flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-[1.02] overflow-hidden",
-          isActive
-            ? "border-[#7C3AED] bg-[#F5F3FF] dark:bg-[#2E1A2E] shadow-[0_4px_12px_rgba(124,58,237,0.15)]"
-            : "border-[#E5E7EB] dark:border-[#252B3A] bg-white dark:bg-[#1A1F2E] hover:border-[#7C3AED]/50 hover:bg-[#F5F3FF]/50 dark:hover:bg-[#2E1A2E]/50"
-        )}
-      >
-        {/* Animated Background Gradient */}
-        <div className={cn(
-          "absolute inset-0 opacity-0 transition-opacity duration-500",
-          isActive && "opacity-100"
-        )}>
-          <div className="absolute inset-0 bg-linear-to-br from-[#7C3AED]/10 via-[#A855F7]/5 to-transparent" />
-        </div>
-
-        {/* Icon Container */}
-        <div className={cn(
-          "relative z-10 w-16 h-16 rounded-xl flex items-center justify-center transition-all duration-300",
-          isActive 
-            ? "bg-[#7C3AED]/10 ring-2 ring-[#7C3AED]/20" 
-            : "bg-[#F3F4F6] dark:bg-[#252B3A] group-hover:bg-[#7C3AED]/5"
-        )}>
-          <Icon 
-            className={cn(
-              "h-8 w-8 transition-all duration-300",
-              isActive 
-                ? "text-[#7C3AED] scale-110" 
-                : "text-[#64748B] dark:text-[#94A3B8] group-hover:text-[#7C3AED] group-hover:scale-105"
-            )} 
-          />
-        </div>
-
-        {/* Label */}
-        <div className="relative z-10 text-center space-y-1">
-          <div className={cn(
-            "text-base font-semibold transition-colors duration-300",
-            isActive 
-              ? "text-[#7C3AED]" 
-              : "text-[#0F172A] dark:text-[#F1F5F9] group-hover:text-[#7C3AED]"
-          )}>
-            {label}
-          </div>
-          <div className="text-xs text-[#64748B] dark:text-[#94A3B8] px-2">
-            {description}
-          </div>
-        </div>
-
-        {/* Active Indicator */}
-        {isActive && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute top-3 right-3 z-10 flex items-center justify-center h-6 w-6 rounded-full bg-[#7C3AED] text-white shadow-lg"
-          >
-            <Check className="h-3.5 w-3.5" />
-          </motion.div>
-        )}
-      </button>
-    );
-  };
-
-  const ToggleSwitch = ({ 
-    checked, 
-    onChange,
-    label,
-    description 
-  }: { 
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-    label: string;
-    description?: string;
-  }) => (
-    <label className="flex items-center justify-between cursor-pointer group py-2">
-      <div className="flex-1">
-        <div className="font-medium text-[15px] text-[#0F172A] dark:text-[#F1F5F9] group-hover:text-[#7C3AED] transition-colors">
-          {label}
-        </div>
-        {description && (
-          <div className="text-[14px] text-[#64748B] dark:text-[#94A3B8] mt-0.5">
-            {description}
-          </div>
-        )}
-      </div>
-      <div className="relative ml-4">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          className="sr-only peer"
-        />
-        <div className={cn(
-          "w-11 h-6 rounded-full transition-all duration-200 relative",
-          checked 
-            ? "bg-linear-to-r from-[#7C3AED] to-[#A855F7]" 
-            : "bg-[#E5E7EB] dark:bg-[#252B3A]"
-        )}>
-          <motion.div
-            className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md"
-            animate={{ left: checked ? "calc(100% - 22px)" : "2px" }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          />
-        </div>
-      </div>
-    </label>
-  );
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 space-y-6 sm:space-y-8">

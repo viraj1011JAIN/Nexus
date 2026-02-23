@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,7 @@ interface AssigneePickerProps {
 
 export function AssigneePicker({
   cardId,
-  orgId,
+  orgId: _orgId,
   currentAssignee: initialAssignee,
   availableUsers,
   onAssigneeChange,

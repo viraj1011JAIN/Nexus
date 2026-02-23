@@ -1,14 +1,12 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
 import { 
   Activity as ActivityIcon, 
   Clock, 
   User, 
-  ChevronRight,
-  AlertCircle,
   Trash2,
-  Copy,
   MoveHorizontal,
   Edit,
   Plus
@@ -312,7 +310,7 @@ export default function ActivityPage() {
                                   {log.entityType}
                                 </span>
                                 <span className="text-[15px] text-[#7C3AED] dark:text-[#A78BFA] font-medium truncate">
-                                  "{log.entityTitle}"
+                                  &quot;{log.entityTitle}&quot;
                                 </span>
                               </div>
 

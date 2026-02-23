@@ -5,7 +5,6 @@ import { CreditCard, Check, Zap, Crown, Loader2, CheckCircle, XCircle } from "lu
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Organization } from "@prisma/client";
-import { STRIPE_CONFIG } from "@/lib/stripe";
 import { useSearchParams } from "next/navigation";
 
 export default function BillingClient({ 
@@ -78,7 +77,7 @@ export default function BillingClient({
           description: "Please check your Stripe configuration or contact support.",
         });
       }
-    } catch (error) {
+    } catch {
       toast.error("Something went wrong", {
         description: "Please try again or contact support.",
       });
@@ -102,7 +101,7 @@ export default function BillingClient({
       } else {
         toast.error("Failed to open billing portal");
       }
-    } catch (error) {
+    } catch {
       toast.error("Something went wrong");
     } finally {
       setLoading(false);
@@ -289,7 +288,7 @@ export default function BillingClient({
               <span className="text-lg font-normal opacity-90">/{billingPeriod === "monthly" ? "month" : "year"}</span>
             </div>
             {billingPeriod === "yearly" && (
-              <div className="text-sm opacity-75 mb-6">That's just £7.50/month • Save 17%</div>
+              <div className="text-sm opacity-75 mb-6">That&apos;s just £7.50/month • Save 17%</div>
             )}
             {billingPeriod === "monthly" && (
               <div className="text-sm opacity-75 mb-6">Billed monthly • Cancel anytime</div>

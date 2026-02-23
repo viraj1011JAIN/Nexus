@@ -22,7 +22,7 @@ interface ListItemProps {
 }
 
 export const ListItem = ({
-  index,
+  index: _index,
   data,
   boardId,
 }: ListItemProps) => {

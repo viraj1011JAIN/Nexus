@@ -15,7 +15,7 @@ export function formatRelativeDate(date: string | Date | undefined | null): stri
     if (!isValid(dateObj)) return 'Invalid date';
     
     return formatDistanceToNow(dateObj, { addSuffix: true });
-  } catch (error) {
+  } catch {
     return 'Invalid date';
   }
 }
@@ -58,7 +58,7 @@ export function groupByDateCategory<T extends { createdAt: string | Date }>(
       } else {
         groups.earlier.push(item);
       }
-    } catch (error) {
+    } catch {
       groups.earlier.push(item);
     }
   });

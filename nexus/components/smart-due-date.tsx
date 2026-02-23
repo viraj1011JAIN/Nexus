@@ -48,7 +48,7 @@ interface SmartDueDateProps {
 export function SmartDueDate({
   dueDate,
   onDateChange,
-  priority,
+  priority: _priority,
   showRelativeTime = true,
   size = "default",
   animated = true,
@@ -92,10 +92,10 @@ export function SmartDueDate({
         shouldShake: false,
       };
 
-  const Icon = stateConfig.icon;
+  const _Icon = stateConfig.icon;
 
   // Format display text
-  const displayText = !dueDate 
+  const _displayText = !dueDate 
     ? "No due date"
     : showRelativeTime
     ? getRelativeTimeText(dueDate)

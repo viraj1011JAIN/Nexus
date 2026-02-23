@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
             Something went wrong
           </h2>
           <p className="text-slate-600 mb-6 max-w-md">
-            We encountered an unexpected error. Don't worry, your data is safe. 
+            We encountered an unexpected error. Don&apos;t worry, your data is safe.
             Please try refreshing the page.
           </p>
           <div className="flex gap-x-3">

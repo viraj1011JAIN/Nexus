@@ -33,9 +33,11 @@ async function assignUserHandler(data: z.infer<typeof AssignUserSchema>) {
     action: "UPDATE",
     entityId: data.cardId,
     entityType: "CARD",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     entityTitle: (card as any).title ?? data.cardId,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   revalidatePath(`/board/${(card as any).list?.boardId}`);
   return { data: card };
 }
@@ -66,9 +68,11 @@ async function unassignUserHandler(data: z.infer<typeof UnassignUserSchema>) {
     action: "UPDATE",
     entityId: data.cardId,
     entityType: "CARD",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     entityTitle: (card as any).title ?? data.cardId,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   revalidatePath(`/board/${(card as any).list?.boardId}`);
   return { data: card };
 }

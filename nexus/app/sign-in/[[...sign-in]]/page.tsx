@@ -19,7 +19,8 @@ export default function SignInPage() {
       sessionStorage.setItem("demo-start-time", Date.now().toString());
       
       // Track demo usage
-      if (typeof window !== "undefined" && (window as any).analytics) {
+      if (typeof window !== "undefined" && (window as Window & { analytics?: { track: (e: string, p?: Record<string, unknown>) => void } }).analytics) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).analytics.track("Guest Demo Started", {
           timestamp: new Date().toISOString(),
           source: "sign-in-page",

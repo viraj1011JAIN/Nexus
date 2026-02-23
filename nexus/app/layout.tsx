@@ -46,6 +46,7 @@ export default function RootLayout({
         <head>
           {/* DNS Prefetch for external resources */}
           <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+          {/* eslint-disable-next-line @next/next/google-font-preconnect */}
           <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
           
           {/* Preconnect to critical origins */}

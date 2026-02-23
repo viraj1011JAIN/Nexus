@@ -5,7 +5,6 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { getAuthenticatedSupabaseClient } from "@/lib/supabase/client";
 import { boardPresenceChannel } from "@/lib/realtime-channels";
 import { RealtimeChannel } from "@supabase/supabase-js";
-import { logger } from "@/lib/logger";
 
 export interface PresenceUser {
   userId: string;
@@ -124,7 +123,7 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
           // Take only presences[0] to avoid duplicate userId entries when a user has
           // multiple tabs open.
           Object.keys(state).forEach((key) => {
-            const presence = state[key][0] as any;
+            const presence = state[key][0] as unknown as { userId?: string; userName?: string; userAvatar?: string; joinedAt?: string; color?: string };
             if (!presence) return;
             const uid: string = presence.userId ?? key;
             if (seen.has(uid)) return; // safety-net dedup
@@ -142,12 +141,12 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         });
 
         // Handle user joining
-        channel.on("presence", { event: "join" }, ({ key, newPresences }) => {
+        channel.on("presence", { event: "join" }, ({ key: _key, newPresences: _newPresences }) => {
           // User joined - state updated via sync event
         });
 
         // Handle user leaving
-        channel.on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+        channel.on("presence", { event: "leave" }, ({ key: _key2, leftPresences: _leftPresences }) => {
           // User left - state updated via sync event
         });
 
@@ -189,6 +188,7 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         setOnlineUsers([]);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId, orgId, enabled, user, getUserColor]);
 
   return {

@@ -35,6 +35,7 @@ import { auth } from "@clerk/nextjs/server";
  * // - Performance timing
  * ```
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function withSentry<TInput extends any[], TOutput>(
   actionName: string,
   action: (...args: TInput) => Promise<TOutput>
@@ -110,7 +111,7 @@ export function withSentry<TInput extends any[], TOutput>(
  * });
  * ```
  */
-export function addSentryBreadcrumb(message: string, data?: Record<string, any>) {
+export function addSentryBreadcrumb(message: string, data?: Record<string, unknown>) {
   Sentry.addBreadcrumb({
     message,
     level: "info",
@@ -146,6 +147,7 @@ export function captureSentryException(
   options?: {
     level?: "fatal" | "error" | "warning" | "info" | "debug";
     tags?: Record<string, string>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extra?: Record<string, any>;
   }
 ) {

@@ -10,7 +10,7 @@ import { useReportWebVitals } from "next/web-vitals";
 export function PerformanceWrapper({ children }: { children: React.ReactNode }) {
   // Report Web Vitals
   useReportWebVitals((metric) => {
-    const { name, value, rating, id } = metric;
+    const { name, value, rating, id: _id } = metric;
 
     // Only log in development
     if (process.env.NODE_ENV === "development") {

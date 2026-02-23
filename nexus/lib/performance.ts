@@ -57,7 +57,7 @@ export function usePerformanceMonitoring(enabled = process.env.NODE_ENV === "dev
         observer.observe({ entryTypes: ["longtask"] });
 
         return () => observer.disconnect();
-      } catch (e) {
+      } catch {
         // Long task API not supported
       }
     }

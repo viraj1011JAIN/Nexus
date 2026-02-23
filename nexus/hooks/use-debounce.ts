@@ -55,6 +55,7 @@ export function useDebounce<T>(value: T, delay: number = 500): T {
  * // Call this on every keystroke, but it will only execute 500ms after last call
  * debouncedSave(editorContent);
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 500

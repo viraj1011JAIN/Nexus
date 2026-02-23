@@ -6,9 +6,6 @@ import { Card, AuditLog, List, Label, Priority } from "@prisma/client";
 import { 
   ChevronRight, 
   X,
-  Tag,
-  User,
-  Calendar,
   MoreHorizontal,
   Copy,
   Trash2,
@@ -324,6 +321,7 @@ export const CardModal = () => {
       setComments((prev) =>
         prev.map((c) =>
           c.id === commentId
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ? { ...c, reactions: [...c.reactions, result.data as any] }
             : c
         )

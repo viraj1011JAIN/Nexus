@@ -17,7 +17,7 @@ Sentry.init({
   // Minimal integrations for edge runtime
   integrations: [],
 
-  beforeSend(event, hint) {
+  beforeSend(event, _hint) {
     if (process.env.NODE_ENV === "development") {
       console.log("Sentry Event (edge, dev mode, not sent):", event);
       return null;

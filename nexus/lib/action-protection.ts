@@ -45,8 +45,10 @@ const DEMO_ORG_ID = process.env.DEMO_ORG_ID ?? "demo-org-id";
  * };
  * ```
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function protectDemoMode<T = any>(
   orgId: string | null | undefined
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<ActionState<any, T> | null> {
   if (orgId === DEMO_ORG_ID) {
     return {

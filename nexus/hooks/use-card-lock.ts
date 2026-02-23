@@ -112,7 +112,7 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
     const channelName = `card-locks:${boardId}`;
     let newChannel: RealtimeChannel;
 
-    const setupLockTracking = async () => {
+  const setupLockTracking = async () => {
       try {
         newChannel = supabase.channel(channelName, {
           config: {
@@ -129,6 +129,7 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
 
           // Take only presences[0] per key (= one entry per user, deduplicates multi-tab)
           Object.keys(state).forEach((key) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const presence = state[key][0] as any;
             if (presence?.editingCardId) {
               locks.set(presence.editingCardId, {
@@ -152,7 +153,7 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
             // error stored in hook state if needed
           }
         });
-      } catch (err) {
+      } catch {
         // setup failed — channel unavailable
       }
     };
@@ -166,7 +167,6 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
         supabase.removeChannel(newChannel);
         setChannel(null);
         setCardLocks(new Map());
-      }
       }
     };
   }, [boardId, enabled, user]);

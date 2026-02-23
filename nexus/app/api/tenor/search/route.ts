@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Multi-provider GIF API support
 // Supports: Giphy (recommended), Klipy

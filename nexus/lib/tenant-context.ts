@@ -107,7 +107,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
         },
         select: { id: true },
       });
-    } catch (createErr: unknown) {
+    } catch {
       // Race condition: concurrent request created the row between our findUnique
       // and create calls. Re-fetch; if still null, re-throw the original error.
       user = await db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true } });

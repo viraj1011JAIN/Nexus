@@ -1,0 +1,279 @@
+﻿
+C:\Nexus\nexus\actions\assignee-actions.ts
+  36:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  69:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  72:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\actions\create-board.ts
+  56:68  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\actions\delete-board.ts
+  41:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\actions\phase3-actions.ts
+  19:10  warning  'withSentry' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\actions\update-card-order.ts
+  5:10  warning  'revalidatePath' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\actions\update-list-order.ts
+  5:10  warning  'revalidatePath' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\app\activity\page-original.tsx
+  95:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\app\activity\page-redesign.tsx
+    8:3   warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+    9:3   warning  'AlertCircle' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   10:3   warning  'Trash2' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   11:3   warning  'Copy' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   12:3   warning  'MoveHorizontal' is defined but never used                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  260:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\app\activity\page.tsx
+    8:3   warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+    9:3   warning  'AlertCircle' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   11:3   warning  'Copy' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  275:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\app\api\cards\search\route.ts
+  24:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\app\api\tenor\featured\route.ts
+   5:7   warning  'GIF_PROVIDER' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  18:37  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  29:37  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\app\api\tenor\search\route.ts
+  17:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\app\api\webhook\stripe\route.ts
+   56:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   87:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  108:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  116:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  133:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  170:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\app\billing\billing-client.tsx
+    8:10  warning  'STRIPE_CONFIG' is defined but never used  @typescript-eslint/no-unused-vars
+   81:14  warning  'error' is defined but never used          @typescript-eslint/no-unused-vars
+  105:14  warning  'error' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\app\board\[boardId]\page.tsx
+  26:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\app\layout.tsx
+  49:11  warning  `rel="preconnect"` is missing from Google Font. See: https://nextjs.org/docs/messages/google-font-preconnect  @next/next/google-font-preconnect
+
+C:\Nexus\nexus\app\sign-in\[[...sign-in]]\page.tsx
+  22:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\components\analytics\analytics-dashboard.tsx
+   79:42  error    Unexpected any. Specify a different type                                                            @typescript-eslint/no-explicit-any
+   95:5   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+  309:49  warning  'key' is defined but never used                                                                     @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\analytics\export-pdf.tsx
+   10:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   53:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   73:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   81:61  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   93:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   98:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   98:68  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  106:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\components\assignee-picker.tsx
+   36:3  warning  'orgId' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  191:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\components\board-list.tsx
+   5:24  warning  'MoreHorizontal' is defined but never used   @typescript-eslint/no-unused-vars
+  14:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+  41:12  warning  'error' is defined but never used            @typescript-eslint/no-unused-vars
+  47:9   warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\card-item.tsx
+  6:34  warning  'Calendar' is defined but never used  @typescript-eslint/no-unused-vars
+  6:51  warning  'User' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\list-container.tsx
+  57:11  warning  'isConnected' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\list-item.tsx
+  25:3  warning  'index' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\command-palette.tsx
+   16:3   warning  'Clock' is defined but never used                    @typescript-eslint/no-unused-vars
+   17:3   warning  'Hash' is defined but never used                     @typescript-eslint/no-unused-vars
+   18:3   warning  'List' is defined but never used                     @typescript-eslint/no-unused-vars
+   19:3   warning  'Zap' is defined but never used                      @typescript-eslint/no-unused-vars
+   20:3   warning  'TrendingUp' is defined but never used               @typescript-eslint/no-unused-vars
+   21:3   warning  'Bell' is defined but never used                     @typescript-eslint/no-unused-vars
+   27:10  warning  'Badge' is defined but never used                    @typescript-eslint/no-unused-vars
+   92:10  warning  'error' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  161:9   warning  'recentBoards' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  168:9   warning  'recentCards' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  176:9   warning  'filteredBoards' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  183:9   warning  'filteredCards' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\editor\gif-picker.tsx
+    3:44  warning  'useMemo' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+    4:37  warning  'TrendingUp' is defined but never used                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   13:10  warning  'useDebouncedCallback' is defined but never used                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  133:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\components\label-manager.tsx
+  45:3  warning  'orgId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\layout\sidebar.tsx
+  21:18  warning  'resolvedTheme' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\lazy-load.tsx
+  120:7  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  137:7  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\components\modals\card-modal\activity.tsx
+  12:40  warning  'entityTitle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\modals\card-modal\index.tsx
+    9:3   warning  'Tag' is defined but never used           @typescript-eslint/no-unused-vars
+   10:3   warning  'User' is defined but never used          @typescript-eslint/no-unused-vars
+   11:3   warning  'Calendar' is defined but never used      @typescript-eslint/no-unused-vars
+  327:66  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\components\performance-wrapper.tsx
+  13:34  warning  'id' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\priority-badge.tsx
+   60:40  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Nexus\nexus\components\priority-badge.tsx:60:40
+  58 |   const isDeadlineNear =
+  59 |     dueDate && !isOverdue
+> 60 |       ? (new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60) < 24
+     |                                        ^^^^^^^^^^ Cannot call impure function
+  61 |       : false;
+  62 |
+  63 |   // Size variants  react-hooks/purity
+  273:10  warning  'getRelativeTimeText' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\rich-comments.tsx
+    3:20  warning  'useEffect' is defined but never used                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+    6:8   warning  'Mention' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+    8:68  warning  'Save' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   88:3   warning  'cardId' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   91:3   warning  'currentUserName' is defined but never used                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+  264:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  474:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  557:37  warning  'onClose' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\rich-text-editor.tsx
+  176:9  warning  'handleCancel' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\smart-due-date.tsx
+  51:3  warning  'priority' is defined but never used              @typescript-eslint/no-unused-vars
+  95:9  warning  'Icon' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  98:9  warning  'displayText' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\theme-provider.tsx
+  65:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+
+C:\Nexus\nexus\components\ui\visually-hidden.tsx
+  3:13  warning  'React' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\coverage\lcov-report\block-navigation.js
+  1:1  warning  Unused eslint-disable directive (no problems were reported)
+
+C:\Nexus\nexus\examples\performance-examples.tsx
+   19:40  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   59:55  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   62:25  warning  'index' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   88:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  102:69  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  147:47  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  161:37  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\hooks\use-card-lock.ts
+  132:47  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:16  warning  'err' is defined but never used           @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\hooks\use-debounce.ts
+  58:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:68  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\hooks\use-demo-mode.ts
+  19:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  61:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\hooks\use-presence.ts
+    8:10  warning  'logger' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+  127:47  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  145:54  warning  'key' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  145:59  warning  'newPresences' is defined but never used                                                                     @typescript-eslint/no-unused-vars
+  150:55  warning  'key' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  150:60  warning  'leftPresences' is defined but never used                                                                    @typescript-eslint/no-unused-vars
+  192:6   warning  React Hook useEffect has a missing dependency: 'getToken'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Nexus\nexus\hooks\use-realtime-board.ts
+  247:35  error    Unexpected any. Specify a different type                                                                                                                  @typescript-eslint/no-explicit-any
+  261:35  error    Unexpected any. Specify a different type                                                                                                                  @typescript-eslint/no-explicit-any
+  322:6   warning  React Hook useEffect has missing dependencies: 'getToken', 'orgId', 'retryCount', and 'retryTimeout'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Nexus\nexus\lib\action-protection.ts
+  48:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  50:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\lib\dal.ts
+   86:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  190:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  198:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  510:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  512:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\lib\format-utils.ts
+  18:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  61:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\lib\lexorank.ts
+  57:55  warning  '_after' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\lib\logger.ts
+  9:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\lib\performance.ts
+  60:16  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\lib\sentry-helpers.ts
+   38:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:76  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  149:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Nexus\nexus\lib\tenant-context.ts
+  110:14  warning  'createErr' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\scripts\seed-demo.ts
+  231:15  warning  'card' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  252:15  warning  'card' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  272:15  warning  'card' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\sentry.client.config.ts
+  65:21  warning  'hint' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\sentry.edge.config.ts
+  20:21  warning  'hint' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\sentry.server.config.ts
+  42:21  warning  'hint' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 150 problems (56 errors, 94 warnings)
+  0 errors and 3 warnings potentially fixable with the `--fix` option.
+

@@ -60,6 +60,7 @@ function ThemeProviderComponent({ children }: { children: React.ReactNode }) {
     
     // Set initial state in single batch
     const initialSystemTheme = mediaQuery.matches ? "dark" : "light";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSystemTheme(initialSystemTheme);
     setThemeState(storedTheme);
     

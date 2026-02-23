@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
-import { MoreHorizontal, Trash2, Calendar, Clock, User } from "lucide-react"; 
+import { MoreHorizontal, Trash2, Clock } from "lucide-react"; 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { deleteCard } from "@/actions/delete-card"; 

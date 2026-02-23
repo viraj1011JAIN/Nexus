@@ -9,7 +9,7 @@ interface ActivityProps {
   items: AuditLog[];
 }
 
-const getActionText = (action: string, entityTitle: string) => {
+const getActionText = (action: string, _entityTitle: string) => {
   switch (action) {
     case "CREATE":
       return `created this card`;

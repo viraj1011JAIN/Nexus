@@ -23,6 +23,7 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
 
   // Fetch board via DAL — returns NOT_FOUND if boardId doesn't belong to ctx.orgId
   // This prevents an authenticated user from reading another org's board by guessing the ID.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let board: any;
   try {
     board = await dal.boards.findUnique(params.boardId, {
@@ -44,7 +45,6 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
   if (!board) notFound();
 
   return (
-    // eslint-disable-next-line react/forbid-component-props
     <div
       className="h-full min-h-screen overflow-x-auto relative"
       style={board.imageFullUrl ? {

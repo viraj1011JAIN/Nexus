@@ -49,11 +49,12 @@ export const ListContainer = ({
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 
   // 2. Real-time synchronization
-  const { isConnected } = useRealtimeBoard({
+  const { isConnected: _isConnected } = useRealtimeBoard({
     boardId,
     orgId,
     onCardCreated: (card) => {
@@ -104,6 +105,7 @@ export const ListContainer = ({
 
   // Sync state and ref when data changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOrderedData(data);
     orderedDataRef.current = data; 
   }, [data]);

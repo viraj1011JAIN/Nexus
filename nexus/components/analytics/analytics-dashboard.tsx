@@ -76,6 +76,7 @@ interface AnalyticsDashboardProps {
 }
 
 export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashboardProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { isConnected } = useRealtimeAnalytics(boardId, orgId);
@@ -101,6 +102,7 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
     return () => {
       window.removeEventListener("refresh-analytics", handleRefresh);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
 
   if (loading) {
@@ -304,7 +306,7 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {Object.entries(COLORS).map(([key, color], index) => (
+                  {Object.entries(COLORS).map(([_key, color], index) => (
                     <Cell key={`cell-${index}`} fill={color} />
                   ))}
                 </Pie>

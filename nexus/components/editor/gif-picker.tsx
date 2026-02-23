@@ -1,7 +1,8 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { Sparkles, Search, Loader2, TrendingUp } from "lucide-react";
+import { useState, useEffect, useCallback, memo } from "react";
+import { Sparkles, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,7 +11,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useDebouncedCallback } from "@/hooks/use-debounce";
 
 interface GifPickerProps {
   onSelect: (gifUrl: string) => void;

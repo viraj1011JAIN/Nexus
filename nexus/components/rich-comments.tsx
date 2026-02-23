@@ -1,11 +1,11 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Mention from "@tiptap/extension-mention";
 import Placeholder from "@tiptap/extension-placeholder";
-import { MessageSquare, Reply, Smile, MoreVertical, Edit2, Trash2, Save, X, Send } from "lucide-react";
+import { MessageSquare, Reply, Smile, MoreVertical, Edit2, Trash2, X, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -85,10 +85,10 @@ interface RichCommentsProps {
 }
 
 export function RichComments({
-  cardId,
+  cardId: _cardId,
   comments,
   currentUserId,
-  currentUserName,
+  currentUserName: _currentUserName,
   currentUserImage,
   onCreateComment,
   onUpdateComment,
@@ -554,7 +554,7 @@ interface ReactionPickerProps {
   onClose: () => void;
 }
 
-function ReactionPicker({ onSelect, onClose }: ReactionPickerProps) {
+function ReactionPicker({ onSelect, onClose: _onClose }: ReactionPickerProps) {
   const emojis = ["👍", "❤️", "😂", "🎉", "🚀", "👀", "🔥", "💯"];
 
   return (

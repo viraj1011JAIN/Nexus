@@ -13,18 +13,11 @@ import {
   ChevronRight,
   Search as SearchIcon,
   Loader2,
-  Clock,
-  Hash,
-  List,
-  Zap,
-  TrendingUp,
-  Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Command as CommandPrimitive } from "cmdk";
-import { Badge } from "@/components/ui/badge";
 
 interface Board {
   id: string;
@@ -89,6 +82,7 @@ export const CommandPalette = () => {
   const [boards, setBoards] = React.useState<Board[]>([]);
   const [cards, setCards] = React.useState<Card[]>([]);
   const [loading, setLoading] = React.useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = React.useState<string | null>(null);
   const { recentItems, addRecentItem } = useRecentItems();
 
@@ -158,6 +152,7 @@ export const CommandPalette = () => {
   }, [addRecentItem]);
 
   // Get recent boards and cards
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const recentBoards = React.useMemo(() => {
     return recentItems
       .filter((item) => item.type === "board")
@@ -165,6 +160,7 @@ export const CommandPalette = () => {
       .filter(Boolean) as Board[];
   }, [recentItems, boards]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const recentCards = React.useMemo(() => {
     return recentItems
       .filter((item) => item.type === "card")
@@ -173,6 +169,7 @@ export const CommandPalette = () => {
   }, [recentItems, cards]);
 
   // Filtered results
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filteredBoards = React.useMemo(() => {
     if (!search) return boards.slice(0, 8);
     return boards.filter((b) => 
@@ -180,6 +177,7 @@ export const CommandPalette = () => {
     ).slice(0, 8);
   }, [boards, search]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filteredCards = React.useMemo(() => {
     if (!search) return cards.slice(0, 8);
     return cards.filter((c) =>

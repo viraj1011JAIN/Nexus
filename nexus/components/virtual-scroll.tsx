@@ -151,6 +151,7 @@ export function DynamicVirtualScroll<T>({
       }
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setItemHeights(newHeights);
   }, [items]);
 

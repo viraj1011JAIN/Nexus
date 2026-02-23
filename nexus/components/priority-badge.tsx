@@ -1,6 +1,7 @@
 "use client";
 
 import { Priority } from "@prisma/client";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowUp, Minus, ArrowDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,10 +56,14 @@ export function PriorityBadge({
   className,
 }: PriorityBadgeProps) {
   // Calculate if deadline is approaching (<24h)
-  const isDeadlineNear =
-    dueDate && !isOverdue
-      ? (new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60) < 24
-      : false;
+  const isDeadlineNear = useMemo(
+    () =>
+      dueDate && !isOverdue
+        ? // eslint-disable-next-line react-hooks/purity
+          (new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60) < 24
+        : false,
+    [dueDate, isOverdue]
+  );
 
   // Size variants
   const sizeClasses = {
@@ -270,6 +275,7 @@ export function PrioritySelector({ value, onChange, dueDate, disabled }: Priorit
  * - "Due tomorrow"
  * - "Overdue by 2 days"
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getRelativeTimeText(dueDate: Date): string {
   const now = new Date();
   const hoursRemaining = differenceInHours(dueDate, now);

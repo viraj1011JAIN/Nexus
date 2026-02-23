@@ -42,7 +42,7 @@ export default function Error({
           Something Went Wrong
         </h2>
         <p className="text-slate-600 mb-8">
-          We encountered an unexpected error. Don't worry, your data is safe. 
+          We encountered an unexpected error. Don&apos;t worry, your data is safe.
           Our team has been notified and is working on a fix.
         </p>
 

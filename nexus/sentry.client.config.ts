@@ -62,8 +62,7 @@ Sentry.init({
   ],
 
   // Add user context from Clerk
-  beforeSend(event, hint) {
-    // Don't send events in development (save quota)
+  beforeSend(event, _hint) {
     if (process.env.NODE_ENV === "development") {
       console.log("Sentry Event (dev mode, not sent):", event);
       return null;

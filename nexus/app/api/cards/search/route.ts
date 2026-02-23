@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get("limit") || "20");
 
     // Build where clause for search
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = {
       list: {
         board: {

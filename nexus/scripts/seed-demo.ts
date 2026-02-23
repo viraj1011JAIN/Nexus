@@ -228,7 +228,7 @@ async function main() {
       // Backlog cards
       for (let i = 0; i < SAMPLE_CARDS.backlog.length; i++) {
         const cardData = SAMPLE_CARDS.backlog[i];
-        const card = await tx.card.create({
+        await tx.card.create({
           data: {
             title: cardData.title,
             description: cardData.description,
@@ -249,7 +249,7 @@ async function main() {
       // In Progress cards
       for (let i = 0; i < SAMPLE_CARDS.inProgress.length; i++) {
         const cardData = SAMPLE_CARDS.inProgress[i];
-        const card = await tx.card.create({
+        await tx.card.create({
           data: {
             title: cardData.title,
             description: cardData.description,
@@ -269,7 +269,7 @@ async function main() {
       // Done cards
       for (let i = 0; i < SAMPLE_CARDS.done.length; i++) {
         const cardData = SAMPLE_CARDS.done[i];
-        const card = await tx.card.create({
+        await tx.card.create({
           data: {
             title: cardData.title,
             description: cardData.description,

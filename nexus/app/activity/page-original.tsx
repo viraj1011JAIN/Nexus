@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
 import { Activity as ActivityIcon, Clock, User } from "lucide-react";
@@ -116,7 +117,7 @@ export default function ActivityPage() {
                       {log.entityType}
                     </span>
                     <span className="font-medium text-slate-900 dark:text-white">
-                      "{log.entityTitle}"
+                      &quot;{log.entityTitle}&quot;
                     </span>
                   </div>
                   

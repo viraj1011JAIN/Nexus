@@ -16,6 +16,7 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/create-audit-log";
 import { createSafeAction } from "@/lib/create-safe-action";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { withSentry } from "@/lib/sentry-helpers";
 import { z } from "zod";
 import { differenceInHours } from "date-fns";

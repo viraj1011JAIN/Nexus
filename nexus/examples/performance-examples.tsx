@@ -6,6 +6,8 @@
  */
 
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect } from "react";
 import { LazyLoad } from "@/components/lazy-load";
@@ -59,7 +61,7 @@ export function OptimizedBoardDashboard() {
 export function OptimizedCardList({ cards }: { cards: any[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {cards.map((card, index) => (
+      {cards.map((card, _index) => (
         <LazyLoad
           key={card.id}
           minHeight={150}

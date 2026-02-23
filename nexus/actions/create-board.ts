@@ -53,6 +53,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     if (currentBoardCount >= boardLimit) {
       return { 
         error: "LIMIT_REACHED",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data: { limit: boardLimit, current: currentBoardCount } as any,
       };
     }

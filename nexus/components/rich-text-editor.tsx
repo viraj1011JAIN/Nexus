@@ -173,6 +173,7 @@ export function RichTextEditor({
   };
 
   // Cancel handler
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCancel = async () => {
     if (editor) {
       const currentContent = editor.getHTML();
@@ -231,7 +232,6 @@ export function RichTextEditor({
           "focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/30",
           "bg-background transition-colors duration-150"
         )}
-        // eslint-disable-next-line react/forbid-dom-props
         style={{ minHeight }}
       >
         <EditorContent editor={editor} />

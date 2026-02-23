@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated coverage reports
+    "coverage/**",
   ]),
   // ── Security: ban systemDb outside privileged routes ─────────────────────
   // systemDb uses the Supabase service role (SYSTEM_DATABASE_URL) and bypasses
@@ -39,6 +41,19 @@ const eslintConfig = defineConfig([
     files: ["app/api/webhook/**/*.ts", "app/api/cron/**/*.ts"],
     rules: {
       "no-restricted-imports": "off",
+    },
+  },
+  // Allow underscore-prefixed variables to be "intentionally unused"
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ]);

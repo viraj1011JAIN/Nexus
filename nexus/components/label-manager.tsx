@@ -42,7 +42,7 @@ const PRESET_COLORS = [
 
 export function LabelManager({
   cardId,
-  orgId,
+  orgId: _orgId,
   availableLabels,
   cardLabels: initialCardLabels,
   onLabelsChange,
@@ -80,6 +80,7 @@ export function LabelManager({
       });
     } else {
       // Optimistic addition
+      // eslint-disable-next-line react-hooks/purity
       addLabel({ ...label, assignmentId: 'temp-' + Date.now() });
 
       // Server action
@@ -174,7 +175,6 @@ export function LabelManager({
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      {/* eslint-disable-next-line react/forbid-dom-props */}
                     <div
                         className="h-4 w-4 rounded-sm"
                         style={{ backgroundColor: label.color }}
@@ -221,7 +221,6 @@ export function LabelManager({
                         'h-8 w-8 rounded-md transition-transform hover:scale-110',
                         selectedColor === color && 'ring-2 ring-primary ring-offset-2'
                       )}
-                      // eslint-disable-next-line react/forbid-dom-props
                       style={{ backgroundColor: color }}
                       title={color}
                     />
@@ -268,7 +267,6 @@ function LabelBadge({
   onRemove: () => void;
 }) {
   return (
-    // eslint-disable-next-line react/forbid-dom-props
     <div
       className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium text-white"
       style={{ backgroundColor: label.color }}
@@ -294,17 +292,18 @@ export function CardLabels({ labels }: { labels: CardLabel[] }) {
 
   return (
     <div className="flex flex-wrap gap-1">
-      {labels.map((label) => (
-        {/* eslint-disable-next-line react/forbid-dom-props */}
-        <div
-          key={label.id}
-          className="h-2 w-10 rounded-full"
-          style={{ backgroundColor: label.color }}
-          title={label.name}
-          role="status"
-          aria-label={`Label: ${label.name}`}
-        />
-      ))}
+      {labels.map((label) => {
+        return (
+          <div
+            key={label.id}
+            className="h-2 w-10 rounded-full"
+            style={{ backgroundColor: label.color }}
+            title={label.name}
+            role="status"
+            aria-label={`Label: ${label.name}`}
+          />
+        );
+      })}
     </div>
   );
 }

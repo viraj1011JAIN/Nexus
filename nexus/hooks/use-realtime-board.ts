@@ -244,6 +244,7 @@ export function useRealtimeBoard({
         // Phase 3: Subscribe to comment changes
         if (onCommentCreated || onCommentUpdated || onCommentDeleted) {
           channel.on(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             "postgres_changes" as any,
             {
               event: "*",
@@ -258,6 +259,7 @@ export function useRealtimeBoard({
         // Phase 3: Subscribe to reaction changes
         if (onReactionAdded || onReactionRemoved) {
           channel.on(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             "postgres_changes" as any,
             {
               event: "*",
@@ -319,6 +321,7 @@ export function useRealtimeBoard({
         setIsConnected(false);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     boardId,
     handleCardChange,

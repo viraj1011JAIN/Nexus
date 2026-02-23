@@ -2,7 +2,6 @@
 
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
-import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
 interface CardUpdate {
