@@ -150,11 +150,19 @@ export async function DELETE(req: NextRequest) {
   // (if storage remove fails the DB record is already gone — safer than leaving orphaned DB rows)
   await db.attachment.delete({ where: { id } });
   try {
-    await supabase.storage.from("card-attachments").remove([attachment.storagePath]);
-  } catch (storageErr) {
+    const { error: storageErr } = await supabase.storage
+      .from("card-attachments")
+      .remove([attachment.storagePath]);
+    if (storageErr) {
+      console.error(
+        `[upload] Storage removal failed for attachment ${attachment.id} (path: ${attachment.storagePath}):`,
+        storageErr
+      );
+    }
+  } catch (unexpectedErr) {
     console.error(
-      `[upload] Storage removal failed for attachment ${attachment.id} (path: ${attachment.storagePath}):`,
-      storageErr
+      `[upload] Unexpected error removing attachment ${attachment.id} (path: ${attachment.storagePath}):`,
+      unexpectedErr
     );
     // DB record is already deleted; log the orphaned file but return success to the client
   }
