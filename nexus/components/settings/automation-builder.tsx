@@ -159,7 +159,11 @@ function ActionItem({
           />
         )}
       </div>
-      <button onClick={onRemove} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
+      <button
+        aria-label="Remove action"
+        onClick={onRemove}
+        className="text-muted-foreground hover:text-destructive transition-colors mt-0.5"
+      >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
     </div>
@@ -394,6 +398,7 @@ function AutomationCard({
           <Button
             variant="ghost"
             size="sm"
+            aria-label="View logs"
             className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
             onClick={onViewLogs}
           >
@@ -402,6 +407,7 @@ function AutomationCard({
           <Button
             variant="ghost"
             size="sm"
+            aria-label="Delete automation"
             className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
             onClick={onDelete}
           >
@@ -434,6 +440,11 @@ function LogsDialog({
     setLoading(true);
     getAutomationLogs(automationId).then((result) => {
       if (result.data) setLogs(result.data as typeof logs);
+    }).catch((e) => {
+      console.error("[LOGS_DIALOG]", e);
+      toast.error("Failed to load automation logs.");
+      setLogs([]);
+    }).finally(() => {
       setLoading(false);
     });
   }, [open, automationId]);

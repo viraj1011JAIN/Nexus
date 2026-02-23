@@ -166,8 +166,9 @@ function FieldValueInput({
       field.type === "NUMBER"
         ? parseFloat(localVal) || 0
         : field.type === "DATE"
-        ? new Date(localVal).toISOString()
+        ? (() => { const d = new Date(localVal); return isNaN(d.getTime()) ? undefined : d.toISOString(); })()
         : localVal.trim();
+    if (val === undefined) { toast.error("Invalid date value."); return; }
     onSave(field.id, { [key]: val });
   };
 
@@ -313,6 +314,10 @@ function CreateFieldDialog({
 
   const handleCreate = async () => {
     if (!name.trim()) return;
+    if (needsOptions && !optionsRaw.trim()) {
+      toast.error("Add at least one option (comma-separated).");
+      return;
+    }
     setSaving(true);
     try {
       const options = needsOptions
@@ -426,7 +431,21 @@ export function CustomFieldsPanel({ boardId, cardId, isAdmin = false }: CustomFi
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [boardId, cardId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [fieldsRes, valuesRes] = await Promise.all([
+        getCustomFieldsForBoard(boardId),
+        getCardCustomFieldValues(cardId),
+      ]);
+      if (cancelled) return;
+      if (fieldsRes.data) setFields(fieldsRes.data as CustomField[]);
+      if (valuesRes.data) setValues(valuesRes.data as FieldValue[]);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [boardId, cardId]);
 
   const getValueFor = (fieldId: string) => values.find((v) => v.fieldId === fieldId);
 
@@ -462,6 +481,7 @@ export function CustomFieldsPanel({ boardId, cardId, isAdmin = false }: CustomFi
   };
 
   const handleDelete = async (fieldId: string) => {
+    if (!window.confirm("Delete this custom field? All stored values will be lost.")) return;
     const result = await deleteCustomField(fieldId);
     if (result.error) { toast.error(result.error); return; }
     setFields((prev) => prev.filter((f) => f.id !== fieldId));

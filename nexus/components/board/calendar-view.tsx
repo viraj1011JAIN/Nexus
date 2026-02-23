@@ -9,7 +9,7 @@ import {
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, isToday, isPast,
-  addMonths, subMonths, parseISO, isValid, addWeeks, subWeeks,
+  addMonths, subMonths, parseISO, isValid, addWeeks, subWeeks, addDays,
   startOfWeek as getWeekStart,
 } from "date-fns";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
@@ -57,6 +57,21 @@ const PRIORITY_DOT: Record<string, string> = {
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Returns safe inline styles for a card's cover color, handling hex/rgb/hsl/named values. */
+function getCardColorStyle(coverColor: string | null | undefined): React.CSSProperties {
+  if (!coverColor) return {};
+  const isHex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(coverColor);
+  if (isHex) {
+    return {
+      backgroundColor: coverColor + "22",
+      borderColor: coverColor + "55",
+      color: coverColor,
+    };
+  }
+  // For non-hex colours (rgb, hsl, named) use the value directly without alpha suffix
+  return { backgroundColor: coverColor, borderColor: coverColor };
+}
 
 function getCardDate(card: CalendarCard): Date | null {
   if (!card.dueDate) return null;
@@ -108,7 +123,7 @@ function MiniCard({
       )}
       style={
         !isOverdue && card.coverColor
-          ? { backgroundColor: card.coverColor + "22", borderColor: card.coverColor + "55", color: card.coverColor }
+          ? getCardColorStyle(card.coverColor)
           : {}
       }
     >
@@ -144,6 +159,7 @@ function DayCell({
   onDropCard?: (cardId: string, date: Date) => void;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -156,8 +172,8 @@ function DayCell({
     if (cardId && onDropCard) onDropCard(cardId, date);
   };
 
-  const visible = cards.slice(0, MAX_VISIBLE);
-  const overflow = cards.length - MAX_VISIBLE;
+  const visible = showAll ? cards : cards.slice(0, MAX_VISIBLE);
+  const overflow = showAll ? 0 : cards.length - MAX_VISIBLE;
 
   return (
     <div
@@ -196,7 +212,13 @@ function DayCell({
           ))}
         </AnimatePresence>
         {overflow > 0 && (
-          <div className="text-[10px] text-muted-foreground pl-1.5 cursor-pointer hover:text-foreground">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowAll(true)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowAll(true); }}
+            className="text-[10px] text-muted-foreground pl-1.5 cursor-pointer hover:text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded"
+          >
             +{overflow} more
           </div>
         )}
@@ -246,10 +268,9 @@ function WeekView({
   onDropCard: (cardId: string, date: Date) => void;
 }) {
   const weekStart = getWeekStart(currentDate, { weekStartsOn: 0 });
-  const days = eachDayOfInterval({ start: weekStart, end: addWeeks(weekStart, 0) });
   const weekDays = eachDayOfInterval({
     start: weekStart,
-    end: new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000),
+    end: addDays(weekStart, 6),
   });
 
   return (

@@ -130,7 +130,7 @@ function SharedCardTile({ card }: { card: SharedCard }) {
               <img src={card.assignee.imageUrl} alt={card.assignee.name} className="h-4 w-4 rounded-full" />
             ) : (
               <div className="h-4 w-4 rounded-full bg-indigo-200 flex items-center justify-center text-[9px] font-bold text-indigo-700">
-                {card.assignee.name[0]}
+                {card.assignee.name.trim().charAt(0).toUpperCase() || "?"}
               </div>
             )}
             <span className="truncate max-w-[60px]">{card.assignee.name}</span>
@@ -153,6 +153,9 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
       setCopied(true);
       toast.success("Link copied!");
       setTimeout(() => setCopied(false), 2000);
+    }).catch((e) => {
+      console.error("[COPY_LINK]", e);
+      toast.error("Failed to copy link.");
     });
   };
 
@@ -208,7 +211,7 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
             <span className="font-medium text-foreground">{totalCards}</span> cards
           </span>
           <div className="ml-auto flex items-center gap-3 text-xs">
-            {share.allowComments && (
+            {!share.allowComments && (
               <Badge variant="secondary" className="text-xs gap-1">
                 <Lock className="h-2.5 w-2.5" />
                 Read-only

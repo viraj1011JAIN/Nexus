@@ -310,6 +310,7 @@ export function BulkActionBar({
 
               {/* Close */}
               <button
+                aria-label="Clear selection"
                 onClick={onClearSelection}
                 className="ml-2 pl-2 border-l border-slate-600 text-white/50 hover:text-white transition-colors"
                 disabled={loading}
@@ -374,9 +375,10 @@ export function useBulkSelection() {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
+      if (next.size === 0) setSelectionMode(false);
       return next;
     });
-  }, []);
+  }, [setSelectionMode]);
 
   const selectAll = useCallback((ids: string[]) => {
     setSelectedIds(new Set(ids));

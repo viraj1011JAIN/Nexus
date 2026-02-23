@@ -92,7 +92,11 @@ function WorkloadCardTile({ card }: { card: WorkloadCard }) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ scale: 1.02, y: -1 }}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open card: ${card.title}`}
             onClick={() => onOpen(card.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(card.id); } }}
             className={cn(
               "relative flex-shrink-0 w-40 cursor-pointer rounded-lg border p-2.5",
               "shadow-sm transition-shadow hover:shadow-md",
@@ -170,8 +174,13 @@ function MemberRow({ member }: { member: WorkloadMember }) {
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
       {/* Header */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-label={`${member.name}: ${member.cards.length} cards. Click to ${expanded ? "collapse" : "expand"}`}
         className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         onClick={() => setExpanded(!expanded)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(!expanded); } }}
       >
         {/* Avatar */}
         {member.imageUrl ? (
@@ -227,10 +236,10 @@ function MemberRow({ member }: { member: WorkloadMember }) {
           )}
         </div>
 
-        {/* Expand toggle */}
-        <button className="text-muted-foreground hover:text-foreground transition-colors ml-2">
+        {/* Expand indicator */}
+        <span className="text-muted-foreground hover:text-foreground transition-colors ml-2" aria-hidden="true">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        </span>
       </div>
 
       {/* Cards row */}
@@ -269,8 +278,13 @@ function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
   return (
     <div className="border border-dashed border-slate-300 dark:border-slate-600 rounded-xl overflow-hidden">
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-label={`Unassigned: ${cards.length} cards. Click to ${expanded ? "collapse" : "expand"}`}
         className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
         onClick={() => setExpanded(!expanded)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(!expanded); } }}
       >
         <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
           <User className="h-4 w-4 text-slate-500" />
@@ -279,9 +293,9 @@ function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
           <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Unassigned</p>
           <p className="text-xs text-muted-foreground">{cards.length} cards with no assignee</p>
         </div>
-        <button className="ml-auto text-muted-foreground">
+        <span className="ml-auto text-muted-foreground" aria-hidden="true">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        </span>
       </div>
 
       <AnimatePresence>

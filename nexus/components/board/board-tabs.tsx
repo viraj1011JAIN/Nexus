@@ -43,6 +43,7 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
       listId: string;
       listTitle: string;
       boardId: string;
+      assigneeId?: string | null;
       assigneeImageUrl?: string | null;
       assigneeName?: string | null;
       coverColor?: string | null;
@@ -57,6 +58,7 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
           listId: list.id,
           listTitle: list.title,
           boardId,
+          assigneeId: card.assigneeId ?? null,
           assigneeImageUrl: card.assignee?.imageUrl ?? null,
           assigneeName: card.assignee?.name ?? null,
           coverColor: card.coverColor ?? null,
@@ -66,16 +68,19 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
     return cards;
   }, [lists, boardId]);
 
-  // Derive members from all cards assignees
+  // Derive members from all cards assignees (use stable assigneeId as key)
   const members = useMemo(() => {
     const map = new Map<string, { id: string; name: string; imageUrl?: string | null }>();
     for (const card of allCards) {
       if (card.assigneeName) {
-        map.set(card.assigneeName, {
-          id: card.assigneeImageUrl ?? card.assigneeName,
-          name: card.assigneeName,
-          imageUrl: card.assigneeImageUrl,
-        });
+        const stableKey = card.assigneeId ?? card.assigneeName;
+        if (!map.has(stableKey)) {
+          map.set(stableKey, {
+            id: stableKey,
+            name: card.assigneeName,
+            imageUrl: card.assigneeImageUrl,
+          });
+        }
       }
     }
     return [...map.values()];
@@ -86,6 +91,45 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
     () => (lists ?? []).map((l: { id: string; title: string }) => ({ id: l.id, title: l.title })),
     [lists]
   );
+
+  // Collect unique labels from all cards
+  const labels = useMemo(() => {
+    const labelMap = new Map<string, { id: string; name: string; color: string }>();
+    for (const list of lists ?? []) {
+      for (const card of list.cards ?? []) {
+        for (const la of card.labels ?? []) {
+          const l = la.label;
+          if (l && !labelMap.has(l.id)) {
+            labelMap.set(l.id, { id: l.id, name: l.name, color: l.color });
+          }
+        }
+      }
+    }
+    return [...labelMap.values()];
+  }, [lists]);
+
+  // Pre-filter cards for views that receive the card array (CalendarView)
+  const filteredCards = useMemo(() => {
+    const hasActiveFilter =
+      filters.assigneeIds.length > 0 ||
+      filters.priorities.length > 0 ||
+      (filters.listIds?.length ?? 0) > 0 ||
+      !!filters.search;
+    if (!hasActiveFilter) return allCards;
+    return allCards.filter((card) => {
+      if (filters.assigneeIds.length > 0 && !filters.assigneeIds.includes(card.assigneeId ?? ""))
+        return false;
+      if (filters.priorities.length > 0 && !filters.priorities.includes(card.priority ?? ""))
+        return false;
+      if (filters.listIds?.length && !filters.listIds.includes(card.listId))
+        return false;
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        if (!card.title.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [allCards, filters]);
 
   // Show filter bar on certain tabs
   const showFilterBar = ["board", "table", "calendar"].includes(activeTab);
@@ -133,7 +177,7 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
                 boardId={boardId}
                 members={members}
                 lists={listOptions}
-                labels={[]}
+                labels={labels}
                 onChange={setFilters}
               />
             </ErrorBoundary>
@@ -154,7 +198,7 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
 
         <TabsContent value="calendar" className="mt-0 p-6 pt-4">
           <ErrorBoundary>
-            <CalendarView cards={allCards} boardId={boardId} />
+            <CalendarView cards={filteredCards} boardId={boardId} />
           </ErrorBoundary>
         </TabsContent>
 

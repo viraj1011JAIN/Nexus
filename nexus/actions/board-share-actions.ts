@@ -6,6 +6,29 @@ import crypto from "crypto";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { db } from "@/lib/db";
 
+// ─── Password helpers (scrypt, no external deps) ──────────────────────────────
+
+const SCRYPT_KEY_LEN = 32;
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 };
+
+function hashPassword(plaintext: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(plaintext, salt, SCRYPT_KEY_LEN, SCRYPT_PARAMS);
+  return `scrypt$${salt}$${hash.toString("hex")}`;
+}
+
+function verifyPassword(plaintext: string, stored: string): boolean {
+  const parts = stored.split("$");
+  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
+  const [, salt, hash] = parts;
+  try {
+    const derived = crypto.scryptSync(plaintext, salt, SCRYPT_KEY_LEN, SCRYPT_PARAMS);
+    return crypto.timingSafeEqual(derived, Buffer.from(hash, "hex"));
+  } catch {
+    return false;
+  }
+}
+
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
 const CreateShareSchema = z.object({
@@ -41,7 +64,7 @@ export async function getBoardShareLink(boardId: string) {
   }
 }
 
-export async function getSharedBoardData(token: string) {
+export async function getSharedBoardData(token: string, password?: string) {
   try {
     const share = await db.boardShare.findFirst({
       where: {
@@ -74,6 +97,13 @@ export async function getSharedBoardData(token: string) {
     });
 
     if (!share) return { error: "Share link not found or expired." };
+
+    // Password check before returning board data
+    if (share.passwordHash) {
+      if (!password || !verifyPassword(password, share.passwordHash)) {
+        return { error: "Invalid or missing password" };
+      }
+    }
 
     // Increment view counter
     await db.boardShare.update({
@@ -137,7 +167,7 @@ export async function createBoardShareLink(input: {
         allowCopyCards: validated.allowCopyCards,
         expiresAt: validated.expiresAt ? new Date(validated.expiresAt) : null,
         passwordHash: validated.password
-          ? crypto.createHash("sha256").update(validated.password).digest("hex")
+          ? hashPassword(validated.password)
           : null,
         createdBy: ctx.userId,
         orgId: ctx.orgId,

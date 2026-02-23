@@ -25,7 +25,7 @@ export default async function SharedBoardPage({ params }: SharedBoardPageProps) 
 export async function generateMetadata({ params }: SharedBoardPageProps) {
   const { token } = await params;
   const result = await getSharedBoardData(token);
-  if (!result.data) return { title: "Shared Board" };
+  if (result.error || !result.data) return { title: "Shared Board" };
   return {
     title: `${result.data.board.title} — Shared Board`,
     description: `View the shared board: ${result.data.board.title}`,

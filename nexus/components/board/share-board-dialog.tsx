@@ -52,6 +52,7 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
   const [revoking, setRevoking] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expiresAt, setExpiresAt] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   const shareUrl = share
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/shared/${share.token}`
@@ -64,10 +65,16 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
 
   const loadShare = async () => {
     setLoading(true);
-    const result = await getBoardShareLink(boardId);
-    if (result.data) setShare(result.data as unknown as ShareData);
-    else setShare(null);
-    setLoading(false);
+    try {
+      const result = await getBoardShareLink(boardId);
+      if (result.data) setShare(result.data as unknown as ShareData);
+      else setShare(null);
+    } catch (e) {
+      console.error("[LOAD_SHARE]", e);
+      setShare(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -100,13 +107,22 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
   };
 
   const handleToggle = async (field: "allowComments" | "allowCopyCards", value: boolean) => {
-    if (!share) return;
+    if (!share || updating) return;
+    setUpdating(true);
     const prev = share;
     setShare({ ...share, [field]: value });
-    const result = await updateBoardShareSettings(share.id, { [field]: value });
-    if (result.error) {
+    try {
+      const result = await updateBoardShareSettings(share.id, { [field]: value });
+      if (result.error) {
+        setShare(prev);
+        toast.error(result.error);
+      }
+    } catch (e) {
+      console.error("[TOGGLE_SHARE_SETTING]", e);
       setShare(prev);
-      toast.error(result.error);
+      toast.error("Failed to update settings.");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -115,6 +131,10 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
       setCopied(true);
       toast.success("Link copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
+    }).catch((e) => {
+      console.error("[COPY_LINK]", e);
+      setCopied(false);
+      toast.error("Failed to copy link.");
     });
   };
 
@@ -213,6 +233,7 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
                   </div>
                   <Switch
                     checked={share.allowComments}
+                    disabled={updating}
                     onCheckedChange={(v) => handleToggle("allowComments", v)}
                   />
                 </div>
@@ -224,6 +245,7 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
                   </div>
                   <Switch
                     checked={share.allowCopyCards}
+                    disabled={updating}
                     onCheckedChange={(v) => handleToggle("allowCopyCards", v)}
                   />
                 </div>

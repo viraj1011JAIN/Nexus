@@ -30,7 +30,12 @@ import {
 } from "@/actions/saved-view-actions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
+/** Safely format a date string, returning the original string on parse failure. */
+function formatDateSafe(dateStr: string | undefined, fmt: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? dateStr : format(d, fmt);
+}
 export interface FilterState {
   assigneeIds: string[];
   priorities: string[];
@@ -236,16 +241,26 @@ function SavedViewsPanel({
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
-    const result = await deleteSavedView(id);
-    if (result.error) { toast.error(result.error); return; }
-    setViews((prev) => prev.filter((v) => v.id !== id));
-    toast.success("View deleted.");
+    try {
+      const result = await deleteSavedView(id);
+      if (result.error) { toast.error(result.error); return; }
+      setViews((prev) => prev.filter((v) => v.id !== id));
+      toast.success("View deleted.");
+    } catch (e) {
+      console.error("[DELETE_VIEW]", e);
+      toast.error("Failed to delete view.");
+    }
   };
 
   const handleToggleShare = async (view: SavedView) => {
-    const result = await updateSavedView(view.id, { isShared: !view.isShared });
-    if (result.error) { toast.error(result.error); return; }
-    setViews((prev) => prev.map((v) => v.id === view.id ? { ...v, isShared: !v.isShared } : v));
+    try {
+      const result = await updateSavedView(view.id, { isShared: !view.isShared });
+      if (result.error) { toast.error(result.error); return; }
+      setViews((prev) => prev.map((v) => v.id === view.id ? { ...v, isShared: !v.isShared } : v));
+    } catch (e) {
+      console.error("[TOGGLE_SHARE_VIEW]", e);
+      toast.error("Failed to update sharing.");
+    }
   };
 
   if (loading) {
@@ -282,12 +297,16 @@ function SavedViewsPanel({
           )}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
+              aria-label="Toggle share"
+              title="Toggle share"
               onClick={(e) => { e.stopPropagation(); handleToggleShare(view); }}
               className="p-1 rounded hover:bg-muted"
             >
               <Share2 className="h-3 w-3" />
             </button>
             <button
+              aria-label="Delete view"
+              title="Delete view"
               onClick={(e) => { e.stopPropagation(); handleDelete(view.id); }}
               className="p-1 rounded hover:bg-red-50 text-red-500"
             >
@@ -684,10 +703,10 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
             <FilterChip
               label={
                 filters.dueDateFrom && filters.dueDateTo
-                  ? `${format(new Date(filters.dueDateFrom), "MMM d")} – ${format(new Date(filters.dueDateTo), "MMM d")}`
+                  ? `${formatDateSafe(filters.dueDateFrom, "MMM d")} – ${formatDateSafe(filters.dueDateTo, "MMM d")}`
                   : filters.dueDateFrom
-                  ? `From ${format(new Date(filters.dueDateFrom), "MMM d")}`
-                  : `Until ${format(new Date(filters.dueDateTo!), "MMM d")}`
+                  ? `From ${formatDateSafe(filters.dueDateFrom, "MMM d")}`
+                  : `Until ${formatDateSafe(filters.dueDateTo, "MMM d")}`
               }
               onRemove={() => applyFilters({ ...filters, dueDateFrom: undefined, dueDateTo: undefined })}
             />

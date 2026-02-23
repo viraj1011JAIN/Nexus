@@ -40,13 +40,15 @@ export interface TriggerConfig {
 
 export interface ActionConfig {
   type: ActionType;
-  listId?: string;          // MOVE_CARD
-  priority?: Priority;      // SET_PRIORITY
-  assigneeId?: string;      // ASSIGN_MEMBER
-  labelId?: string;         // ADD_LABEL / REMOVE_LABEL
-  daysOffset?: number;      // SET_DUE_DATE_OFFSET
-  comment?: string;         // POST_COMMENT
+  listId?: string;              // MOVE_CARD
+  priority?: Priority;          // SET_PRIORITY
+  assigneeId?: string;          // ASSIGN_MEMBER
+  labelId?: string;             // ADD_LABEL / REMOVE_LABEL
+  daysOffset?: number;          // SET_DUE_DATE_OFFSET
+  comment?: string;             // POST_COMMENT
   notificationMessage?: string; // SEND_NOTIFICATION
+  checklistId?: string;         // COMPLETE_CHECKLIST_ITEM
+  itemId?: string;              // COMPLETE_CHECKLIST_ITEM (optional: specific item)
 }
 
 export interface ConditionConfig {
@@ -74,6 +76,8 @@ const ActionSchema = z.object({
   daysOffset: z.number().min(-365).max(365).optional(),
   comment: z.string().max(500).optional(),
   notificationMessage: z.string().max(200).optional(),
+  checklistId: z.string().uuid().optional(),
+  itemId: z.string().uuid().optional(),
 });
 
 const ConditionSchema = z.object({
@@ -133,6 +137,7 @@ export async function getAutomationLogs(automationId: string) {
 
     return { data: logs };
   } catch (e) {
+    console.error("[GET_AUTOMATION_LOGS]", e);
     return { error: "Failed to load logs." };
   }
 }
@@ -200,14 +205,35 @@ export async function updateAutomation(
     });
     if (!automation) return { error: "Automation not found." };
 
+    // Validate config fields before persisting
+    let validatedTrigger: object | undefined;
+    let validatedConditions: object | undefined;
+    let validatedActions: object | undefined;
+
+    if (input.trigger !== undefined) {
+      const parsed = TriggerSchema.safeParse(input.trigger);
+      if (!parsed.success) return { error: "Invalid trigger configuration." };
+      validatedTrigger = parsed.data as object;
+    }
+    if (input.conditions !== undefined) {
+      const parsed = z.array(ConditionSchema).safeParse(input.conditions);
+      if (!parsed.success) return { error: "Invalid conditions configuration." };
+      validatedConditions = parsed.data as object;
+    }
+    if (input.actions !== undefined) {
+      const parsed = z.array(ActionSchema).min(1).safeParse(input.actions);
+      if (!parsed.success) return { error: "Invalid actions configuration." };
+      validatedActions = parsed.data as object;
+    }
+
     const updated = await db.automation.update({
       where: { id },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.isEnabled !== undefined ? { isEnabled: input.isEnabled } : {}),
-        ...(input.trigger !== undefined ? { trigger: input.trigger as object } : {}),
-        ...(input.conditions !== undefined ? { conditions: input.conditions as object } : {}),
-        ...(input.actions !== undefined ? { actions: input.actions as object } : {}),
+        ...(validatedTrigger !== undefined ? { trigger: validatedTrigger } : {}),
+        ...(validatedConditions !== undefined ? { conditions: validatedConditions } : {}),
+        ...(validatedActions !== undefined ? { actions: validatedActions } : {}),
       },
     });
 
@@ -309,6 +335,17 @@ export async function fireAutomations(
             const match = cond.operator === "exists" ? hasIt : !hasIt;
             if (!match) { conditionsMet = false; break; }
           }
+          if (cond.field === "listId") {
+            const match = cond.operator === "equals"
+              ? card.listId === cond.value
+              : card.listId !== cond.value;
+            if (!match) { conditionsMet = false; break; }
+          }
+          if (cond.field === "assigneeId") {
+            const hasAssignee = cond.value ? card.assigneeId === cond.value : !!card.assigneeId;
+            const match = cond.operator === "exists" ? hasAssignee : !hasAssignee;
+            if (!match) { conditionsMet = false; break; }
+          }
         }
       }
       if (!conditionsMet) continue;
@@ -361,12 +398,8 @@ async function executeAction(
   switch (action.type) {
     case "MOVE_CARD":
       if (action.listId) {
-        const lastCard = await db.card.findFirst({
-          where: { listId: action.listId },
-          orderBy: { order: "desc" },
-          select: { order: true },
-        });
-        const newOrder = (lastCard?.order ?? "m") + "a";
+        // Use a timestamp-based key so the order string stays bounded (~8 chars)
+        const newOrder = Date.now().toString(36);
         await db.card.update({
           where: { id: cardId },
           data: { listId: action.listId, order: newOrder },
@@ -427,6 +460,9 @@ async function executeAction(
       if (action.notificationMessage) {
         const card = await db.card.findFirst({ where: { id: cardId }, select: { assigneeId: true } });
         if (card?.assigneeId) {
+          // Use the recipient as the actor placeholder — a system user id is preferred
+          // when available via an env variable (SYSTEM_USER_ID), otherwise re-use recipient
+          const systemActorId = process.env.SYSTEM_USER_ID ?? card.assigneeId;
           await db.notification.create({
             data: {
               orgId,
@@ -436,11 +472,28 @@ async function executeAction(
               body: action.notificationMessage,
               entityType: "card",
               entityId: cardId,
-              actorId: card.assigneeId,
+              actorId: systemActorId,
               actorName: "Automation",
             },
           });
         }
+      }
+      break;
+
+    case "COMPLETE_CHECKLIST_ITEM":
+      if (action.checklistId) {
+        // Mark a specific item (if itemId given) or all incomplete items on the checklist
+        await db.checklistItem.updateMany({
+          where: {
+            checklistId: action.checklistId,
+            ...(action.itemId ? { id: action.itemId } : {}),
+            isComplete: false,
+          },
+          data: {
+            isComplete: true,
+            completedAt: new Date(),
+          },
+        });
       }
       break;
 

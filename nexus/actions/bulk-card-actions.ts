@@ -23,17 +23,24 @@ const BulkDeleteSchema = z.object({
   cardIds: z.array(z.string().uuid()).min(1).max(200),
 });
 
+const BulkMoveSchema = z.object({
+  cardIds: z.array(z.string().uuid()).min(1).max(200),
+  targetListId: z.string().uuid(),
+});
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function verifyCardsOwnership(cardIds: string[], orgId: string) {
+  // Deduplicate to avoid false negatives from repeated IDs
+  const uniqueCardIds = [...new Set(cardIds)];
   const cards = await db.card.findMany({
     where: {
-      id: { in: cardIds },
+      id: { in: uniqueCardIds },
       list: { board: { orgId } },
     },
     select: { id: true },
   });
-  if (cards.length !== cardIds.length) {
+  if (cards.length !== uniqueCardIds.length) {
     throw new Error("Some cards not found or not authorized.");
   }
   return cards;
@@ -62,8 +69,12 @@ export async function bulkUpdateCards(
     const { labelIds, dueDate, assigneeId, ...directUpdate } = validated.update;
 
     await db.$transaction(async (tx) => {
-      // Update direct fields
-      if (Object.keys(directUpdate).length > 0) {
+      // Update direct fields — also run when only assigneeId or dueDate are set
+      if (
+        Object.keys(directUpdate).length > 0 ||
+        assigneeId !== undefined ||
+        dueDate !== undefined
+      ) {
         await tx.card.updateMany({
           where: { id: { in: validated.cardIds } },
           data: {
@@ -140,40 +151,46 @@ export async function bulkMoveCards(cardIds: string[], targetListId: string) {
     await requireRole("MEMBER", ctx);
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
-    if (!cardIds.length) return { error: "No cards selected." };
+    // Validate inputs with the same schema pattern as other bulk actions
+    const validated = BulkMoveSchema.parse({ cardIds, targetListId });
 
-    await verifyCardsOwnership(cardIds, ctx.orgId);
+    await verifyCardsOwnership(validated.cardIds, ctx.orgId);
 
     // Verify target list belongs to the org
     const targetList = await db.list.findFirst({
-      where: { id: targetListId, board: { orgId: ctx.orgId } },
+      where: { id: validated.targetListId, board: { orgId: ctx.orgId } },
       include: { board: true },
     });
     if (!targetList) return { error: "Target list not found." };
 
-    // Get the max order in target list (order is String/LexoRank)
-    const existingCards = await db.card.findMany({
-      where: { listId: targetListId },
-      select: { order: true },
-      orderBy: { order: "desc" },
-      take: 1,
+    // Capture source board IDs before moving (for cache revalidation)
+    const sourceCards = await db.card.findMany({
+      where: { id: { in: validated.cardIds } },
+      select: { list: { select: { boardId: true } } },
     });
-    const baseOrder = existingCards[0]?.order ?? "m";
-    // Append increasing suffixes to maintain sort order
-    const newOrders = cardIds.map((_, i) => baseOrder + String.fromCharCode(97 + i));
+    const sourceBoardIds = [...new Set(sourceCards.map((c) => c.list.boardId))]
+      .filter((id) => id !== targetList.boardId); // exclude target (revalidated below)
+
+    // Generate bounded order keys: timestamp base + zero-padded index delimiter
+    const baseTs = Date.now().toString(36);
+    const newOrders = validated.cardIds.map(
+      (_, i) => `${baseTs}:${String(i).padStart(6, "0")}`
+    );
 
     await db.$transaction(
-      cardIds.map((id, i) =>
+      validated.cardIds.map((id, i) =>
         db.card.update({
           where: { id },
-          data: { listId: targetListId, order: newOrders[i] },
+          data: { listId: validated.targetListId, order: newOrders[i] },
         })
       )
     );
 
+    // Revalidate target board and all source boards
     revalidatePath(`/board/${targetList.boardId}`);
+    sourceBoardIds.forEach((id) => revalidatePath(`/board/${id}`));
 
-    return { data: { moved: cardIds.length } };
+    return { data: { moved: validated.cardIds.length } };
   } catch (e) {
     console.error("[BULK_MOVE_CARDS]", e);
     return { error: e instanceof Error ? e.message : "Failed to move cards." };
