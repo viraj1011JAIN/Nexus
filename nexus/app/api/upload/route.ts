@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
 import { db } from "@/lib/db";
+import { getTenantContext, TenantError } from "@/lib/tenant-context";
 
 // 10 MB limit
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -33,9 +34,15 @@ function getServiceClient() {
 
 /** POST /api/upload — multipart/form-data with `file` and `cardId` fields */
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let ctx: Awaited<ReturnType<typeof getTenantContext>>;
+  try {
+    ctx = await getTenantContext();
+  } catch (err) {
+    if (err instanceof TenantError) {
+      const status = err.code === "UNAUTHENTICATED" ? 401 : 403;
+      return NextResponse.json({ error: err.message }, { status });
+    }
+    throw err;
   }
 
   let formData: FormData;
@@ -63,7 +70,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File type not allowed" }, { status: 415 });
   }
 
-  // Verify card exists and belongs to a board the user can access
+  // Verify card exists and belongs to the caller's org
   const card = await db.card.findUnique({
     where: { id: cardId },
     include: { list: { include: { board: true } } },
@@ -73,20 +80,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
   }
 
-  // Verify the uploader is a member of the org that owns this card
-  const user = await db.user.findUnique({ where: { clerkUserId: userId } });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 403 });
-  }
-  const orgMembership = await db.organizationUser.findFirst({
-    where: { userId: user.id, organizationId: card.list.board.orgId, isActive: true },
-  });
-  if (!orgMembership) {
+  if (card.list.board.orgId !== ctx.orgId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Get the uploader's User record
-  const uploaderName = user.name;
+  // Fetch the uploader's display name — user is guaranteed to exist since
+  // getTenantContext() provisions the User row on first access.
+  const user = await db.user.findUnique({
+    where: { clerkUserId: ctx.userId },
+    select: { name: true },
+  });
+  const uploaderName = user?.name ?? "Unknown";
 
   const supabase = getServiceClient();
   const storagePath = `attachments/${cardId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
@@ -113,7 +117,7 @@ export async function POST(req: NextRequest) {
       mimeType: file.type,
       url: publicData.publicUrl,
       storagePath,
-      uploadedById: userId,
+      uploadedById: ctx.userId,
       uploadedByName: uploaderName,
     },
   });
