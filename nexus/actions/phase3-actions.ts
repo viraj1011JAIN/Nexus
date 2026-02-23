@@ -18,6 +18,7 @@ import { createAuditLog } from "@/lib/create-audit-log";
 import { createSafeAction } from "@/lib/create-safe-action";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { withSentry } from "@/lib/sentry-helpers";
+import { sendMentionEmail } from "@/lib/email";
 import { z } from "zod";
 import { differenceInHours } from "date-fns";
 
@@ -280,7 +281,7 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
   // Validate card access
   const card = await db.card.findUnique({
     where: { id: cardId },
-    include: { list: { select: { board: { select: { orgId: true } } } } },
+    include: { list: { select: { board: { select: { orgId: true, title: true } } } } },
   });
 
   if (!card) {
@@ -321,6 +322,34 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
   }
 
   revalidatePath(`/board/${boardId}`);
+
+  // Send @mention notification emails (fire-and-forget — email failures must not
+  // block or roll back the comment creation).
+  if (!isDraft && mentions.length > 0) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const cardUrl = `${appUrl}/board/${boardId}?card=${cardId}`;
+    const mentionerName = comment.userName;
+    void Promise.allSettled(
+      mentions
+        .filter((mentionedClerkId) => mentionedClerkId !== userId) // never email the commenter themselves
+        .map(async (mentionedClerkId) => {
+          const mentionedUser = await db.user.findUnique({
+            where: { clerkUserId: mentionedClerkId },
+            select: { email: true, name: true },
+          });
+          if (!mentionedUser) return;
+          return sendMentionEmail({
+            mentionedUserEmail: mentionedUser.email,
+            mentionedUserName: mentionedUser.name,
+            mentionerName,
+            cardTitle: card.title,
+            boardTitle: card.list.board.title,
+            cardUrl,
+          });
+        })
+    );
+  }
+
   return { data: comment };
 });
 

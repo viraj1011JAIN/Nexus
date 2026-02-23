@@ -140,6 +140,7 @@
   - `sendDueDateReminderEmail(opts)` — due date reminder
   - `sendWeeklyDigestEmail(opts)` — weekly stats digest with stat grid cards
 - Cron job (`/api/cron/daily-reports`) sends weekly digests on Monday and daily due-date reminders
+- `createComment` trigger: `sendMentionEmail()` called for each `@`-mentioned user after comment save (fire-and-forget, non-blocking, skips self-mentions and draft comments)
 
 ### File Attachments (Supabase Storage)
 - Prisma `Attachment` model: id, fileName, fileSize, mimeType, url, storagePath, cardId, uploadedById, uploadedByName
@@ -161,8 +162,9 @@
 - `components/editor/mention-list.tsx` — dropdown with keyboard navigation (Arrow Up/Down/Enter), avatars, fallback initials, empty state; guards against empty items array before modulo arithmetic
 - `components/editor/mention-suggestion.ts` — `createMentionSuggestion()` factory (scopes debounce timer + `latestResolve` per editor instance; resolves pending Promises on rapid input to prevent unresolved Promise leaks); backward-compat singleton `mentionSuggestion` export; wired to `/api/members`, 200ms debounce, tippy.js popup
 - `rich-comments.tsx` — creates per-mount suggestion via `useMemo(() => createMentionSuggestion(), [])` to prevent cross-editor timer collisions
-- `/api/members/route.ts` — search org members by query, returns up to 10 matches
+- `/api/members/route.ts` — search org members by query, returns up to 10 matches (returns `clerkUserId` as `id` field)
 - `app/editor.css` — `.mention` styles + tippy override
+- **Email trigger:** `createComment` (phase3-actions.ts) fires `sendMentionEmail()` for each mentioned Clerk user ID after comment save; fire-and-forget via `void Promise.allSettled()`; skips self-mentions; non-draft only
 
 ### Real-Time Collaboration
 - `useRealtimeBoard`: Supabase Realtime postgres_changes per board — patches local state on remote list/card CRUD, shows toast for remote changes, auto-reconnects
@@ -236,7 +238,7 @@
 | Card cover image | Not started | No field on Card. |
 | Comment draft auto-recovery | Not built | `isDraft Boolean` field on Comment — not consumed by client. |
 | Desktop push notifications | Not built | Preference toggle persisted; no Service Worker or Push API. |
-| @mention email notifications | Not built | Mention email template built in `lib/email.ts`; trigger on comment save not wired. |
+| @mention email notifications | **Built** | Trigger wired in `createComment` (phase3-actions.ts): parses `mentions[]` (Clerk user IDs), queries `db.user` per mentioned user, calls `sendMentionEmail()` fire-and-forget; skips self-mentions; only fires on non-draft comments |
 | Dedicated search page | Not built | Command palette searches API; no full-text search results page. |
 | PostHog / product analytics | Not integrated | |
 | Supabase Storage bucket setup | Manual step | `card-attachments` bucket must be created in Supabase dashboard |
@@ -289,7 +291,7 @@ Run E2E: `npx playwright test` (requires `npm run dev` running or `PLAYWRIGHT_BA
 | `get-audit-logs.ts` | `getAuditLogs` |
 | `label-actions.ts` | createLabel, assignLabel, unassignLabel, getOrganizationLabels, getCardLabels |
 | `assignee-actions.ts` | assignUser, unassignUser, getOrganizationMembers |
-| `phase3-actions.ts` | updateCardPriority, setDueDate, clearDueDate, createComment, updateComment, deleteComment, addReaction, removeReaction |
+| `phase3-actions.ts` | updateCardPriority, setDueDate, clearDueDate, createComment (+ @mention email trigger), updateComment, deleteComment, addReaction, removeReaction |
 | `user-preferences.ts` | getPreferences, savePreferences |
 | `template-actions.ts` | getTemplates, getTemplateById, createBoardFromTemplate, seedBuiltInTemplates |
 | `attachment-actions.ts` | getCardAttachments, deleteAttachment |
@@ -388,7 +390,7 @@ Run E2E: `npx playwright test` (requires `npm run dev` running or `PLAYWRIGHT_BA
 | Mobile responsive | 100% | |
 | PWA manifest | 100% | Icons in `/public`, manifest `icons` array |
 | **Board backgrounds** | **100%** | Unsplash picker UI + server-side API route + image fields in schema + create-board wiring |
-| **Email delivery** | **100%** | Resend + `lib/email.ts` + 4 email types + cron integration; `allowUrl()` + `escHtml()` on all href attributes; PII removed from logs; UTC timezone |
+| **Email delivery** | **100%** | Resend + `lib/email.ts` + 4 email types + cron integration + `createComment` @mention trigger; `allowUrl()` + `escHtml()` on all href attributes; PII removed from logs; UTC timezone |
 | **File attachments** | **100%** | Supabase Storage + Prisma model + upload API (uses `getTenantContext()`) + card modal Files tab |
 | **Board templates** | **100%** | 6 seeded templates + picker UI + createBoardFromTemplate (in `db.$transaction`) + admin seed endpoint (CRON_SECRET guarded) |
 | **@mention UI** | **100%** | TipTap Mention extension + dropdown + members API + CSS; per-instance debounce timer + `latestResolve` leak fix |
