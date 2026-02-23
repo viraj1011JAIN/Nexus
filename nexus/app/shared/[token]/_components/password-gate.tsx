@@ -34,7 +34,15 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
     startTransition(async () => {
       const result = await getSharedBoardData(token, password);
       if (result.error) {
-        setError("Incorrect password. Please try again.");
+        // Distinguish password failures from other errors (expired token, server errors, etc.)
+        const isPasswordError =
+          result.error.toLowerCase().includes("password") ||
+          result.error.toLowerCase().includes("invalid");
+        setError(
+          isPasswordError
+            ? "Incorrect password. Please try again."
+            : `Unable to access board: ${result.error}`
+        );
         return;
       }
       if (result.data) {
@@ -93,7 +101,6 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setShowPassword((v) => !v)}
-                tabIndex={-1}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />

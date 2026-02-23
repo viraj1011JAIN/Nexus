@@ -8,7 +8,7 @@
  * Consume with useBulkSelection().
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 
 interface BulkSelectionState {
   selectedIds: string[];
@@ -34,8 +34,6 @@ export function BulkSelectionProvider({ children }: { children: ReactNode }) {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
-        // Exit bulk mode when last card is deselected
-        if (next.size === 0) setIsBulkMode(false);
       } else {
         next.add(id);
       }
@@ -43,9 +41,14 @@ export function BulkSelectionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Sync bulk mode with selection size via effect (avoids setState-inside-setState)
+  useEffect(() => {
+    setIsBulkMode(selectedIds.size > 0);
+  }, [selectedIds]);
+
   const selectAll = useCallback((ids: string[]) => {
     setSelectedIds(new Set(ids));
-    if (ids.length > 0) setIsBulkMode(true);
+    setIsBulkMode(ids.length > 0);
   }, []);
 
   const clearSelection = useCallback(() => {

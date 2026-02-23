@@ -55,18 +55,13 @@ function isPrivateIPv6(ip: string): boolean {
 /**
  * Validate a webhook target URL before delivery.
  *
- * Blocks:
- *   - Non-parseable URLs
- *   - Non-HTTPS URLs in production
- *   - Blocked / private hostnames (SSRF prevention)
- *   - Hostnames that resolve to private / internal IP ranges
- *
- * Returns `{ valid: true }` if the URL is safe to call, or
- * `{ valid: false, reason: "..." }` explaining why it was blocked.
+ * Returns `{ valid: true; resolvedIp: string }` if the URL is safe to call,
+ * exposing the resolved IP so callers can pin it to prevent TOCTOU DNS rebinding.
+ * Returns `{ valid: false; reason: string }` explaining why it was blocked.
  */
 async function validateWebhookUrl(
   url: string
-): Promise<{ valid: boolean; reason?: string }> {
+): Promise<{ valid: true; resolvedIp: string } | { valid: false; reason: string }> {
   // 1. Parse
   let parsed: URL;
   try {
@@ -133,14 +128,17 @@ async function validateWebhookUrl(
     if (ipv4s.length === 0 && ipv6s.length === 0) {
       return { valid: false, reason: `Hostname '${hostname}' did not resolve` };
     }
+
+    // Return the first usable resolved IP so callers can pin it for the actual request
+    // (prevents TOCTOU DNS rebinding between validation and fetch).
+    const resolvedIp = ipv4s[0] ?? ipv6s[0];
+    return { valid: true, resolvedIp };
   } catch (dnsErr) {
     return {
       valid: false,
       reason: `DNS lookup failed for '${hostname}': ${String(dnsErr)}`,
     };
   }
-
-  return { valid: true };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -237,6 +235,17 @@ async function deliverSingle(
     return;
   }
 
+  // Build the fetch URL: for HTTP, pin the resolved IP to prevent TOCTOU DNS rebinding.
+  // For HTTPS we use the original hostname so TLS certificate validation succeeds;
+  // a production-grade solution would use a custom Agent with a pinned DNS resolver.
+  const originalParsed = new URL(webhook.url);
+  let fetchUrl = webhook.url;
+  if (originalParsed.protocol === "http:") {
+    const pinned = new URL(webhook.url);
+    pinned.hostname = urlCheck.resolvedIp;
+    fetchUrl = pinned.toString();
+  }
+
   try {
     const sig = sign(body, webhook.secret);
 
@@ -245,11 +254,12 @@ async function deliverSingle(
 
     let response: Response;
     try {
-      response = await fetch(webhook.url, {
+      response = await fetch(fetchUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "User-Agent": "Nexus-Webhook/1.0",
+          "Host": originalParsed.host, // always send the original hostname
           "X-Nexus-Event": event,
           "X-Nexus-Signature-256": `sha256=${sig}`,
           "X-Nexus-Delivery": crypto.randomUUID(),
@@ -264,6 +274,8 @@ async function deliverSingle(
     statusCode = response.status;
     // 2xx = success
     success = response.status >= 200 && response.status < 300;
+    // Drain the response body to release the underlying socket
+    try { await response.arrayBuffer(); } catch { /* ignore drain errors */ }
   } catch (err) {
     // Network errors, timeouts, DNS failures — record as failure
     success = false;

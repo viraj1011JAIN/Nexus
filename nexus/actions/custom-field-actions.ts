@@ -26,6 +26,12 @@ const SetValueSchema = z.object({
   valueOptions: z.array(z.string()).optional(),
 });
 
+const UpdateFieldSchema = z.object({
+  name: z.string().min(1, "Name cannot be empty").max(100, "Name too long").optional(),
+  isRequired: z.boolean().optional(),
+  options: z.array(z.string().min(1).max(100)).optional(),
+});
+
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 export async function getCustomFieldsForBoard(boardId: string) {
@@ -121,6 +127,9 @@ export async function updateCustomField(
     await requireRole("ADMIN", ctx);
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
+    // Validate update payload before any DB access
+    const validated = UpdateFieldSchema.parse(data);
+
     const existing = await db.customField.findFirst({
       where: { id: fieldId, orgId: ctx.orgId },
     });
@@ -129,9 +138,9 @@ export async function updateCustomField(
     const field = await db.customField.update({
       where: { id: fieldId },
       data: {
-        ...(data.name !== undefined ? { name: data.name } : {}),
-        ...(data.isRequired !== undefined ? { isRequired: data.isRequired } : {}),
-        ...(data.options !== undefined ? { options: data.options } : {}),
+        ...(validated.name !== undefined ? { name: validated.name } : {}),
+        ...(validated.isRequired !== undefined ? { isRequired: validated.isRequired } : {}),
+        ...(validated.options !== undefined ? { options: validated.options } : {}),
       },
     });
 

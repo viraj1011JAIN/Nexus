@@ -60,10 +60,27 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     revalidatePath(`/board/${boardId}`);
 
     // Fire automations + webhooks (TASK-019/020) — fire-and-forget, never throws
-    void emitCardEvent(
-      { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
-      { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
-    ).catch(() => {});
+    try {
+      void emitCardEvent(
+        { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
+        { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
+      ).catch((err) => {
+        logger.error("[create-card] emitCardEvent async rejection", {
+          err,
+          cardId: card.id,
+          boardId,
+          orgId: ctx.orgId,
+        });
+      });
+    } catch (err) {
+      // Synchronous throw from emitCardEvent (should not happen, but guard anyway)
+      logger.error("[create-card] emitCardEvent threw synchronously", {
+        err,
+        cardId: card.id,
+        boardId,
+        orgId: ctx.orgId,
+      });
+    }
 
     return { data: card };
   } catch (error) {

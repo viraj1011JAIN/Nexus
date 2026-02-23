@@ -9,10 +9,12 @@
 import { runAutomations, type AutomationEvent } from "@/lib/automation-engine";
 import { fireWebhooks } from "@/lib/webhook-delivery";
 
-// Map our internal trigger types → outbound webhook event names
-const TRIGGER_TO_WEBHOOK: Record<string, string> = {
+// Map internal trigger types → outbound webhook event names.
+// Typed as Partial so only known mappings are allowed and missing ones are handled explicitly.
+const TRIGGER_TO_WEBHOOK: Partial<Record<AutomationEvent["type"], string>> = {
   CARD_CREATED:         "card.created",
   CARD_MOVED:           "card.moved",
+  CARD_DELETED:         "card.deleted",
   PRIORITY_CHANGED:     "card.updated",
   LABEL_ADDED:          "card.updated",
   MEMBER_ASSIGNED:      "card.updated",
@@ -26,18 +28,22 @@ export async function emitCardEvent(
   event: AutomationEvent,
   webhookData?: Record<string, unknown>
 ): Promise<void> {
-  const webhookEvent = TRIGGER_TO_WEBHOOK[event.type] ?? "card.updated";
+  const webhookEvent = TRIGGER_TO_WEBHOOK[event.type];
   const payload = webhookData ?? {
+    // Spread context first so explicit fields take priority over any context keys
+    ...event.context,
     cardId: event.cardId,
     boardId: event.boardId,
     type: event.type,
-    ...event.context,
   };
 
   // Automations and webhooks are fully independent — run in parallel
   const results = await Promise.allSettled([
     runAutomations(event),
-    fireWebhooks(event.orgId, webhookEvent, payload),
+    // Only fire webhooks when there is a mapped event name for this trigger type
+    webhookEvent
+      ? fireWebhooks(event.orgId, webhookEvent, payload)
+      : Promise.resolve(),
   ]);
 
   // Log any rejections so they are observable (engine functions should not reject,
@@ -62,7 +68,8 @@ export async function emitCardEvent(
         webhookEvent,
         cardId: event.cardId,
         orgId: event.orgId,
-        webhookData: payload,
+        // Omit full payload to avoid logging PII / free-form content
+        payloadSize: JSON.stringify(payload).length,
       }
     );
   }

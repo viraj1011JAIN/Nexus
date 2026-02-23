@@ -11,6 +11,7 @@ import { Priority } from "@prisma/client";
 export type TriggerType =
   | "CARD_CREATED"
   | "CARD_MOVED"
+  | "CARD_DELETED"
   | "CARD_DUE_SOON"
   | "CARD_OVERDUE"
   | "LABEL_ADDED"
@@ -480,6 +481,11 @@ async function executeAction(
       }
       break;
 
+    // Backward-compat shim: records persisted with the old string value still work.
+    // Run `npx tsx scripts/migrate-automation-actions.ts` to rename stored values in DB,
+    // then remove this shim once all records are updated.
+    // eslint-disable-next-line no-fallthrough
+    case "COMPLETE_CHECKLIST_ITEM" as ActionType:
     case "COMPLETE_CHECKLIST":
       if (action.checklistId) {
         // Mark a specific item (if itemId given) or all incomplete items on the checklist

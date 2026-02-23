@@ -93,11 +93,11 @@ export const CardItem = ({
         isSelected && "ring-2 ring-primary ring-offset-1"
       )}
     >
-      {/* Bulk selection checkbox (top-left overlay) */}
-      {(isBulkMode || isSelected) && (
-        <button
-          type="button"
+      {/* Bulk selection checkbox (top-left overlay — visible only in bulk mode) */}
+      {isBulkMode && (
+        <div
           role="checkbox"
+          tabIndex={0}
           aria-checked={isSelected}
           aria-label="Select card"
           className={cn(
@@ -107,6 +107,7 @@ export const CardItem = ({
               : "bg-white/90 border-slate-300 group-hover:border-primary"
           )}
           onClick={(e) => { e.stopPropagation(); toggleCard(data.id); }}
+          onPointerDown={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.stopPropagation();
@@ -116,7 +117,7 @@ export const CardItem = ({
           }}
         >
           {isSelected && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
-        </button>
+        </div>
       )}
 
       {/* Cover Image / Color */}

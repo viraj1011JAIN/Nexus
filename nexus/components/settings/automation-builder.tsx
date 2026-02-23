@@ -35,6 +35,7 @@ import { Priority } from "@prisma/client";
 const TRIGGER_LABELS: Record<TriggerType, string> = {
   CARD_CREATED: "Card is created",
   CARD_MOVED: "Card is moved to a list",
+  CARD_DELETED: "Card is deleted",
   CARD_DUE_SOON: "Card is due soon",
   CARD_OVERDUE: "Card becomes overdue",
   LABEL_ADDED: "Label is added to card",

@@ -21,6 +21,7 @@ import {
   createCustomField,
   updateCustomField,
   deleteCustomField,
+  getCustomFieldsForBoard,
 } from "@/actions/custom-field-actions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ const FIELD_TYPES = [
 
 type FieldType = typeof FIELD_TYPES[number]["value"];
 
-interface CustomField {
+export interface CustomField {
   id: string;
   name: string;
   type: FieldType;
@@ -59,6 +60,7 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
   const [fields, setFields] = useState<CustomField[]>(initialFields);
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // New field form state
@@ -68,8 +70,12 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
   const [newOptions, setNewOptions] = useState("");
 
   const reload = useCallback(async () => {
-    const { getCustomFieldsForBoard } = await import("@/actions/custom-field-actions");
     const result = await getCustomFieldsForBoard(boardId);
+    if (result.error) {
+      console.error("[BoardFieldsClient] reload failed:", result.error);
+      toast.error("Failed to reload custom fields.");
+      return;
+    }
     if (result.data) setFields(result.data as CustomField[]);
   }, [boardId]);
 
@@ -100,6 +106,8 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
       setNewName(""); setNewType("TEXT"); setNewRequired(false); setNewOptions("");
       setShowCreate(false);
       await reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create field.");
     } finally {
       setSaving(false);
     }
@@ -114,11 +122,17 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
   };
 
   const handleDelete = async (fieldId: string) => {
-    const result = await deleteCustomField(fieldId);
-    if (result.error) { toast.error(result.error); return; }
-    toast.success("Field deleted.");
-    setFields((prev) => prev.filter((f) => f.id !== fieldId));
-    setDeleteTarget(null);
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      const result = await deleteCustomField(fieldId);
+      if (result.error) { toast.error(result.error); return; }
+      toast.success("Field deleted.");
+      setFields((prev) => prev.filter((f) => f.id !== fieldId));
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const fieldTypeConfig = (type: string) => FIELD_TYPES.find((t) => t.value === type);
@@ -299,19 +313,24 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Custom Field?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete &ldquo;{fields.find((f) => f.id === deleteTarget)?.name ?? "this field"}&rdquo;?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the field and all values for this field across every card
-              on this board. This action cannot be undone.
+              This will permanently delete the field{" "}
+              <strong>{fields.find((f) => f.id === deleteTarget)?.name ?? ""}</strong>{" "}
+              and all values for this field across every card on this board. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              disabled={deleting}
               onClick={() => deleteTarget && handleDelete(deleteTarget)}
             >
-              Delete Field
+              {deleting ? "Deleting…" : "Delete Field"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

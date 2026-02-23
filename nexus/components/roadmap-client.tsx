@@ -53,7 +53,7 @@ import {
   createEpic,
   updateEpic,
 } from "@/actions/roadmap-actions";
-import { format, differenceInDays, isPast, startOfMonth, addMonths, eachMonthOfInterval, min as dateMin, max as dateMax } from "date-fns";
+import { format, differenceInDays, isPast, startOfMonth, endOfMonth, addMonths, eachMonthOfInterval, min as dateMin, max as dateMax } from "date-fns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -169,7 +169,7 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
 
   // Expand view by one month on each side for breathing room
   const rangeStart = startOfMonth(addMonths(dateMin(allDates), -1));
-  const rangeEnd   = startOfMonth(addMonths(dateMax(allDates),  1));
+  const rangeEnd   = endOfMonth(addMonths(dateMax(allDates),  1));
   const totalDays  = differenceInDays(rangeEnd, rangeStart) || 1;
 
   const months = eachMonthOfInterval({ start: rangeStart, end: rangeEnd });
@@ -230,12 +230,14 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
                   <span className="text-sm font-medium truncate">{init.title}</span>
                 </div>
                 <div className="flex-1 relative h-full flex items-center min-w-[600px] px-1">
-                  {/* Today marker */}
-                  <div
-                    className="absolute top-0 bottom-0 w-px bg-rose-400/60 z-10"
-                    style={{ left: `${toPct(new Date())}%` }}
-                    title="Today"
-                  />
+                  {/* Today marker — rendered only when today is within the visible range */}
+                  {(() => { const today = new Date(); return today >= rangeStart && today <= rangeEnd; })() && (
+                    <div
+                      className="absolute top-0 bottom-0 w-px bg-rose-400/60 z-10"
+                      style={{ left: `${toPct(new Date())}%` }}
+                      title="Today"
+                    />
+                  )}
                   {/* Initiative bar */}
                   {hasRange && (
                     <div

@@ -74,12 +74,11 @@ export async function runAutomations(event: AutomationEvent): Promise<void> {
     });
     if (!card) return;
 
-    // Evaluate each automation
-    await Promise.allSettled(
-      automations.map((automation) =>
-        evaluateAndExecute(event, card, automation)
-      )
-    );
+    // Run automations sequentially so mutations by one automation are visible to the
+    // next (e.g. ASSIGN_MEMBER followed by SEND_NOTIFICATION sees the updated assigneeId).
+    for (const automation of automations) {
+      await evaluateAndExecute(event, card, automation);
+    }
   } catch (err) {
     // Never let engine failure surface to the caller
     console.error("[AutomationEngine] Fatal error – aborting silently", err);
@@ -105,12 +104,28 @@ async function evaluateAndExecute(event: AutomationEvent, card: any, automation:
 
   if (!matched) return;
 
-  // Execute all actions
+  // Execute all actions, re-fetching the card after each mutating action so
+  // sequential actions (e.g. ASSIGN_MEMBER → SEND_NOTIFICATION) see the latest state.
   let success = true;
   let errorMsg: string | undefined;
   try {
     for (const action of actions) {
       await executeAction(action, event, card);
+      // Re-fetch for actions that mutate card state
+      const mutatingTypes: ActionType[] = [
+        "MOVE_CARD", "SET_PRIORITY", "ASSIGN_MEMBER", "SET_DUE_DATE_OFFSET"
+      ];
+      if (mutatingTypes.includes(action.type)) {
+        const refreshed = await db.card.findUnique({
+          where: { id: event.cardId },
+          include: {
+            list: { select: { id: true, title: true, boardId: true } },
+            labels: { include: { label: true } },
+            checklists: { include: { items: true } },
+          },
+        });
+        if (refreshed) card = refreshed;
+      }
     }
   } catch (err) {
     success = false;
@@ -165,10 +180,17 @@ function triggerMatches(trigger: TriggerConfig, event: AutomationEvent): boolean
     case "CARD_OVERDUE":
       return true;
 
+    case "CARD_DELETED":
+      // CARD_DELETED fires a webhook but doesn't trigger automation execution
+      return false;
+
     case "CARD_DUE_SOON": {
       const days = trigger.daysBeforeDue ?? 1;
-      const dueDate = event.context?.dueDate;
-      if (!dueDate) return false;
+      const rawDueDate = event.context?.dueDate;
+      if (!rawDueDate) return false;
+      // dueDate may arrive as a Date object or a serialized ISO-8601 string
+      const dueDate = new Date(rawDueDate);
+      if (isNaN(dueDate.getTime())) return false;
       const msUntilDue = dueDate.getTime() - Date.now();
       const hoursUntilDue = msUntilDue / (1000 * 60 * 60);
       return hoursUntilDue <= days * 24 && hoursUntilDue >= 0;
@@ -195,8 +217,19 @@ function conditionsPass(conditions: any[], card: any, _event: AutomationEvent): 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cardValue: any = card[field];
     switch (op) {
-      case "eq":   return cardValue === value;
-      case "neq":  return cardValue !== value;
+      case "eq": {
+        // Type-coerce: compare numbers as numbers, booleans as booleans
+        if (typeof cardValue === "number") return cardValue === Number(value);
+        if (typeof cardValue === "boolean") return cardValue === (value === "true");
+        // eslint-disable-next-line eqeqeq
+        return cardValue == value;
+      }
+      case "neq": {
+        if (typeof cardValue === "number") return cardValue !== Number(value);
+        if (typeof cardValue === "boolean") return cardValue !== (value === "true");
+        // eslint-disable-next-line eqeqeq
+        return cardValue != value;
+      }
       case "contains":
         return typeof cardValue === "string" && cardValue.toLowerCase().includes(String(value).toLowerCase());
       case "not_contains":
@@ -205,7 +238,9 @@ function conditionsPass(conditions: any[], card: any, _event: AutomationEvent): 
       case "lt":   return typeof cardValue === "number" && cardValue < Number(value);
       case "is_null":   return cardValue == null;
       case "is_not_null": return cardValue != null;
-      default:     return true; // unknown op → pass
+      default:
+        console.warn("[AutomationEngine] Unknown condition op:", op);
+        return false; // fail-safe: unknown op → condition not met
     }
   });
 }
@@ -326,8 +361,9 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
           entityType: "CARD",
           entityId: event.cardId,
           entityTitle: card.title,
-          // actorId / actorName: treat automation as acting on behalf of the assignee
-          actorId: assignedUser.id,
+          // actorId: prefer a dedicated system/automation user if configured;
+          // fall back to the assignee's own id to satisfy the non-nullable FK.
+          actorId: process.env.SYSTEM_USER_ID ?? assignedUser.id,
           actorName: "Automation",
         },
       });
@@ -366,9 +402,9 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 function incrementOrder(order: string): string {
   const MAX_ORDER_LENGTH = 32;
   if (order.length >= MAX_ORDER_LENGTH) {
-    // String has grown too long — fall back to a compact timestamp-based rank.
-    // This ensures the card still appears last while keeping strings bounded.
-    return Date.now().toString(36);
+    // String has grown too long — fall back to a compact timestamp-based rank, prefixed
+    // with \uFFFF so it always sorts AFTER any printable-ASCII-based order string.
+    return "\uFFFF" + Date.now().toString(36);
   }
   // Append "|" (0x7C) which sorts after all printable ASCII to place the card last.
   return order + "|";

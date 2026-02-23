@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useMemo, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ListContainer } from "@/components/board/list-container";
@@ -52,6 +53,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
   const tabListRef = useRef<HTMLDivElement>(null);
 
   const bulk = useBulkSelection();
+  const router = useRouter();
 
   // Flatten all cards
   const allCards = useMemo(() => {
@@ -91,10 +93,11 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
   const members = useMemo(() => {
     const map = new Map<string, { id: string; name: string; imageUrl?: string | null }>();
     for (const card of allCards) {
-      if (card.assigneeName) {
-        const stableKey = card.assigneeId ?? card.assigneeName;
-        if (!map.has(stableKey)) {
-          map.set(stableKey, { id: stableKey, name: card.assigneeName, imageUrl: card.assigneeImageUrl });
+      // Only include cards that have a real assigneeId so the map key is always
+      // the actual DB user id — keeps FilterBar predicate consistent
+      if (card.assigneeId && card.assigneeName) {
+        if (!map.has(card.assigneeId)) {
+          map.set(card.assigneeId, { id: card.assigneeId, name: card.assigneeName, imageUrl: card.assigneeImageUrl });
         }
       }
     }
@@ -162,7 +165,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     { key: "6", description: "Switch to Analytics",     action: () => switchToTab("analytics"), ignoreInInput: true },
     // â”€â”€ Bulk selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "b", description: "Toggle bulk selection mode", action: () => bulk.isBulkMode ? bulk.exitBulkMode() : bulk.enterBulkMode(), ignoreInInput: true },
-    { key: "a", modifiers: { ctrl: true } as const, description: "Select all visible cards", action: selectAllVisible, ignoreInInput: false },
+    { key: "a", modifiers: { ctrl: true } as const, description: "Select all visible cards", action: selectAllVisible, ignoreInInput: true },
     { key: "Escape", description: "Clear selection / close modal", action: () => { bulk.clearSelection(); setShortcutsOpen(false); }, ignoreInInput: false },
     // â”€â”€ Help â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "?", description: "Show keyboard shortcuts", action: () => setShortcutsOpen(true), ignoreInInput: true },
@@ -180,7 +183,6 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
       />
 
       <Tabs
-        defaultValue="board"
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as TabValue)}
         className="w-full relative z-10"
@@ -249,7 +251,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
       <BulkActionBar
         selectedIds={bulk.selectedIds}
         onClearSelection={bulk.clearSelection}
-        onActionComplete={() => {/* refresh via revalidation */}}
+        onActionComplete={() => router.refresh()}
         lists={listOptions}
         members={members}
       />
