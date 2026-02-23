@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,9 @@ import { deleteBoard } from "@/actions/delete-board";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
+import { UnsplashPicker, type UnsplashPhoto } from "@/components/board/unsplash-picker";
+import { TemplatePicker } from "@/components/board/template-picker";
+import { type TemplateSummary } from "@/actions/template-actions";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -56,6 +59,9 @@ export function BoardList() {
   const [title, setTitle] = useState("");
   const [boards, setBoards] = useState<DashboardBoard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<UnsplashPhoto | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateSummary | null>(null);
 
   const fetchBoards = useCallback(async () => {
     try {
@@ -98,13 +104,26 @@ export function BoardList() {
     }
 
     startTransition(async () => {
-      const result = await createBoard({ title: title.trim() });
+      const result = await createBoard({
+        title: title.trim(),
+        ...(selectedPhoto ? {
+          imageId:       selectedPhoto.id,
+          imageThumbUrl: selectedPhoto.thumbUrl,
+          imageFullUrl:  selectedPhoto.fullUrl,
+          imageUserName: selectedPhoto.userName,
+          imageLinkHTML: selectedPhoto.linkHtml,
+        } : {}),
+        ...(selectedTemplate ? { templateId: selectedTemplate.id } : {}),
+      });
 
       if (result.error) {
         toast.error(result.error);
       } else {
         toast.success(`Board "${result.data?.title}" created!`);
         setTitle("");
+        setSelectedPhoto(null);
+        setSelectedTemplate(null);
+        setShowAdvanced(false);
         fetchBoards();
       }
     });
@@ -146,6 +165,21 @@ export function BoardList() {
 
         {/* Create Board */}
         <form onSubmit={handleCreateBoard} className="mb-8">
+          {/* Selected photo preview */}
+          {selectedPhoto && (
+            <div
+              className="w-full max-w-2xl h-24 rounded-lg mb-2 bg-cover bg-center relative overflow-hidden"
+              style={{ backgroundImage: `url(${selectedPhoto.thumbUrl})` }}
+            >
+              <div className="absolute inset-0 bg-black/20" />
+              <p
+                className="absolute bottom-1.5 right-2 text-[10px] text-white/70"
+                dangerouslySetInnerHTML={{ __html: selectedPhoto.linkHtml }}
+              />
+            </div>
+          )}
+
+          {/* Main create row */}
           <div className="flex gap-2 max-w-2xl">
             <input
               value={title}
@@ -165,7 +199,38 @@ export function BoardList() {
                 </>
               )}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="default"
+              onClick={() => setShowAdvanced((v) => !v)}
+              aria-label="Toggle advanced options"
+            >
+              {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
           </div>
+
+          {/* Advanced options: background + template */}
+          {showAdvanced && (
+            <div className="mt-3 max-w-2xl p-4 rounded-lg border bg-muted/30 space-y-3">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Background Photo</p>
+                <UnsplashPicker
+                  selectedId={selectedPhoto?.id}
+                  onSelect={(photo) => setSelectedPhoto(photo)}
+                  onClear={() => setSelectedPhoto(null)}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Start from Template</p>
+                <TemplatePicker
+                  selectedId={selectedTemplate?.id}
+                  onSelect={(tmpl) => setSelectedTemplate(tmpl)}
+                  onClear={() => setSelectedTemplate(null)}
+                />
+              </div>
+            </div>
+          )}
         </form>
 
         {/* Boards Grid */}

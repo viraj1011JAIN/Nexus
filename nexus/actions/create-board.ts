@@ -12,6 +12,7 @@ import { Board } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { STRIPE_CONFIG } from "@/lib/stripe";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
+import { createBoardFromTemplate } from "@/actions/template-actions";
 
 type InputType = z.infer<typeof CreateBoard>;
 type ReturnType = ActionState<InputType, Board>;
@@ -58,15 +59,42 @@ const handler = async (data: InputType): Promise<ReturnType> => {
       };
     }
 
-    // DAL.boards.create injects orgId from ctx — never from input
-    const board = await dal.boards.create({ title: data.title });
+    const imageFields = {
+      ...(data.imageId       ? { imageId: data.imageId } : {}),
+      ...(data.imageThumbUrl ? { imageThumbUrl: data.imageThumbUrl } : {}),
+      ...(data.imageFullUrl  ? { imageFullUrl: data.imageFullUrl } : {}),
+      ...(data.imageUserName ? { imageUserName: data.imageUserName } : {}),
+      ...(data.imageLinkHTML ? { imageLinkHTML: data.imageLinkHTML } : {}),
+    };
 
-    await dal.auditLogs.create({
-      entityId: board.id,
-      entityType: "BOARD",
-      entityTitle: board.title,
-      action: "CREATE",
-    });
+    let board: Board;
+
+    if (data.templateId) {
+      // Create board populated from template (handles lists + cards + audit log internally)
+      const tmplResult = await createBoardFromTemplate({
+        templateId: data.templateId,
+        title: data.title,
+        ...imageFields,
+      });
+
+      if (tmplResult.error || !tmplResult.data) {
+        return { error: tmplResult.error ?? "Failed to create board from template" };
+      }
+
+      const created = await db.board.findUnique({ where: { id: tmplResult.data.boardId } });
+      if (!created) return { error: "Board creation failed" };
+      board = created;
+    } else {
+      // Blank board — DAL injects orgId server-side
+      board = await dal.boards.create({ title: data.title, ...imageFields });
+
+      await dal.auditLogs.create({
+        entityId: board.id,
+        entityType: "BOARD",
+        entityTitle: board.title,
+        action: "CREATE",
+      });
+    }
 
     logger.info("Board created successfully", { boardId: board.id, orgId });
     revalidatePath(`/`);

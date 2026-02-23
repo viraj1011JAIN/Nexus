@@ -160,6 +160,7 @@ model Card {
   
   labels      CardLabelAssignment[]
   comments    Comment[]
+  attachments Attachment[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -405,4 +406,85 @@ model UserPreference {
   updatedAt            DateTime @updatedAt      @map("updated_at")
 
   @@map("user_preferences")
+}
+
+// ============================================
+// FILE ATTACHMENTS
+// ============================================
+
+model Attachment {
+  id          String   @id @default(uuid())
+
+  // File metadata
+  fileName    String   @map("file_name")
+  fileSize    Int      @map("file_size")   // bytes
+  mimeType    String   @map("mime_type")
+
+  // Storage URL (Supabase Storage)
+  url         String   @db.Text
+  storagePath String   @map("storage_path") @db.Text
+
+  // Ownership
+  cardId      String   @map("card_id")
+  card        Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  uploadedById   String  @map("uploaded_by_id")
+  uploadedByName String  @map("uploaded_by_name")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([cardId])
+  @@map("attachments")
+}
+
+// ============================================
+// BOARD TEMPLATES
+// ============================================
+
+model BoardTemplate {
+  id          String   @id @default(uuid())
+
+  title       String
+  description String?  @db.Text
+  category    String   @default("General") // e.g., Engineering, Marketing, Design
+
+  // Template can be global (built-in) or org-specific
+  orgId       String?  @map("org_id")
+
+  // Preview image (optional)
+  imageThumbUrl String? @map("image_thumb_url") @db.Text
+
+  lists       TemplateList[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  @@index([orgId])
+  @@map("board_templates")
+}
+
+model TemplateList {
+  id         String        @id @default(uuid())
+  title      String
+  order      String        @default("m")
+
+  templateId String        @map("template_id")
+  template   BoardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  cards      TemplateCard[]
+
+  @@index([templateId])
+  @@map("template_lists")
+}
+
+model TemplateCard {
+  id         String       @id @default(uuid())
+  title      String
+  order      String       @default("m")
+
+  listId     String       @map("list_id")
+  list       TemplateList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@map("template_cards")
 }

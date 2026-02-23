@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { systemDb as db } from "@/lib/db";
+import { sendWeeklyDigestEmail, sendDueDateReminderEmail } from "@/lib/email";
+import { clerkClient } from "@clerk/nextjs/server";
 
 // NOTE: systemDb is used here intentionally — cron jobs access all organizations
 // without a user session. They run under a shared CRON_SECRET and must bypass
@@ -83,14 +85,86 @@ export async function GET(request: Request) {
 
       reports.push(reportData);
 
-      // Here you would send email via Resend or another service
-      // Example:
-      // await resend.emails.send({
-      //   from: "NEXUS Reports <reports@yourdomain.com>",
-      //   to: ["admin@example.com"], // Get org admin emails
-      //   subject: `Daily Analytics Report - ${org.name}`,
-      //   html: generateEmailHTML(reportData),
-      // });
+      // ─── Weekly digest email (sent every Monday) ────────────────────────
+      const isMonday = new Date().getDay() === 1;
+      if (isMonday) {
+        try {
+          // Fetch org members from Clerk to get email addresses
+          const clerk = await clerkClient();
+          const memberships = await clerk.organizations
+            .getOrganizationMembershipList({ organizationId: org.id, limit: 100 })
+            .catch(() => ({ data: [] }));
+
+          const weekStats = {
+            cardsCreated: allCards.filter((c) => {
+              const d = new Date(c.createdAt);
+              const sevenDaysAgo = new Date(today);
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              return d >= sevenDaysAgo;
+            }).length,
+            cardsCompleted: cardsCompletedYesterday * 7, // approximation
+            overdueCards: reportData.metrics.overdueCards,
+            activeBoards: org.boards.length,
+          };
+
+          for (const membership of memberships.data) {
+            const user = membership.publicUserData;
+            if (!user?.identifier) continue;
+            await sendWeeklyDigestEmail({
+              userEmail: user.identifier,
+              userName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.identifier,
+              stats: weekStats,
+              appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app",
+            }).catch(() => null); // never let email failure break the cron
+          }
+        } catch {
+          console.warn("[CRON] Failed to send weekly digest for org", org.id);
+        }
+      }
+
+      // ─── Due-date reminder emails (daily) ──────────────────────────────
+      try {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dayAfter = new Date(tomorrow);
+        dayAfter.setDate(dayAfter.getDate() + 1);
+
+        const dueSoonCards = allCards.filter(
+          (c) => c.dueDate && new Date(c.dueDate) >= tomorrow && new Date(c.dueDate) < dayAfter
+        );
+
+        if (dueSoonCards.length > 0) {
+          const clerk = await clerkClient();
+          const memberships = await clerk.organizations
+            .getOrganizationMembershipList({ organizationId: org.id, limit: 100 })
+            .catch(() => ({ data: [] }));
+
+          for (const card of dueSoonCards) {
+            // Find which list+board this card belongs to
+            const parentBoard = org.boards.find((b) =>
+              b.lists.some((l) => l.cards.some((c) => c.id === card.id))
+            );
+            const cardUrl = parentBoard
+              ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app"}/board/${parentBoard.id}`
+              : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app"}/dashboard`;
+
+            for (const membership of memberships.data) {
+              const user = membership.publicUserData;
+              if (!user?.identifier) continue;
+              await sendDueDateReminderEmail({
+                userEmail: user.identifier,
+                userName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.identifier,
+                cardTitle: card.title,
+                boardTitle: parentBoard?.title ?? "Your board",
+                dueDate: new Date(card.dueDate!),
+                cardUrl,
+              }).catch(() => null);
+            }
+          }
+        }
+      } catch {
+        console.warn("[CRON] Failed to send due-date reminders for org", org.id);
+      }
     }
 
     console.log(`[CRON] Generated ${reports.length} daily reports`);

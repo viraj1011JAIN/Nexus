@@ -9,6 +9,14 @@ export const CreateBoard = z.object({
     .string()
     .min(3, "Title must be at least 3 characters")
     .max(50, "Title must be less than 50 characters"),
+  // Unsplash background (optional)
+  imageId:       z.string().optional(),
+  imageThumbUrl: z.string().url().optional(),
+  imageFullUrl:  z.string().url().optional(),
+  imageUserName: z.string().optional(),
+  imageLinkHTML: z.string().optional(),
+  // Board template (optional)
+  templateId:    z.string().uuid().optional(),
 });
 
 export const DeleteBoard = z.object({

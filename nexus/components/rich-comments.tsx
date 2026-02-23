@@ -5,6 +5,8 @@ import { useState, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import Mention from "@tiptap/extension-mention";
+import { mentionSuggestion } from "@/components/editor/mention-suggestion";
 import { MessageSquare, Reply, Smile, MoreVertical, Edit2, Trash2, X, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -449,8 +451,19 @@ function CommentEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder }),
-      // Note: Mention extension requires suggestion configuration
-      // This is a simplified version - production would need user search API
+      Mention.configure({
+        HTMLAttributes: {
+          class: "mention",
+        },
+        suggestion: mentionSuggestion,
+        renderHTML({ options, node }) {
+          return [
+            "span",
+            { ...options.HTMLAttributes, "data-mention-id": node.attrs.id as string },
+            `${options.suggestion.char}${(node.attrs.label ?? node.attrs.id) as string}`,
+          ];
+        },
+      }),
     ],
     content: initialValue,
     onFocus: () => setIsFocused(true),

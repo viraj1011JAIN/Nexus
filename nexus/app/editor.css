@@ -358,3 +358,21 @@
     font-size: 1.2em;
   }
 }
+
+/*  @mention styling  */
+.mention {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+}
+
+/*  tippy.js override (mention dropdown positioning)  */
+.tippy-box[data-theme~='mention'] {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}

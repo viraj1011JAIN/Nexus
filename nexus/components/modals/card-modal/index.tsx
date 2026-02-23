@@ -13,7 +13,8 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  Keyboard
+  Keyboard,
+  Paperclip
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
@@ -41,8 +42,10 @@ import { LabelManager, CardLabels } from "@/components/label-manager";
 import { AssigneePicker, CardAssignee } from "@/components/assignee-picker";
 import { SmartDueDate } from "@/components/smart-due-date";
 import { RichComments, type Comment } from "@/components/rich-comments";
+import { FileAttachment } from "@/components/board/file-attachment";
 import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";
 import { getOrganizationMembers } from "@/actions/assignee-actions";
+import { getCardAttachments, type AttachmentDto } from "@/actions/attachment-actions";
 import { 
   updateCardPriority, 
   setDueDate, 
@@ -95,6 +98,7 @@ export const CardModal = () => {
   const [cardLabels, setCardLabels] = useState<CardLabel[]>([]);
   const [orgMembers, setOrgMembers] = useState<Array<{ id: string; name: string; imageUrl: string | null; email: string }>>([]);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentDto[]>([]);
   
   const { user } = useUser();
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
@@ -109,15 +113,17 @@ export const CardModal = () => {
           setCharCount(card.description?.length || 0);
           
           if (organizationId) {
-            const [labels, cardLabelsList, members] = await Promise.all([
+            const [labels, cardLabelsList, members, attachmentsResult] = await Promise.all([
               getOrganizationLabels(),
               getCardLabels(id),
               getOrganizationMembers(),
+              getCardAttachments(id),
             ]);
             
             setOrgLabels(labels);
             setCardLabels(cardLabelsList);
             setOrgMembers(members);
+            if (attachmentsResult.data) setAttachments(attachmentsResult.data);
           }
         }
 
@@ -599,6 +605,18 @@ export const CardModal = () => {
                       </Badge>
                     )}
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="attachments"
+                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
+                  >
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    Files
+                    {attachments.length > 0 && (
+                      <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                        {attachments.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
                 </TabsList>
               </motion.div>
 
@@ -699,6 +717,27 @@ export const CardModal = () => {
                           />
                         )}
                       </ErrorBoundary>
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
+
+                {/* ATTACHMENTS TAB */}
+                <TabsContent value="attachments" className="mt-0 p-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="attachments-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {cardData && (
+                        <FileAttachment
+                          cardId={cardData.id}
+                          boardId={boardId}
+                          initialAttachments={attachments}
+                        />
+                      )}
                     </motion.div>
                   </AnimatePresence>
                 </TabsContent>

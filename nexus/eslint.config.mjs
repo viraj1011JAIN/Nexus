@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated coverage reports
     "coverage/**",
+    // Playwright E2E — linted separately via e2e/tsconfig.json
+    "e2e/**",
+    "playwright.config.ts",
+    "playwright-report/**",
   ]),
   // ── Security: ban systemDb outside privileged routes ─────────────────────
   // systemDb uses the Supabase service role (SYSTEM_DATABASE_URL) and bypasses
