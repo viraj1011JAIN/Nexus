@@ -70,9 +70,14 @@ export default async function SharedBoardPage({ params }: SharedBoardPageProps) 
     );
   }
 
-  // Step 2: full query — only reached when share is public (no password required)
+  // Step 2: full query — only reached when share is public (no password required).
+  // Re-include validity conditions to close the TOCTOU gap between the two queries.
   const share = await db.boardShare.findFirst({
-    where: { id: shareLight.id },
+    where: {
+      id: shareLight.id,
+      isActive: true,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    },
     select: {
       id: true,
       allowComments: true,

@@ -36,9 +36,9 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
       if (result.error) {
         // Use the structured error code (set by getSharedBoardData) to determine message.
         // Avoid surfacing raw server error text in the UI — log it instead.
-        const isPasswordError = (result as { code?: string }).code === "INVALID_PASSWORD";
-        if (!isPasswordError) {
-          console.error("[PasswordGate] access error:", result.error);
+        const isPasswordError = result.code === "INVALID_TOKEN" && password.length > 0;
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[PasswordGate] access error code:", result.code);
         }
         setError(
           isPasswordError

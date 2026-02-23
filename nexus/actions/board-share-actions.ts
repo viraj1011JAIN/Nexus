@@ -98,10 +98,12 @@ export async function getSharedBoardData(token: string, password?: string) {
 
     if (!share) return { error: "Share link not found or expired.", code: "INVALID_TOKEN" as const };
 
-    // Password check before returning board data
+    // Password check before returning board data.
+    // Using the same INVALID_TOKEN code for password failures prevents callers from
+    // distinguishing whether the token was valid — avoids leaking token existence.
     if (share.passwordHash) {
       if (!password || !verifyPassword(password, share.passwordHash)) {
-        return { error: "Invalid or missing password", code: "INVALID_PASSWORD" as const };
+        return { error: "Invalid or missing password", code: "INVALID_TOKEN" as const };
       }
     }
 
@@ -124,7 +126,7 @@ export async function getSharedBoardData(token: string, password?: string) {
     };
   } catch (e) {
     console.error("[GET_SHARED_BOARD]", e);
-    return { error: "Failed to load shared board." };
+    return { error: "Failed to load shared board.", code: undefined };
   }
 }
 

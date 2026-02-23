@@ -87,7 +87,9 @@ export async function runAutomations(event: AutomationEvent): Promise<void> {
           checklists: { include: { items: true } },
         },
       });
-      if (refreshed) card = refreshed;
+      // If the card was deleted mid-sequence, stop running further automations
+      if (!refreshed) break;
+      card = refreshed;
     }
   } catch (err) {
     // Never let engine failure surface to the caller
@@ -265,7 +267,8 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
   // CARD_DELETED automations never reach here (triggerMatches returns false),
   // but guard defensively: only allow safe side-effect actions when card may not exist.
   if (event.type === "CARD_DELETED") {
-    const safeTypes: ActionType[] = ["SEND_NOTIFICATION", "POST_COMMENT"];
+    // POST_COMMENT is also unsafe — it writes a comment.cardId FK referencing the deleted card
+    const safeTypes: ActionType[] = ["SEND_NOTIFICATION"];
     if (!safeTypes.includes(action.type)) return;
   }
   switch (action.type) {

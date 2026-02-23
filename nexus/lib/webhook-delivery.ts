@@ -228,7 +228,7 @@ async function deliverSingle(
     // Record blocked attempt as a failed delivery so the user sees it in the log
     const duration = Date.now() - startMs;
     try {
-    await db.webhookDelivery.create({
+      await db.webhookDelivery.create({
         data: {
           webhookId: webhook.id,
           event,
@@ -251,17 +251,16 @@ async function deliverSingle(
   const originalParsed = new URL(webhook.url);
   const isHttps = originalParsed.protocol === "https:";
   const pinnedFamily: 4 | 6 = urlCheck.resolvedIp.includes(":") ? 6 : 4;
+  // Both HTTP and HTTPS use a pinned lookup to prevent TOCTOU DNS rebinding.
+  // For HTTPS the Agent still uses originalParsed.hostname for TLS SNI / cert validation.
+  const pinnedLookup = (
+    _host: string,
+    _opts: unknown,
+    cb: (err: Error | null, addr: string, fam: 4 | 6) => void
+  ) => cb(null, urlCheck.resolvedIp, pinnedFamily);
   const agent = isHttps
-    ? new https.Agent({
-        // Override DNS resolution to always return the pre-validated IP.
-        // TLS still validates certificates against originalParsed.hostname (SNI).
-        lookup: (
-          _host: string,
-          _opts: unknown,
-          cb: (err: Error | null, addr: string, fam: 4 | 6) => void
-        ) => cb(null, urlCheck.resolvedIp, pinnedFamily),
-      })
-    : new http.Agent();
+    ? new https.Agent({ lookup: pinnedLookup })
+    : new http.Agent({ lookup: pinnedLookup } as http.AgentOptions);
 
   try {
     const sig = sign(body, webhook.secret);

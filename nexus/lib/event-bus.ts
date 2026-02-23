@@ -64,7 +64,7 @@ export async function emitCardEvent(
   }
   if (webhookResult.status === "rejected") {
     // Compute payload size safely — JSON.stringify can throw on circular refs / BigInt
-    let safePayloadSize: number | string;
+    let safePayloadSize: number;
     try { safePayloadSize = JSON.stringify(payload).length; } catch { safePayloadSize = -1; }
     console.error(
       "[EventBus] fireWebhooks rejected unexpectedly",

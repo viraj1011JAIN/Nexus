@@ -67,6 +67,9 @@ const ACTIONS_BLOCKED_FOR_DELETED: ActionType[] = [
   "COMPLETE_CHECKLIST",
   "SET_PRIORITY",
   "SET_DUE_DATE_OFFSET",
+  // POST_COMMENT writes a comment.cardId FK which would violate the constraint
+  // if the card has already been deleted
+  "POST_COMMENT",
 ];
 // ─── Types ────────────────────────────────────────────────────────────────────
 

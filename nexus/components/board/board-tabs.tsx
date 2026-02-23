@@ -49,6 +49,15 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     priorities: [],
     labelIds: [],
   });
+
+  // Reset filters when leaving the calendar tab so selectAllVisible and filter logic
+  // always operate on the full card list on non-calendar views.
+  const handleTabChange = useCallback((tab: TabValue) => {
+    setActiveTab(tab);
+    if (tab !== "calendar") {
+      setFilters({ assigneeIds: [], priorities: [], labelIds: [] });
+    }
+  }, []);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const tabListRef = useRef<HTMLDivElement>(null);
 
@@ -169,7 +178,26 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     // â”€â”€ Bulk selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "b", description: "Toggle bulk selection mode", action: () => bulk.isBulkMode ? bulk.exitBulkMode() : bulk.enterBulkMode(), ignoreInInput: true },
     { key: "a", modifiers: { ctrl: true } as const, description: "Select all visible cards", action: selectAllVisible, ignoreInInput: true },
-    { key: "Escape", description: "Clear selection / close modal", action: () => { bulk.clearSelection(); setShortcutsOpen(false); }, ignoreInInput: true },
+    // Two Escape entries: closing the shortcuts modal should work even when focus is inside
+    // an input within the modal (ignoreInInput: false), but clearing bulk selection should
+    // not fire while the user is typing in an input field (ignoreInInput: true).
+    // The hook returns on first match, so we fire both by combining them into one entry
+    // that always closes the modal and only conditionally clears selection.
+    {
+      key: "Escape",
+      description: "Clear selection / close modal",
+      action: () => {
+        setShortcutsOpen(false);
+        // Only clear selection when focus is not inside an input/textarea/contentEditable
+        const el = document.activeElement;
+        const inInput = el && (
+          ["input", "textarea", "select"].includes(el.tagName.toLowerCase()) ||
+          (el as HTMLElement).isContentEditable
+        );
+        if (!inInput) bulk.clearSelection();
+      },
+      ignoreInInput: false,
+    },
     // â”€â”€ Help â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "?", description: "Show keyboard shortcuts", action: () => setShortcutsOpen(true), ignoreInInput: true },
   ], [switchToTab, bulk, selectAllVisible]);
@@ -187,7 +215,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
 
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as TabValue)}
+        onValueChange={(v) => handleTabChange(v as TabValue)}
         className="w-full relative z-10"
       >
         <div className="px-6 pt-4 space-y-3" ref={tabListRef as React.RefObject<HTMLDivElement>}>

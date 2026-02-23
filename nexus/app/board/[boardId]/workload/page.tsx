@@ -54,9 +54,9 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
       },
     });
   } catch (err) {
-    // null returns from findUnique are handled by the if (!board) notFound() guard below;
-    // this catch rethrows unexpected DB/permission errors so Next.js can handle them.
-    console.error("[WorkloadPage] Failed to fetch board:", err instanceof Error ? err.message : String(err));
+    // dal.boards.findUnique returns null for missing boards (handled by if (!board) notFound()
+    // below) — this catch only handles unexpected DB/permission/runtime exceptions.
+    console.error("[WorkloadPage] Failed to fetch board:", err);
     throw err;
   }
 

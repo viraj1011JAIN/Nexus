@@ -33,11 +33,11 @@ export async function updateCardOrder(items: CardUpdate[], boardId: string) {
     //   (a) detect cross-list moves (only emit CARD_MOVED for those)
     //   (b) use the canonical DB title in the event payload, not client-supplied value
     const cardIds = items.map((i) => i.id);
-    // Scope snapshot to current tenant to prevent cross-tenant reads
+    // Scope snapshot to current tenant AND board to prevent cross-org/cross-board reads
     const currentCards = await db.card.findMany({
       where: {
         id: { in: cardIds },
-        list: { board: { orgId: ctx.orgId } },
+        list: { board: { id: boardId, orgId: ctx.orgId } },
       },
       select: { id: true, listId: true, title: true },
     });

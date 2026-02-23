@@ -12,7 +12,7 @@ const CreateFieldSchema = z.object({
   name: z.string().min(1).max(100),
   type: z.enum(["TEXT", "NUMBER", "DATE", "CHECKBOX", "SELECT", "MULTI_SELECT", "URL", "EMAIL", "PHONE"] as const),
   boardId: z.string().uuid().optional(),
-  options: z.array(z.string()).optional(),
+  options: z.array(z.string().min(1).max(100)).max(100).optional(),
   isRequired: z.boolean().default(false),
 });
 
@@ -130,8 +130,14 @@ export async function updateCustomField(
     await requireRole("ADMIN", ctx);
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
-    // Validate update payload before any DB access
-    const validated = UpdateFieldSchema.parse(data);
+    // Validate update payload before any DB access — surface Zod messages to the caller
+    const parseResult = UpdateFieldSchema.safeParse(data);
+    if (!parseResult.success) {
+      // Return the first validation issue message (inc. the refine "At least one field" message)
+      const firstIssue = parseResult.error.issues[0];
+      return { error: firstIssue?.message ?? "Invalid update data." };
+    }
+    const validated = parseResult.data;
 
     const existing = await db.customField.findFirst({
       where: { id: fieldId, orgId: ctx.orgId },
