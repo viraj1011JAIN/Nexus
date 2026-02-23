@@ -16,7 +16,7 @@ export async function GET() {
       throw e;
     }
     
-    const boards = await db.board.findMany({
+    const rawBoards = await db.board.findMany({
       where: {
         orgId,
       },
@@ -26,8 +26,27 @@ export async function GET() {
       select: {
         id: true,
         title: true,
+        updatedAt: true,
+        imageThumbUrl: true,
+        _count: {
+          select: { lists: true },
+        },
+        lists: {
+          select: {
+            _count: { select: { cards: true } },
+          },
+        },
       },
     });
+
+    const boards = rawBoards.map((b) => ({
+      id: b.id,
+      title: b.title,
+      updatedAt: b.updatedAt,
+      imageThumbUrl: b.imageThumbUrl,
+      listCount: b._count.lists,
+      cardCount: b.lists.reduce((sum, l) => sum + l._count.cards, 0),
+    }));
 
     return NextResponse.json(boards);
   } catch (error) {

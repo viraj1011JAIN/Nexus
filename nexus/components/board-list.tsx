@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid, parseISO } from "date-fns";
@@ -8,12 +8,21 @@ import { Button } from "@/components/ui/button";
 import { createBoard } from "@/actions/create-board";
 import { deleteBoard } from "@/actions/delete-board";
 import Link from "next/link";
-import { Board } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+/** Shape returned by /api/boards */
+interface DashboardBoard {
+  id: string;
+  title: string;
+  updatedAt: string | Date;
+  imageThumbUrl: string | null;
+  listCount: number;
+  cardCount: number;
+}
 
 // Modern, bold gradient colors for board icons
 const boardColors = [
@@ -45,37 +54,10 @@ function formatRelativeDate(date: string | Date | null | undefined): string {
 export function BoardList() {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
-  const [boards, setBoards] = useState<Board[]>([]);
+  const [boards, setBoards] = useState<DashboardBoard[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchBoards();
-
-    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      const channel = supabase
-        .channel('boards-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'boards',
-          },
-() => {
-              fetchBoards();
-            }
-          )
-          .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, []);
-
-  const fetchBoards = async () => {
+  const fetchBoards = useCallback(async () => {
     try {
       const res = await fetch('/api/boards');
       if (res.ok) {
@@ -85,7 +67,27 @@ export function BoardList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchBoards();
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Re-fetch whenever boards, lists, or cards change so counts stay accurate.
+    const channel = supabase
+      .channel('dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, fetchBoards)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, fetchBoards)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, fetchBoards)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchBoards]);
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,11 +242,11 @@ export function BoardList() {
                     <div className="px-4 pb-4 flex items-center gap-3 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        <span>0 lists</span>
+                        <span>{board.listCount} {board.listCount === 1 ? "list" : "lists"}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                        <span>0 cards</span>
+                        <span>{board.cardCount} {board.cardCount === 1 ? "card" : "cards"}</span>
                       </div>
                     </div>
                   </div>
