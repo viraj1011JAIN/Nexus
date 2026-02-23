@@ -70,6 +70,15 @@ export const UpdateCard = z.object({
     .max(100, "Title must be less than 100 characters")
     .optional(),
   id: z.string().uuid("Invalid card ID"),
+  // TASK-010: Cover
+  coverColor: z.string().max(50).nullable().optional(),
+  coverImageUrl: z.string().url().nullable().optional(),
+  // TASK-013/TASK-023: Sprint / Epic / Story points
+  sprintId: z.string().uuid().nullable().optional(),
+  epicId: z.string().uuid().nullable().optional(),
+  storyPoints: z.number().int().min(0).max(999).nullable().optional(),
+  startDate: z.string().datetime().nullable().optional(),
+  estimatedMinutes: z.number().int().min(0).max(100000).nullable().optional(),
 });
 
 // ============================================

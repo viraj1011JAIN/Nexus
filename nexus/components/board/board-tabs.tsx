@@ -4,7 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ListContainer } from "@/components/board/list-container";
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
-import { BarChart3, LayoutDashboard } from "lucide-react";
+import { TableView } from "@/components/board/table-view";
+import { SprintPanel } from "@/components/board/sprint-panel";
+import { BarChart3, LayoutDashboard, Table2, GitBranch } from "lucide-react";
 
 interface BoardTabsProps {
   boardId: string;
@@ -23,6 +25,14 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
             <LayoutDashboard className="h-4 w-4" />
             Board
           </TabsTrigger>
+          <TabsTrigger value="table" className="gap-2">
+            <Table2 className="h-4 w-4" />
+            Table
+          </TabsTrigger>
+          <TabsTrigger value="sprints" className="gap-2">
+            <GitBranch className="h-4 w-4" />
+            Sprints
+          </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Analytics
@@ -33,6 +43,18 @@ export function BoardTabs({ boardId, boardTitle, orgId, lists }: BoardTabsProps)
       <TabsContent value="board" className="mt-0 p-6 pt-4">
         <ErrorBoundary>
           <ListContainer boardId={boardId} orgId={orgId} data={lists} />
+        </ErrorBoundary>
+      </TabsContent>
+
+      <TabsContent value="table" className="mt-0 p-6 pt-4">
+        <ErrorBoundary>
+          <TableView lists={lists} />
+        </ErrorBoundary>
+      </TabsContent>
+
+      <TabsContent value="sprints" className="mt-0 p-6 pt-4 max-w-3xl">
+        <ErrorBoundary>
+          <SprintPanel boardId={boardId} />
         </ErrorBoundary>
       </TabsContent>
 

@@ -79,10 +79,22 @@ export const CardItem = ({
         delay: index * 0.05
       }}
       onClick={() => cardModal.onOpen(data.id)}
-      className="group relative p-3 text-sm bg-muted hover:bg-accent rounded-lg hover:shadow-md cursor-pointer transition-all duration-200 touch-manipulation min-h-20"
+      className="group relative text-sm bg-muted hover:bg-accent rounded-lg hover:shadow-md cursor-pointer transition-all duration-200 touch-manipulation min-h-20 overflow-hidden"
     >
+      {/* Cover Image / Color */}
+      {(data.coverImageUrl || data.coverColor) && (
+        <div
+          className="h-12 w-full rounded-t-lg"
+          style={
+            data.coverImageUrl
+              ? { backgroundImage: `url(${data.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+              : { backgroundColor: data.coverColor ?? undefined }
+          }
+        />
+      )}
+
       {/* Card Content */}
-      <div className="space-y-2">
+      <div className="p-3 space-y-2">
         {/* Title */}
         <div className="pr-8">
           <span className="block font-semibold text-card-foreground group-hover:text-primary transition-colors line-clamp-2">
@@ -113,6 +125,13 @@ export const CardItem = ({
             )}>
               <Clock className="w-3 h-3" />
               <span>{format(new Date(data.dueDate), "MMM d")}</span>
+            </div>
+          )}
+
+          {/* Story Points badge */}
+          {data.storyPoints !== null && data.storyPoints !== undefined && (
+            <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+              <span>{data.storyPoints}pt</span>
             </div>
           )}
         </div>

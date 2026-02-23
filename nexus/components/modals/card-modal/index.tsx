@@ -13,8 +13,12 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  Keyboard,
-  Paperclip
+  Paperclip,
+  Image as ImageIcon,
+  CheckSquare,
+  GitBranch,
+  Timer,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
@@ -32,6 +36,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useCardModal } from "@/hooks/use-card-modal";
 import { getCard } from "@/actions/get-card"; 
 import { updateCard } from "@/actions/update-card"; 
@@ -43,9 +52,15 @@ import { AssigneePicker, CardAssignee } from "@/components/assignee-picker";
 import { SmartDueDate } from "@/components/smart-due-date";
 import { RichComments, type Comment } from "@/components/rich-comments";
 import { FileAttachment } from "@/components/board/file-attachment";
+import { CardCoverPicker } from "@/components/board/card-cover-picker";
+import { ChecklistPanel } from "@/components/board/checklist-panel";
+import { TimeTrackingPanel } from "@/components/board/time-tracking-panel";
+import { DependencyPanel } from "@/components/board/dependency-panel";
+import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";
 import { getOrganizationMembers } from "@/actions/assignee-actions";
 import { getCardAttachments, type AttachmentDto } from "@/actions/attachment-actions";
+import { getChecklists } from "@/actions/checklist-actions";
 import { 
   updateCardPriority, 
   setDueDate, 
@@ -99,6 +114,7 @@ export const CardModal = () => {
   const [orgMembers, setOrgMembers] = useState<Array<{ id: string; name: string; imageUrl: string | null; email: string }>>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [attachments, setAttachments] = useState<AttachmentDto[]>([]);
+  const [checklists, setChecklists] = useState<Parameters<typeof ChecklistPanel>[0]["initialChecklists"]>([]);
   
   const { user } = useUser();
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
@@ -113,17 +129,19 @@ export const CardModal = () => {
           setCharCount(card.description?.length || 0);
           
           if (organizationId) {
-            const [labels, cardLabelsList, members, attachmentsResult] = await Promise.all([
+            const [labels, cardLabelsList, members, attachmentsResult, checklistsResult] = await Promise.all([
               getOrganizationLabels(),
               getCardLabels(id),
               getOrganizationMembers(),
               getCardAttachments(id),
+              getChecklists(id),
             ]);
             
             setOrgLabels(labels);
             setCardLabels(cardLabelsList);
             setOrgMembers(members);
             if (attachmentsResult.data) setAttachments(attachmentsResult.data);
+            if (checklistsResult.data) setChecklists(checklistsResult.data as unknown as Parameters<typeof ChecklistPanel>[0]["initialChecklists"]);
           }
         }
 
@@ -250,6 +268,27 @@ export const CardModal = () => {
       setCardData({ ...cardData, dueDate: null });
       toast.success("Due date cleared");
     }
+  };
+
+  const handleCoverChange = async (type: "color" | "image" | "none", value: string | null) => {
+    if (!cardData) return;
+
+    const update =
+      type === "color"
+        ? { coverColor: value, coverImageUrl: null }
+        : type === "image"
+        ? { coverImageUrl: value, coverColor: null }
+        : { coverColor: null, coverImageUrl: null };
+
+    const result = await updateCard({ boardId, id: cardData.id, ...update });
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    setCardData({ ...cardData, ...update });
+    if (type === "none") toast.success("Cover removed");
   };
 
   const handleCreateComment = async (text: string, parentId: string | null = null) => {
@@ -380,116 +419,130 @@ export const CardModal = () => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="px-8 pt-8 pb-6 space-y-4 border-b border-slate-200 dark:border-slate-700"
+              className="border-b border-slate-200 dark:border-slate-700"
             >
-              {/* Close Button */}
-              <DialogClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-6 right-6 h-10 w-10 p-0 rounded-lg opacity-70 hover:opacity-100 hover:bg-muted hover:scale-110 transition-all duration-200 ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                >
-                  <X className="h-5 w-5" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </DialogClose>
+              {/* Cover Image / Color Banner */}
+              {(cardData.coverImageUrl || cardData.coverColor) && (
+                <div
+                  className="h-32 w-full rounded-t-2xl"
+                  style={
+                    cardData.coverImageUrl
+                      ? { backgroundImage: `url(${cardData.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+                      : { backgroundColor: cardData.coverColor ?? undefined }
+                  }
+                />
+              )}
 
-              {/* Breadcrumb */}
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <button 
-                  onClick={() => router.push(`/board/${boardId}`)}
-                  className="hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 hover:underline"
-                >
-                  {cardData.list.title}
-                </button>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-slate-700 dark:text-slate-300">Card #{cardData.id.slice(-8)}</span>
-              </div>
-
-              {/* Title + Priority */}
-              <div className="flex items-start gap-4">
-                {isEditingTitle ? (
-                  <motion.div
-                    initial={{ scale: 0.98 }}
-                    animate={{ scale: 1 }}
-                    className="flex-1"
+              <div className="px-8 pt-6 pb-6 space-y-4">
+                {/* Close Button */}
+                <DialogClose asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-6 right-6 h-10 w-10 p-0 rounded-lg opacity-70 hover:opacity-100 hover:bg-muted hover:scale-110 transition-all duration-200 ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
-                    <textarea
-                      ref={titleInputRef}
-                      aria-label="Card title"
-                      value={title}
-                      onChange={(e) => {
-                        setTitle(e.target.value);
-                        e.currentTarget.style.height = 'auto';
-                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                      }}
-                      onBlur={onSaveTitle}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          onSaveTitle();
-                        }
-                        if (e.key === 'Escape') {
-                          setTitle(cardData.title);
-                          setIsEditingTitle(false);
-                        }
-                      }}
-                      rows={1}
-                      className="w-full text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none resize-none border-2 border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-100 dark:ring-purple-900/30"
-                    />
-                  </motion.div>
-                ) : (
-                  <motion.button
-                    onClick={() => setIsEditingTitle(true)}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    className="flex-1 text-left text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-4 py-3 transition-all duration-200 group cursor-text"
+                    <X className="h-5 w-5" />
+                    <span className="sr-only">Close</span>
+                  </Button>
+                </DialogClose>
+
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <button 
+                    onClick={() => router.push(`/board/${boardId}`)}
+                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 hover:underline"
                   >
-                    {title}
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-slate-400">✎</span>
-                  </motion.button>
-                )}
+                    {cardData.list.title}
+                  </button>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-slate-700 dark:text-slate-300">Card #{cardData.id.slice(-8)}</span>
+                </div>
 
-                {cardData.priority && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm",
-                          priorityConfig[cardData.priority].color,
-                          priorityConfig[cardData.priority].text
-                        )}
-                      >
-                        <span className="text-lg">{priorityConfig[cardData.priority].icon}</span>
-                        {priorityConfig[cardData.priority].label}
-                      </motion.button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      <DropdownMenuItem onClick={() => handlePriorityChange("URGENT")} className="cursor-pointer">
-                        <span className="mr-2">⚠</span> Urgent
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handlePriorityChange("HIGH")} className="cursor-pointer">
-                        <span className="mr-2">↑</span> High
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handlePriorityChange("MEDIUM")} className="cursor-pointer">
-                        <span className="mr-2">—</span> Medium
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handlePriorityChange("LOW")} className="cursor-pointer">
-                        <span className="mr-2">↓</span> Low
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
+                {/* Title + Priority */}
+                <div className="flex items-start gap-4">
+                  {isEditingTitle ? (
+                    <motion.div
+                      initial={{ scale: 0.98 }}
+                      animate={{ scale: 1 }}
+                      className="flex-1"
+                    >
+                      <textarea
+                        ref={titleInputRef}
+                        aria-label="Card title"
+                        value={title}
+                        onChange={(e) => {
+                          setTitle(e.target.value);
+                          e.currentTarget.style.height = 'auto';
+                          e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                        }}
+                        onBlur={onSaveTitle}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            onSaveTitle();
+                          }
+                          if (e.key === 'Escape') {
+                            setTitle(cardData.title);
+                            setIsEditingTitle(false);
+                          }
+                        }}
+                        rows={1}
+                        className="w-full text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none resize-none border-2 border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-100 dark:ring-purple-900/30"
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      onClick={() => setIsEditingTitle(true)}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      className="flex-1 text-left text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-4 py-3 transition-all duration-200 group cursor-text"
+                    >
+                      {title}
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-slate-400">✎</span>
+                    </motion.button>
+                  )}
 
-              {/* Metadata */}
-              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                <Clock className="h-4 w-4" />
-                <span>Created {new Date(cardData.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                <span>•</span>
-                <span>Updated {new Date(cardData.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  {cardData.priority && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm",
+                            priorityConfig[cardData.priority].color,
+                            priorityConfig[cardData.priority].text
+                          )}
+                        >
+                          <span className="text-lg">{priorityConfig[cardData.priority].icon}</span>
+                          {priorityConfig[cardData.priority].label}
+                        </motion.button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-48">
+                        <DropdownMenuItem onClick={() => handlePriorityChange("URGENT")} className="cursor-pointer">
+                          <span className="mr-2">⚠</span> Urgent
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePriorityChange("HIGH")} className="cursor-pointer">
+                          <span className="mr-2">↑</span> High
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePriorityChange("MEDIUM")} className="cursor-pointer">
+                          <span className="mr-2">—</span> Medium
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePriorityChange("LOW")} className="cursor-pointer">
+                          <span className="mr-2">↓</span> Low
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+
+                {/* Metadata */}
+                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                  <Clock className="h-4 w-4" />
+                  <span>Created {new Date(cardData.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <span>•</span>
+                  <span>Updated {new Date(cardData.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
               </div>
             </motion.div>
 
@@ -536,6 +589,35 @@ export const CardModal = () => {
                     />
                   </motion.div>
                 </ErrorBoundary>
+
+                {/* Cover picker */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "h-9 gap-2 text-xs font-medium transition-all",
+                          (cardData.coverColor || cardData.coverImageUrl)
+                            ? "border-purple-300 text-purple-700 dark:border-purple-600 dark:text-purple-300"
+                            : ""
+                        )}
+                      >
+                        <ImageIcon className="h-3.5 w-3.5" />
+                        Cover
+                      </Button>
+                    </motion.div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-4" align="start">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-3">Card Cover</p>
+                    <CardCoverPicker
+                      currentColor={cardData.coverColor}
+                      currentImage={cardData.coverImageUrl}
+                      onSelect={handleCoverChange}
+                    />
+                  </PopoverContent>
+                </Popover>
 
                 <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
 
@@ -616,6 +698,32 @@ export const CardModal = () => {
                         {attachments.length}
                       </Badge>
                     )}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="checklists"
+                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
+                  >
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Checklist
+                    {checklists.length > 0 && (
+                      <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                        {checklists.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="time"
+                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-violet-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
+                  >
+                    <Timer className="h-4 w-4 mr-2" />
+                    Time
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="dependencies"
+                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
+                  >
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Links
                   </TabsTrigger>
                 </TabsList>
               </motion.div>
@@ -743,6 +851,70 @@ export const CardModal = () => {
                     </motion.div>
                   </AnimatePresence>
                 </TabsContent>
+
+                {/* CHECKLISTS TAB */}
+                <TabsContent value="checklists" className="mt-0 p-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="checklists-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {cardData && (
+                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load checklists.</p>}>
+                          <ChecklistPanel
+                            cardId={cardData.id}
+                            boardId={boardId}
+                            initialChecklists={checklists}
+                          />
+                        </ErrorBoundary>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
+
+                {/* TIME TRACKING TAB */}
+                <TabsContent value="time" className="mt-0 p-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="time-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {cardData && (
+                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load time tracking.</p>}>
+                          <TimeTrackingPanel
+                            cardId={cardData.id}
+                            currentUserId={user?.id}
+                          />
+                        </ErrorBoundary>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
+
+                {/* DEPENDENCIES TAB */}
+                <TabsContent value="dependencies" className="mt-0 p-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="dependencies-content"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {cardData && (
+                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load dependencies.</p>}>
+                          <DependencyPanel cardId={cardData.id} />
+                        </ErrorBoundary>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </TabsContent>
               </div>
             </Tabs>
 
@@ -758,10 +930,7 @@ export const CardModal = () => {
                   <span className="text-slate-500 dark:text-slate-400">
                     {charCount.toLocaleString()} / 10,000 characters
                   </span>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs px-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200">
-                    <Keyboard className="h-3 w-3 mr-1.5" />
-                    Shortcuts
-                  </Button>
+                  <KeyboardShortcutsModal />
                 </div>
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
