@@ -46,14 +46,21 @@ export default defineConfig({
   },
 
   projects: [
-    /* ─── Setup ──────────────────────────────────────────────────── */
+    /* ─── Setup: User A (primary test account) ──────────────────────────── */
     {
       name: "setup",
       testMatch: "**/auth.setup.ts",
       use: { ...devices["Desktop Chrome"] },
     },
 
-    /* ─── Authenticated browsers ─────────────────────────────────── */
+    /* ─── Setup: User B (second org – required for tenant isolation tests) ─ */
+    {
+      name: "setup-b",
+      testMatch: "**/auth-user-b.setup.ts",
+      use: { ...devices["Desktop Chrome"] },
+    },
+
+    /* ─── Authenticated browsers ─────────────────────────────────────────── */
     {
       name: "chromium",
       use: {
@@ -61,6 +68,15 @@ export default defineConfig({
         storageState: "e2e/.auth/user.json",
       },
       dependencies: ["setup"],
+    },
+
+    /* ─── Tenant-isolation (dual-context: User A + User B) ───────────────── */
+    {
+      name: "tenant-isolation",
+      testMatch: "**/tenant-isolation.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+      // Depends on BOTH auth setups so storage-state files exist before tests run
+      dependencies: ["setup", "setup-b"],
     },
 
     {

@@ -19,6 +19,7 @@ import { createSafeAction } from "@/lib/create-safe-action";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { withSentry } from "@/lib/sentry-helpers";
 import { sendMentionEmail } from "@/lib/email";
+import { createNotification } from "@/actions/notification-actions";
 import { z } from "zod";
 import { differenceInHours } from "date-fns";
 
@@ -323,29 +324,47 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
 
   revalidatePath(`/board/${boardId}`);
 
-  // Send @mention notification emails (fire-and-forget — email failures must not
-  // block or roll back the comment creation).
+  // Fire-and-forget: email + in-app notifications for @mentions.
+  // Failures must not block or roll back comment creation.
   if (!isDraft && mentions.length > 0) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const cardUrl = `${appUrl}/board/${boardId}?card=${cardId}`;
     const mentionerName = comment.userName;
     void Promise.allSettled(
       mentions
-        .filter((mentionedClerkId) => mentionedClerkId !== userId) // never email the commenter themselves
+        .filter((mentionedClerkId) => mentionedClerkId !== userId) // never notify the commenter themselves
         .map(async (mentionedClerkId) => {
           const mentionedUser = await db.user.findUnique({
             where: { clerkUserId: mentionedClerkId },
-            select: { email: true, name: true },
+            select: { id: true, email: true, name: true },
           });
           if (!mentionedUser) return;
-          return sendMentionEmail({
+
+          // 1. Email notification
+          await sendMentionEmail({
             mentionedUserEmail: mentionedUser.email,
             mentionedUserName: mentionedUser.name,
             mentionerName,
             cardTitle: card.title,
             boardTitle: card.list.board.title,
             cardUrl,
-          });
+          }).catch(() => { /* email failure is non-fatal */ });
+
+          // 2. In-app notification (creates a DB row → triggers Supabase Realtime
+          //    postgres_changes INSERT → NotificationCenter badge increments live)
+          await createNotification({
+            orgId,
+            userId: mentionedUser.id,
+            type: "MENTIONED",
+            title: `${mentionerName} mentioned you in \"${card.title}\"",
+            body: text.replace(/<[^>]+>/g, "").slice(0, 200),
+            entityType: "CARD",
+            entityId: cardId,
+            entityTitle: card.title,
+            actorId: userId,
+            actorName: mentionerName,
+            actorImage: comment.userImage ?? undefined,
+          }).catch(() => { /* notification failure is non-fatal */ });
         })
     );
   }

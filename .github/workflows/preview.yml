@@ -1,0 +1,99 @@
+name: Preview Deployment
+
+# Deploy a Vercel preview for every PR — gives reviewers a live URL to test
+# before any code lands on main.
+#
+# Required repository secrets:
+#   VERCEL_TOKEN       — Vercel personal access token (Account Settings → Tokens)
+#   VERCEL_ORG_ID      — found in .vercel/project.json or Vercel project settings
+#   VERCEL_PROJECT_ID  — found in .vercel/project.json or Vercel project settings
+#
+# The action posts the preview URL as a PR comment automatically via
+# github-comment: true and the GITHUB_TOKEN that Actions injects.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    # Only run when source files actually change — skip pure-docs PRs
+    paths:
+      - "nexus/**"
+      - ".github/workflows/preview.yml"
+
+concurrency:
+  # Cancel any in-flight preview for the same PR — one preview per PR at a time
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    name: Deploy Vercel Preview
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write   # needed for the PR comment with the preview URL
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: nexus/package-lock.json
+
+      # Run a quick type-check before deploying so broken PRs never get a preview URL
+      - name: Install dependencies
+        working-directory: nexus
+        run: npm ci
+
+      - name: Type-check
+        working-directory: nexus
+        run: npx tsc --noEmit
+        env:
+          # Provide stub values so the type-checker doesn't fail on env-var assertions
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder"
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_placeholder"
+          CLERK_SECRET_KEY: "sk_test_placeholder"
+          DATABASE_URL: "postgresql://placeholder:placeholder@placeholder:5432/placeholder"
+          STRIPE_SECRET_KEY: "sk_test_placeholder"
+          STRIPE_WEBHOOK_SECRET: "whsec_placeholder"
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_placeholder"
+
+      - name: Deploy to Vercel (Preview)
+        id: vercel-deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          # Point Vercel at the Next.js app subdirectory
+          working-directory: ./nexus
+          # Post the preview URL as a PR comment
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-comment: true
+          # Alias the preview to a stable PR-specific URL for easy sharing
+          alias-domains: |
+            nexus-pr-${{ github.event.pull_request.number }}.vercel.app
+        env:
+          # Runtime environment variables injected into the Vercel preview build.
+          # These mirror what ci.yml passes to the production build job.
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+
+      - name: Output preview URL
+        run: |
+          echo "### ✅ Preview Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.vercel-deploy.outputs.preview-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**PR:** #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
