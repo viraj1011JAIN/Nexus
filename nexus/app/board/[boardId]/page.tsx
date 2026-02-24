@@ -4,6 +4,14 @@ import { BoardTabs } from "@/components/board/board-tabs";
 import { getTenantContext } from "@/lib/tenant-context";
 import { createDAL } from "@/lib/dal";
 
+// Revalidate the Route Cache every 30 seconds so stale board data
+// (from Next.js full-route cache) is refreshed automatically. The page
+// is still dynamically rendered per-request because getTenantContext()
+// reads cookies, so ISR does not apply here — this setting governs any
+// fetch()-based data calls made inside the render tree and controls the
+// client-side Router Cache TTL.
+export const revalidate = 30;
+
 interface BoardIdPageProps {
   params: Promise<{
     boardId: string;

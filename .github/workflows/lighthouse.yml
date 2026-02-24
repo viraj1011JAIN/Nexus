@@ -1,0 +1,101 @@
+name: Lighthouse CI
+
+# Runs Lighthouse performance, accessibility, best-practices, and SEO audits
+# on the public-facing pages (landing, sign-in, terms, privacy) which do not
+# require authentication. Board/dashboard routes are excluded here because
+# Lighthouse cannot access auth-gated pages without browser credentials.
+#
+# Budgets (enforced as errors unless noted):
+#   Performance   ≥ 85     Accessibility ≥ 95
+#   Best Practices ≥ 90    SEO           ≥ 80
+#   LCP  ≤ 2.5 s (warn)    TBT ≤ 100 ms (warn)   CLS ≤ 0.1 (warn)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "nexus/**"
+      - ".github/workflows/lighthouse.yml"
+      - "nexus/lighthouserc.json"
+
+# Cancel any in-flight audit for the same ref – one run at a time
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse Audit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: nexus
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: nexus/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Build with real secrets so Next.js doesn't error on missing env vars.
+      # Pages tested by Lighthouse are public-only (no Prisma/Supabase needed).
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+
+      # Start the production HTTP server in the background
+      - name: Start production server
+        run: npm start &
+        env:
+          PORT: 3000
+          NODE_ENV: production
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # Poll until the server responds (up to 60 s before failing)
+      - name: Wait for server to be ready
+        run: npx --yes wait-on@7 http://localhost:3000 --timeout 60000
+
+      # Run LHCI against the URLs declared in lighthouserc.json
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          configPath: ./nexus/lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      # Summarise the scores in the workflow run page
+      - name: Post Lighthouse summary
+        if: always()
+        run: |
+          echo "## 🔦 Lighthouse CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Page | Perf | A11y | Best Practices | SEO |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|------|----------------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| / | ≥85 | ≥95 | ≥90 | ≥80 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Full reports uploaded as workflow artifacts." >> $GITHUB_STEP_SUMMARY

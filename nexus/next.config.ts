@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
 
 const isDev = process.env.NODE_ENV === "development";
+
+// Bundle analyzer: run `ANALYZE=true npm run build` to inspect output
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: false, // write HTML report, don't auto-open browser
+});
 
 const nextConfig: NextConfig = {
   // Performance optimizations
@@ -31,6 +38,25 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'plus.unsplash.com',
       },
+      // Clerk user profile photos
+      {
+        protocol: 'https',
+        hostname: 'img.clerk.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.clerk.com',
+      },
+      // Google OAuth avatars (e.g. lh3.googleusercontent.com)
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      },
+      // GitHub OAuth avatars
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
     ],
   },
   
@@ -59,4 +85,4 @@ const nextConfig: NextConfig = {
   
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

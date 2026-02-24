@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { 
   Filter, X, Save, ChevronDown, User, Tag, Flag, Calendar,
@@ -446,7 +447,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
               >
                 <span className="flex items-center gap-2">
                   {m.imageUrl ? (
-                    <img src={m.imageUrl} alt={m.name} className="h-5 w-5 rounded-full object-cover" />
+                    <Image src={m.imageUrl} alt={m.name} width={20} height={20} className="rounded-full object-cover" />
                   ) : (
                     <div className="h-5 w-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold">
                       {m.name[0]?.toUpperCase()}

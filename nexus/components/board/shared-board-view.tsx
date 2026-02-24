@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Globe, Eye, Lock, Calendar, Users, Flag, AlertTriangle,
   Copy, Check, ExternalLink, Share2, Layers
@@ -127,7 +128,7 @@ function SharedCardTile({ card }: { card: SharedCard }) {
         {card.assignee && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
             {card.assignee.imageUrl ? (
-              <img src={card.assignee.imageUrl} alt={card.assignee.name} className="h-4 w-4 rounded-full" />
+              <Image src={card.assignee.imageUrl} alt={card.assignee.name} width={16} height={16} className="rounded-full" />
             ) : (
               <div className="h-4 w-4 rounded-full bg-indigo-200 flex items-center justify-center text-[9px] font-bold text-indigo-700">
                 {card.assignee.name.trim().charAt(0).toUpperCase() || "?"}

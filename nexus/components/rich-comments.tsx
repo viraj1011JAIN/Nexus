@@ -1,7 +1,7 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -262,7 +262,7 @@ function CommentItem({
         {/* Avatar */}
         <Avatar className="w-8 h-8 flex-shrink-0">
           {comment.userImage ? (
-            <img src={comment.userImage} alt={comment.userName} className="w-full h-full object-cover" />
+            <Image src={comment.userImage} alt={comment.userName} width={32} height={32} className="rounded-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
               {comment.userName[0].toUpperCase()}
@@ -486,7 +486,7 @@ function CommentEditor({
     <div className="flex gap-3">
       {currentUserImage && (
         <Avatar className="w-8 h-8 flex-shrink-0">
-          <img src={currentUserImage} alt="You" className="w-full h-full object-cover" />
+          <Image src={currentUserImage} alt="You" width={32} height={32} className="rounded-full object-cover" />
         </Avatar>
       )}
 

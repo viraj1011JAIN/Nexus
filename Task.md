@@ -1542,7 +1542,7 @@ Track: board created, card moved, sprint started, export used, AI feature used. 
 ### TASK-035 · Performance Hardening
 **Priority:** P1 | **Effort:** 3 days
 
-**What:** Current performance utilities exist (`VirtualScroll`, `LazyLoad`, `PerformanceWrapper`) but no actual measurements. No targets.
+> **Status: COMPLETE** — Lighthouse CI workflow (`lighthouse.yml`) with `lighthouserc.json` budgets (Perf ≥85, A11y ≥95, BP ≥90, SEO ≥80). All 5 raw `<img>` tags converted to Next.js `<Image>` across `bulk-action-bar`, `filter-bar`, `shared-board-view`, and `rich-comments`. `@next/bundle-analyzer` installed with `npm run analyze` script. Extended `next.config.ts` remotePatterns to cover Clerk/Google/GitHub avatar CDNs. `export const revalidate = 30` added to board page. `supabase-performance-indexes.sql` created with 14 production indexes covering card ordering, assignee/due filters, audit feed pagination, notifications, time logs, checklists, dependencies, webhooks, board-shares, and API keys.
 
 **Targets (Lighthouse CI enforced in GitHub Actions):**
 - Performance: >85
@@ -1675,7 +1675,7 @@ New monorepo workspace `apps/mobile/` using Expo (React Native). Share:
 | TASK-032 | Observability & Monitoring | P1 | 2d | ✅ |
 | TASK-033 | GDPR & Privacy Compliance | P1 | 3d | ✅ |
 | TASK-034 | Onboarding Flow | P1 | 3d | ✅ |
-| TASK-035 | Performance Hardening | P1 | 3d | 🔄 |
+| TASK-035 | Performance Hardening | P1 | 3d | ✅ |
 | TASK-036 | Accessibility (a11y) | P1 | 3d | ✅ |
 | TASK-037 | Mobile App | P3 | 6w | ⬜ |
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import { 
   X, Trash2, MoveRight, Flag, User, Tag, Calendar,
   CheckSquare, ChevronDown, AlertTriangle, Loader2
@@ -242,7 +243,7 @@ export function BulkActionBar({
                       <DropdownMenuItem key={m.id} onClick={() => handleAssign(m.id)}>
                         <span className="flex items-center gap-2">
                           {m.imageUrl ? (
-                            <img src={m.imageUrl} alt={m.name} className="h-5 w-5 rounded-full" />
+                            <Image src={m.imageUrl} alt={m.name} width={20} height={20} className="rounded-full" />
                           ) : (
                             <div className="h-5 w-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">
                               {m.name[0]?.toUpperCase()}
