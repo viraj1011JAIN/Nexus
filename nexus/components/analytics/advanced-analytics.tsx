@@ -14,6 +14,7 @@ import {
   Layers, Target, Zap, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { NameType } from "recharts/types/component/DefaultTooltipContent";
 import { format, parseISO } from "date-fns";
 
 // ─── Lazy-load recharts ───────────────────────────────────────────────────────
@@ -38,6 +39,9 @@ const PieChart = dynamic(() => import("recharts").then((m) => m.PieChart), { ssr
 const Pie = dynamic(() => import("recharts").then((m) => m.Pie), { ssr: false });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+/** Maximum pixel height for member-count bar charts to prevent unbounded rendering. */
+const MAX_CHART_HEIGHT = 600;
 
 const CHART_STYLE = {
   backgroundColor: "transparent",
@@ -118,11 +122,19 @@ function exportCSV(data: AdvancedBoardAnalytics, boardName: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${boardName.replace(/\s+/g, "-")}-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+  // Sanitize boardName: keep only alphanumeric, dots, underscores, and hyphens;
+  // collapse consecutive hyphens; trim leading/trailing hyphens; fallback to "board".
+  const safeName = boardName
+    .replace(/[^A-Za-z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    || "board";
+  a.download = `${safeName}-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Defer revoke so the browser has time to initiate the download before the URL is freed.
+  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -474,7 +486,7 @@ function CycleTimeTab({ d }: { d: AdvancedBoardAnalytics }) {
                 <YAxis tick={{ fontSize: 11 }} unit="h" />
                 <RechartsTooltip
                   contentStyle={CHART_STYLE}
-                  formatter={(v: unknown) => [`${v}h`, ""]}
+                  formatter={(v: unknown, name: NameType | undefined) => [`${v}h`, name ?? ""]}
                 />
                 <Legend />
                 <Line
@@ -843,7 +855,7 @@ function MembersTab({ d }: { d: AdvancedBoardAnalytics }) {
           <CardDescription>Total, completed, and overdue cards per member</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={Math.max(200, d.memberStats.length * 44)}>
+          <ResponsiveContainer width="100%" height={Math.min(MAX_CHART_HEIGHT, Math.max(200, d.memberStats.length * 44))}>
             <BarChart data={d.memberStats} layout="vertical" margin={{ left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
@@ -869,7 +881,7 @@ function MembersTab({ d }: { d: AdvancedBoardAnalytics }) {
             <CardDescription>Average hours from card creation to completion (members with completions only)</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={Math.max(160, membersWithCompletions.length * 44)}>
+            <ResponsiveContainer width="100%" height={Math.min(MAX_CHART_HEIGHT, Math.max(160, membersWithCompletions.length * 44))}>
               <BarChart data={membersWithCompletions} layout="vertical" margin={{ left: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" tick={{ fontSize: 11 }} unit="h" />
@@ -901,7 +913,7 @@ function MembersTab({ d }: { d: AdvancedBoardAnalytics }) {
                 m.totalCards > 0 ? Math.round((m.completedCards / m.totalCards) * 100) : 0;
               return (
                 <div
-                  key={m.name}
+                  key={`${m.name}-${i}`}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm dark:border-slate-700"
                 >
                   <div

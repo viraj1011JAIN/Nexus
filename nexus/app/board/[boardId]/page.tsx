@@ -30,6 +30,8 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
             cards: {
               orderBy: { order: "asc" },
               include: {
+                assignee: { select: { id: true, name: true, imageUrl: true } },
+                labels: { include: { label: { select: { id: true, name: true, color: true } } } },
                 checklists: {
                   include: {
                     items: { select: { id: true, isComplete: true } },

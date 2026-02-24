@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
@@ -56,22 +57,20 @@ export async function updateCardOrder(items: CardUpdate[], boardId: string) {
     for (const item of items) {
       const prev = cardMap.get(item.id);
       if (!prev || prev.listId === item.listId) continue; // same list — skip
-      void emitCardEvent(
-        {
-          type: "CARD_MOVED",
-          orgId: ctx.orgId,
-          boardId,
-          cardId: item.id,
-          context: { fromListId: prev.listId, toListId: item.listId },
-        },
-        { cardId: item.id, cardTitle: prev.title, listId: item.listId, boardId, orgId: ctx.orgId }
-      ).catch((err) => {
-        console.error("[update-card-order] emitCardEvent failed", {
-          cardId: item.id,
-          boardId,
-          orgId: ctx.orgId,
-          err,
-        });
+      // Wrap in after() so the event fires after the response is sent,
+      // ensuring the card-move succeeds even if automation/webhook delivery is slow.
+      // emitCardEvent returns void and handles all internal errors.
+      after(() => {
+        emitCardEvent(
+          {
+            type: "CARD_MOVED",
+            orgId: ctx.orgId,
+            boardId,
+            cardId: item.id,
+            context: { fromListId: prev.listId, toListId: item.listId },
+          },
+          { cardId: item.id, cardTitle: prev.title, listId: item.listId, boardId, orgId: ctx.orgId }
+        );
       });
     }
 

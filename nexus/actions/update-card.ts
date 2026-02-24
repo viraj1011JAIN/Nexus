@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
@@ -47,13 +48,17 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     // Fire CARD_TITLE_CONTAINS event if the title was updated (TASK-019) — fire-and-forget.
     // Deferred via Promise.resolve().then() so a synchronous throw from emitCardEvent
     // cannot be caught by the outer try/catch and turned into a false failure response.
+    // Use card.title (post-write canonical value) rather than values.title (input) in
+    // the event context so automation rules see the authoritative stored title.
     if (values.title) {
-      void Promise.resolve().then(() =>
+      // emitCardEvent is fully fire-and-forget (returns void, handles errors internally).
+      // Defer via after() so the event fires post-response without blocking the action.
+      after(() => {
         emitCardEvent(
-          { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card.id, context: { cardTitle: values.title } },
+          { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card.id, context: { cardTitle: card.title } },
           { cardId: card.id, cardTitle: card.title, boardId, orgId: ctx.orgId }
-        )
-      ).catch((err) => console.error("[update-card] emitCardEvent failed", err));
+        );
+      });
     }
 
     return { data: card };

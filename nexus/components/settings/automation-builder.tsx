@@ -208,12 +208,41 @@ function CreateAutomationDialog({
   const [actionList, setActionList] = useState<ActionConfig[]>([{ type: "SET_PRIORITY" }]);
   const [saving, setSaving] = useState(false);
 
+  // Determine the first allowed action type for the current trigger
+  const firstAllowedActionType = (trigger: TriggerType): ActionType => {
+    const blocked = trigger === "CARD_DELETED" ? ACTIONS_BLOCKED_FOR_DELETED : [];
+    const allowed = (Object.keys(ACTION_LABELS) as ActionType[]).find((t) => !blocked.includes(t));
+    return allowed ?? "SEND_NOTIFICATION";
+  };
+
+  const handleTriggerChange = (v: string) => {
+    const next = v as TriggerType;
+    setTriggerType(next);
+    // When switching to CARD_DELETED, remove any actions that cannot run on a deleted card.
+    if (next === "CARD_DELETED") {
+      setActionList((prev) => {
+        const filtered = prev.filter((a) => !ACTIONS_BLOCKED_FOR_DELETED.includes(a.type));
+        // Ensure at least one valid action remains after filtering.
+        return filtered.length > 0 ? filtered : [{ type: firstAllowedActionType(next) }];
+      });
+    }
+  };
+
   const handleAddAction = () => {
-    setActionList((prev) => [...prev, { type: "POST_COMMENT" }]);
+    // Default new action to a type that is valid for the current trigger.
+    setActionList((prev) => [...prev, { type: firstAllowedActionType(triggerType) }]);
   };
 
   const handleSave = async () => {
     if (!name.trim() || !actionList.length) return;
+    // Prevent saving blocked action types (e.g. if the user somehow bypasses the UI filter).
+    const invalidAction = actionList.find(
+      (a) => triggerType === "CARD_DELETED" && ACTIONS_BLOCKED_FOR_DELETED.includes(a.type)
+    );
+    if (invalidAction) {
+      toast.error(`Action "${ACTION_LABELS[invalidAction.type] ?? invalidAction.type}" cannot be used with the CARD_DELETED trigger.`);
+      return;
+    }
     setSaving(true);
     try {
       const result = await createAutomation({
@@ -229,6 +258,7 @@ function CreateAutomationDialog({
       onClose();
       setName("");
       setTriggerType("CARD_CREATED");
+      setTriggerExtras({});
       setActionList([{ type: "SET_PRIORITY" }]);
     } finally {
       setSaving(false);
@@ -263,7 +293,7 @@ function CreateAutomationDialog({
               <div className="h-2 w-2 rounded-full bg-amber-400" />
               When this happens (trigger)
             </Label>
-            <Select value={triggerType} onValueChange={(v) => setTriggerType(v as TriggerType)}>
+            <Select value={triggerType} onValueChange={handleTriggerChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

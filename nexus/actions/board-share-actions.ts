@@ -64,6 +64,33 @@ export async function getBoardShareLink(boardId: string) {
   }
 }
 
+/**
+ * Lightweight check: does the share identified by `token` require a password?
+ *
+ * Used by the client before calling getSharedBoardData so the UI can decide
+ * whether to show the password gate without having to actually submit credentials.
+ * Returns { requiresPassword: true } when the share is password-protected, and
+ * { requiresPassword: false } otherwise.  Returns an error for expired/revoked tokens
+ * without leaking whether the token exists (callers should treat errors as 404-equivalent).
+ */
+export async function checkShareRequiresPassword(token: string) {
+  try {
+    const share = await db.boardShare.findFirst({
+      where: {
+        token,
+        isActive: true,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      select: { passwordHash: true },
+    });
+    if (!share) return { error: "Share not found.", code: "INVALID_TOKEN" as const };
+    return { data: { requiresPassword: !!share.passwordHash } };
+  } catch (e) {
+    console.error("[CHECK_SHARE_PASSWORD]", e);
+    return { error: "Failed to check share." };
+  }
+}
+
 export async function getSharedBoardData(token: string, password?: string) {
   try {
     const share = await db.boardShare.findFirst({
@@ -104,10 +131,12 @@ export async function getSharedBoardData(token: string, password?: string) {
     if (share.passwordHash) {
       if (!password || !verifyPassword(password, share.passwordHash)) {
         // Return the same error *message* as the not-found path so callers
-        // cannot distinguish a bad password from a non-existent token.
-        // The distinct *code* (INVALID_PASSWORD vs INVALID_TOKEN) is only
-        // used by trusted client UI to decide which prompt to show.
-        return { error: "Share link not found or expired.", code: "INVALID_PASSWORD" as const };
+        // cannot distinguish a bad password from a non-existent token via the message.
+        // Use INVALID_TOKEN (not a distinct INVALID_PASSWORD code) to prevent external
+        // callers from enumerating whether a token exists by supplying a wrong password.
+        // The UI already knows a password is required (via checkShareRequiresPassword),
+        // so any error response here means "wrong password".
+        return { error: "Share link not found or expired.", code: "INVALID_TOKEN" as const };
       }
     }
 

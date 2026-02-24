@@ -63,21 +63,12 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     // Fire automations + webhooks (TASK-019/020).
     // `after` keeps the serverless function alive until the callback settles,
     // preventing early termination before async work completes.
-    after(async () => {
-      try {
-        await emitCardEvent(
-          { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
-          { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
-        );
-      } catch (err) {
-        logger.error("[create-card] emitCardEvent failed", {
-          err,
-          cardId: card.id,
-          boardId,
-          listId,
-          orgId: ctx.orgId,
-        });
-      }
+    after(() => {
+      // emitCardEvent is fully fire-and-forget (returns void, handles errors internally).
+      emitCardEvent(
+        { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
+        { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
+      );
     });
 
     return { data: card };

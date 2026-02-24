@@ -7,12 +7,13 @@
  */
 
 import { notFound } from "next/navigation";
-import { getTenantContext } from "@/lib/tenant-context";
+import { getTenantContext, requireRole } from "@/lib/tenant-context";
 import { createDAL } from "@/lib/dal";
 import { WorkloadView } from "@/components/board/workload-view";
 import { ErrorBoundary } from "@/components/error-boundary";
 import Link from "next/link";
 import { ArrowLeft, Users } from "lucide-react";
+import { Suspense } from "react";
 
 interface WorkloadPageProps {
   params: Promise<{ boardId: string }>;
@@ -21,8 +22,7 @@ interface WorkloadPageProps {
 export async function generateMetadata({ params }: WorkloadPageProps) {
   const { boardId } = await params;
   const ctx = await getTenantContext();
-  const dal = await createDAL(ctx);
-  try {
+  const dal = await createDAL(ctx);  try {
     const board = await dal.boards.findUnique(boardId, { select: { title: true } });
     return { title: `Workload — ${board?.title ?? "Board"} — Nexus` };
   } catch {
@@ -33,10 +33,23 @@ export async function generateMetadata({ params }: WorkloadPageProps) {
 export default async function WorkloadPage({ params }: WorkloadPageProps) {
   const { boardId } = await params;
   const ctx = await getTenantContext();
+  // Board-level ACL: only members (and above) of the owning org may view workload.
+  await requireRole("MEMBER", ctx);
   const dal = await createDAL(ctx);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let board: any;
+  type BoardWithLists = Awaited<ReturnType<typeof dal.boards.findUnique>> & {
+    lists: Array<{
+      id: string; title: string; order: string;
+      cards: Array<{
+        id: string; title: string; order: string; listId: string;
+        priority?: string | null; dueDate?: Date | null;
+        coverColor?: string | null; coverImageUrl?: string | null;
+        assignee?: { name: string; imageUrl: string | null } | null;
+      }>;
+    }>;
+  };
+
+  let board: BoardWithLists | null = null;
   try {
     board = await dal.boards.findUnique(boardId, {
       include: {
@@ -52,7 +65,7 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
           },
         },
       },
-    });
+    }) as BoardWithLists | null;
   } catch (err) {
     // dal.boards.findUnique returns null for missing boards (handled by if (!board) notFound()
     // below) — this catch only handles unexpected DB/permission/runtime exceptions.
@@ -85,7 +98,9 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
       {/* Workload view */}
       <main className="max-w-7xl mx-auto px-6 py-6">
         <ErrorBoundary>
-          <WorkloadView boardId={boardId} lists={board.lists} />
+          <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>}>
+            <WorkloadView boardId={boardId} lists={board.lists} />
+          </Suspense>
         </ErrorBoundary>
       </main>
     </div>

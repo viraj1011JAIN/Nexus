@@ -60,7 +60,8 @@ async function assignUserHandler(data: z.infer<typeof AssignUserSchema>) {
   // Fire MEMBER_ASSIGNED event for automations + webhooks (TASK-019) — fire-and-forget
   // Guard: only emit when boardId is known so the event has valid routing data.
   if (card.list?.boardId) {
-    void emitCardEvent(
+    // emitCardEvent returns void and handles all internal errors; no .catch() needed.
+    emitCardEvent(
       {
         type: "MEMBER_ASSIGNED",
         orgId: ctx.orgId,
@@ -69,7 +70,7 @@ async function assignUserHandler(data: z.infer<typeof AssignUserSchema>) {
         context: { assigneeId: data.assigneeId },
       },
       { cardId: data.cardId, cardTitle: card.title, assigneeId: data.assigneeId, orgId: ctx.orgId }
-    ).catch((err) => console.error("[assign-user] emitCardEvent failed", err));
+    );
   }
 
   return { data: card };

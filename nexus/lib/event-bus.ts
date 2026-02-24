@@ -24,58 +24,84 @@ const TRIGGER_TO_WEBHOOK: Partial<Record<AutomationEvent["type"], string>> = {
   CARD_TITLE_CONTAINS:  "card.updated",
 };
 
-export async function emitCardEvent(
+// Allowlisted keys from AutomationEvent.context that are safe to forward to webhooks.
+// Prevents accidental leakage of internal-only context properties to external receivers.
+const CONTEXT_WEBHOOK_ALLOWLIST = [
+  "fromListId", "toListId", "labelId", "assigneeId", "priority", "dueDate", "cardTitle",
+] as const;
+
+/**
+ * Emit a card event fire-and-forget: schedules automation + webhook delivery and
+ * returns immediately. Never throws — any errors are caught and logged internally.
+ */
+export function emitCardEvent(
   event: AutomationEvent,
   webhookData?: Record<string, unknown>
-): Promise<void> {
+): void {
   const webhookEvent = TRIGGER_TO_WEBHOOK[event.type];
-  // Always merge: context fields first, then caller-supplied data, then explicit
-  // identifiers — so cardId/boardId/type can never be accidentally omitted.
+
+  // Build webhook payload from an explicit allowlist of context keys to avoid
+  // forwarding internal-only fields to external webhook receivers.
+  const safeContext: Record<string, unknown> = {};
+  if (event.context) {
+    for (const key of CONTEXT_WEBHOOK_ALLOWLIST) {
+      if (key in event.context) safeContext[key] = (event.context as Record<string, unknown>)[key];
+    }
+  }
   const payload: Record<string, unknown> = {
-    ...event.context,
+    ...safeContext,
     ...(webhookData ?? {}),
     cardId: event.cardId,
     boardId: event.boardId,
-    type: event.type,
+    // Use the outbound webhook event name (e.g. "card.created") as the type discriminator
+    // so external consumers see a stable, documented event name rather than an internal
+    // trigger identifier (e.g. "CARD_CREATED").
+    type: webhookEvent ?? event.type,
   };
 
-  // Automations and webhooks are fully independent — run in parallel
-  const results = await Promise.allSettled([
+  // Fire-and-forget: do not block the calling server action on automation/webhook I/O.
+  void Promise.allSettled([
     runAutomations(event),
     // Only fire webhooks when there is a mapped event name for this trigger type
     webhookEvent
       ? fireWebhooks(event.orgId, webhookEvent, payload)
       : Promise.resolve(),
-  ]);
+  ]).then((results) => {
+    // Log any rejections so they are observable (engine functions should not reject,
+    // but this guards against unexpected throws).
+    const [automationResult, webhookResult] = results;
 
-  // Log any rejections so they are observable (engine functions should not reject,
-  // but this guards against unexpected throws)
-  const [automationResult, webhookResult] = results;
-  if (automationResult.status === "rejected") {
-    console.error(
-      "[EventBus] runAutomations rejected unexpectedly",
-      {
-        reason: automationResult.reason,
+    if (automationResult.status === "rejected") {
+      // Sanitize: log only a short message snippet, never the full reason object
+      // which may contain PII, user data, or stack traces with internal paths.
+      const msgSnippet =
+        automationResult.reason instanceof Error
+          ? automationResult.reason.message.slice(0, 120)
+          : String(automationResult.reason).slice(0, 120);
+      console.error("[EventBus] runAutomations rejected unexpectedly", {
+        msgSnippet,
         eventType: event.type,
         cardId: event.cardId,
         orgId: event.orgId,
-      }
-    );
-  }
-  if (webhookResult.status === "rejected") {
-    // Compute payload size safely — JSON.stringify can throw on circular refs / BigInt
-    let safePayloadSize: number;
-    try { safePayloadSize = JSON.stringify(payload).length; } catch { safePayloadSize = -1; }
-    console.error(
-      "[EventBus] fireWebhooks rejected unexpectedly",
-      {
-        reason: webhookResult.reason,
+      });
+    }
+
+    if (webhookResult.status === "rejected") {
+      const msgSnippet =
+        webhookResult.reason instanceof Error
+          ? webhookResult.reason.message.slice(0, 120)
+          : String(webhookResult.reason).slice(0, 120);
+      // Compute payload size safely — JSON.stringify can throw on circular refs / BigInt
+      let safePayloadSize: number;
+      try { safePayloadSize = JSON.stringify(payload).length; } catch { safePayloadSize = -1; }
+      console.error("[EventBus] fireWebhooks rejected unexpectedly", {
+        msgSnippet,
         webhookEvent,
         cardId: event.cardId,
         orgId: event.orgId,
-        // Omit full payload to avoid logging PII / free-form content
+        // Omit full payload to avoid logging PII / free-form card content
         payloadSize: safePayloadSize,
-      }
-    );
-  }
+      });
+    }
+  });
 }

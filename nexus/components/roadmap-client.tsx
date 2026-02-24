@@ -16,7 +16,7 @@ import {
   Target,
   Layers,
   LayoutList,
-  GanttChart,
+  ChartGantt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,7 @@ import {
   createEpic,
   updateEpic,
 } from "@/actions/roadmap-actions";
-import { format, differenceInDays, isPast, startOfMonth, endOfMonth, addMonths, eachMonthOfInterval, min as dateMin, max as dateMax } from "date-fns";
+import { format, differenceInDays, isPast, startOfMonth, endOfMonth, addMonths, eachMonthOfInterval, min as dateMin, max as dateMax, parseISO } from "date-fns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,11 +151,11 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
   // Collect all dates to derive the visible range
   const allDates: Date[] = [];
   for (const init of initiatives) {
-    if (init.startDate) allDates.push(new Date(init.startDate));
-    if (init.endDate)   allDates.push(new Date(init.endDate));
+    if (init.startDate) allDates.push(typeof init.startDate === "string" ? parseISO(init.startDate) : init.startDate);
+    if (init.endDate)   allDates.push(typeof init.endDate === "string" ? parseISO(init.endDate) : init.endDate);
     for (const epic of init.epics) {
-      if (epic.startDate) allDates.push(new Date(epic.startDate));
-      if (epic.dueDate)   allDates.push(new Date(epic.dueDate));
+      if (epic.startDate) allDates.push(typeof epic.startDate === "string" ? parseISO(epic.startDate) : epic.startDate);
+      if (epic.dueDate)   allDates.push(typeof epic.dueDate === "string" ? parseISO(epic.dueDate) : epic.dueDate);
     }
   }
 
@@ -176,12 +176,16 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
 
   /** Convert a date to a left-offset % */
   const toPct = (d: Date | string) =>
-    Math.max(0, Math.min(100, (differenceInDays(new Date(d), rangeStart) / totalDays) * 100));
+    Math.max(0, Math.min(100, (differenceInDays(typeof d === "string" ? parseISO(d) : d, rangeStart) / totalDays) * 100));
 
-  /** Convert a duration (days) to a width % */
+  /** Convert a duration (days) to a width % — returns 0 for invalid/inverted ranges */
   const toWidthPct = (start: Date | string, end: Date | string) => {
-    const days = differenceInDays(new Date(end), new Date(start));
-    return Math.max(0.5, (days / totalDays) * 100);
+    const days = differenceInDays(
+      typeof end   === "string" ? parseISO(end)   : end,
+      typeof start === "string" ? parseISO(start) : start,
+    );
+    if (days <= 0) return 0;   // inverted or zero-length range — skip rendering
+    return (days / totalDays) * 100;
   };
 
   return (
@@ -526,7 +530,7 @@ export function RoadmapClient() {
               className="rounded-none h-8 px-3 gap-1.5 border-l"
               onClick={() => setViewMode("gantt")}
             >
-              <GanttChart className="h-3.5 w-3.5" /> Timeline
+              <ChartGantt className="h-3.5 w-3.5" /> Timeline
             </Button>
           </div>
           <Button onClick={() => setShowCreateInit(true)} className="gap-1">

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Paperclip, Trash2, Download, FileText, ImageIcon, File, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { type AttachmentDto } from "@/actions/attachment-actions";
 
@@ -150,7 +150,9 @@ export function FileAttachment({ cardId, boardId, initialAttachments = [], onAtt
                 <p className="text-sm font-medium truncate">{att.fileName}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatBytes(att.fileSize)} · {att.uploadedByName} ·{" "}
-                  {formatDistanceToNow(att.createdAt, { addSuffix: true })}
+                  {isValid(att.createdAt)
+                    ? formatDistanceToNow(att.createdAt, { addSuffix: true })
+                    : "—"}
                 </p>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">

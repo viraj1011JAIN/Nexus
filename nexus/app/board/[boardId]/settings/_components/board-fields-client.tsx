@@ -121,13 +121,14 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
     try {
       const result = await updateCustomField(field.id, { isRequired: !field.isRequired });
       if (result.error) { toast.error(result.error); return; }
-      // Flip using current prev value to avoid stale-closure polarity bugs
+      // Use the server-returned value as the source of truth rather than locally
+      // inverting, to avoid stale-closure polarity bugs when rapid toggling occurs.
       setFields((prev) =>
-        prev.map((f) => {
-          if (f.id !== field.id) return f;
-          const current = prev.find((p) => p.id === field.id);
-          return { ...f, isRequired: !(current?.isRequired ?? f.isRequired) };
-        })
+        prev.map((f) =>
+          f.id === field.id
+            ? { ...f, isRequired: result.data?.isRequired ?? !field.isRequired }
+            : f
+        )
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update field.");
@@ -343,14 +344,18 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancel</AlertDialogCancel>
+            {/* Use a plain Button rather than AlertDialogAction so the AlertDialog does NOT
+                auto-close on click. This lets us show the "Deleting…" spinner state and only
+                close the dialog ourselves after the server action completes. */}
+            <Button
+              variant="destructive"
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
               disabled={deleting}
               onClick={() => deleteTarget && handleDelete(deleteTarget)}
             >
               {deleting ? "Deleting…" : "Delete Field"}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

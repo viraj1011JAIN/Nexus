@@ -34,9 +34,12 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
     startTransition(async () => {
       const result = await getSharedBoardData(token, password);
       if (result.error) {
-        // Use the structured error code (set by getSharedBoardData) to determine message.
-        // Avoid surfacing raw server error text in the UI — log it instead.
-        const isPasswordError = result.code === "INVALID_PASSWORD" && password.length > 0;
+        // The shared board page only renders PasswordGate when the token is valid and
+        // password-protected, so any error here means the password was wrong.
+        // Both wrong-password and invalid-token share the INVALID_TOKEN code — in this
+        // context, treat any error as an incorrect password since the token was already
+        // validated server-side before the gate was rendered.
+        const isPasswordError = result.code === "INVALID_TOKEN" && password.length > 0;
         if (process.env.NODE_ENV !== "production") {
           console.error("[PasswordGate] access error code:", result.code);
         }
@@ -90,6 +93,7 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
               <Input
+                id="password-input"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -98,6 +102,7 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
                 autoComplete="current-password"
                 className={error ? "border-destructive focus-visible:ring-destructive" : ""}
                 disabled={isPending}
+                aria-describedby={error ? "password-error" : undefined}
               />
               <button
                 type="button"
@@ -114,7 +119,7 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
             </div>
 
             {error && (
-              <p className="text-sm text-destructive" role="alert">
+              <p id="password-error" className="text-sm text-destructive" role="alert" aria-live="polite">
                 {error}
               </p>
             )}

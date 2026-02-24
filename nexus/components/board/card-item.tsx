@@ -104,7 +104,7 @@ export const CardItem = ({
             "absolute top-1.5 left-1.5 z-20 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",
             isSelected
               ? "bg-primary border-primary"
-              : "bg-white/90 border-slate-300 group-hover:border-primary"
+              : "bg-white/90 dark:bg-slate-800/90 border-slate-300 group-hover:border-primary"
           )}
           onClick={(e) => { e.stopPropagation(); toggleCard(data.id); }}
           onPointerDown={(e) => e.stopPropagation()}

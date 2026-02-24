@@ -333,7 +333,14 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 
     case "SET_DUE_DATE_OFFSET": {
       const offsetDays = action.daysOffset ?? 0;
-      const base = card.dueDate ? new Date(card.dueDate) : new Date();
+      // Requires an existing due date as the reference point. Without one, applying an
+      // offset of 0 would silently set dueDate to the current time, which is unexpected.
+      // Skip entirely when there is no existing due date to offset from.
+      if (!card.dueDate) {
+        console.warn("[AutomationEngine] SET_DUE_DATE_OFFSET skipped: card has no existing dueDate to offset from");
+        return;
+      }
+      const base = new Date(card.dueDate);
       const newDate = new Date(base.getTime() + offsetDays * 24 * 60 * 60 * 1000);
       await db.card.update({
         where: { id: event.cardId },
@@ -371,9 +378,20 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 
     case "SEND_NOTIFICATION": {
       if (!action.notificationMessage || !card.assigneeId) return;
-      // card.assigneeId stores the DB user.id (set by ASSIGN_MEMBER which stores action.assigneeId
-      // directly). Query by primary key, not by clerkUserId.
-      const assignedUser = await db.user.findFirst({
+      const systemUserId = process.env.SYSTEM_USER_ID;
+      if (!systemUserId) {
+        // Without a dedicated automation actor we would fall back to using the
+        // assignee's own id as actorId, causing the user to receive a notification
+        // from themselves. Skip rather than self-notify.
+        console.warn(
+          "[AutomationEngine] SEND_NOTIFICATION skipped: SYSTEM_USER_ID env var is not set. "
+          + "Create a dedicated automation user and set its DB id in SYSTEM_USER_ID."
+        );
+        return;
+      }
+      // card.assigneeId stores the DB user.id. Use findUnique (primary key lookup)
+      // instead of findFirst to enforce uniqueness and avoid unnecessary table scans.
+      const assignedUser = await db.user.findUnique({
         where: { id: card.assigneeId },
         select: { id: true, name: true },
       });
@@ -388,9 +406,7 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
           entityType: "CARD",
           entityId: event.cardId,
           entityTitle: card.title,
-          // actorId: prefer a dedicated system/automation user if configured;
-          // fall back to the assignee's own id to satisfy the non-nullable FK.
-          actorId: process.env.SYSTEM_USER_ID ?? assignedUser.id,
+          actorId: systemUserId,
           actorName: "Automation",
         },
       });

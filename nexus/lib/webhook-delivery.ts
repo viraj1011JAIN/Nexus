@@ -263,8 +263,8 @@ async function deliverSingle(
     cb: (err: NodeJS.ErrnoException | null, address: string, family: number) => void
   ) => cb(null, urlCheck.resolvedIp, pinnedFamily);
   const agent = isHttps
-    ? new https.Agent({ lookup: pinnedLookup })
-    : new http.Agent({ lookup: pinnedLookup });
+    ? new https.Agent({ lookup: pinnedLookup, keepAlive: false })
+    : new http.Agent({ lookup: pinnedLookup, keepAlive: false });
 
   try {
     const sig = sign(body, webhook.secret);

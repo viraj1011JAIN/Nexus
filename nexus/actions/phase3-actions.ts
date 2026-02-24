@@ -96,11 +96,12 @@ export const updateCardPriority = createSafeAction(
 
     revalidatePath(`/board/${boardId}`);
 
-    // Fire PRIORITY_CHANGED event for automations + webhooks (TASK-019) — fire-and-forget
-    void emitCardEvent(
+    // Fire PRIORITY_CHANGED event for automations + webhooks (TASK-019) — fire-and-forget.
+    // emitCardEvent returns void and handles all internal errors; no .catch() needed.
+    emitCardEvent(
       { type: "PRIORITY_CHANGED", orgId, boardId, cardId: id, context: { priority } },
       { cardId: id, cardTitle: updated.title, priority, boardId, orgId }
-    ).catch((err) => console.error("[update-priority] emitCardEvent failed", err));
+    );
 
     return { data: updated };
   }
