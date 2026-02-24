@@ -17,6 +17,7 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -64,7 +65,7 @@ export default function RootLayout({
           {/* Viewport optimization for better mobile performance */}
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         </head>
-        <body className={inter.className} suppressHydrationWarning>
+        <body className={`${inter.variable} ${inter.className} antialiased`} suppressHydrationWarning>
           {/* Skip navigation link — keyboard / screen-reader UX (TASK-036) */}
           <a
             href="#main-content"

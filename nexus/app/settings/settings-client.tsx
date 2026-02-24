@@ -64,7 +64,7 @@ function ThemeButton({
         "absolute inset-0 opacity-0 transition-opacity duration-500",
         isActive && "opacity-100"
       )}>
-        <div className="absolute inset-0 bg-linear-to-br from-[#7C3AED]/10 via-[#A855F7]/5 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-br from-primary/10 via-primary/5 to-transparent" />
       </div>
 
       {/* Icon Container */}
@@ -146,7 +146,7 @@ function ToggleSwitch({
         <div className={cn(
           "w-11 h-6 rounded-full transition-all duration-200 relative",
           checked 
-            ? "bg-linear-to-r from-[#7C3AED] to-[#A855F7]" 
+            ? "gradient-brand" 
             : "bg-muted"
         )}>
           <motion.div
@@ -232,11 +232,11 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
       >
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <div className="relative shrink-0">
-            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl gradient-brand flex items-center justify-center">
               <SettingsIcon className="h-6 w-6 text-white" />
             </div>
             <motion.div
-              className="absolute -inset-1 bg-linear-to-br from-[#7C3AED] to-[#A855F7] rounded-xl opacity-20 blur-lg"
+              className="absolute -inset-1 gradient-brand rounded-xl opacity-20 blur-lg"
               animate={{ opacity: [0.2, 0.4, 0.2] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
@@ -505,7 +505,7 @@ export default function SettingsClient({ initialPreferences }: SettingsClientPro
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-linear-to-r from-[#7C3AED] to-[#A855F7] hover:brightness-110 text-white shadow-[0_2px_8px_rgba(124,58,237,0.25)] hover:shadow-[0_4px_12px_rgba(124,58,237,0.35)] font-medium px-6"
+          className="gradient-brand hover:brightness-110 text-white shadow-glow font-medium px-6"
         >
           {isSaving ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />

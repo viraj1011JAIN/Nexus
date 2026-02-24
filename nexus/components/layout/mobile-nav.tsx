@@ -45,11 +45,11 @@ export const MobileNav = () => {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-md border-b border-border z-50 flex items-center justify-between px-4 transition-all duration-200">
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
-            <div className="w-4 h-4 rounded bg-white/30 backdrop-blur-sm" />
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-violet-700 to-purple-800 flex items-center justify-center shadow-md">
+            <span className="text-white font-bold text-[15px] leading-none select-none">N</span>
           </div>
-          <span className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <span className="text-[15px] font-semibold text-foreground tracking-tight">
             Nexus
           </span>
         </Link>
@@ -58,12 +58,12 @@ export const MobileNav = () => {
           <UserButton afterSignOutUrl="/sign-in" />
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
             {isOpen ? (
-              <X className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+              <X className="h-5 w-5 text-foreground" />
             ) : (
-              <Menu className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+              <Menu className="h-5 w-5 text-foreground" />
             )}
           </button>
         </div>
@@ -99,7 +99,7 @@ export const MobileNav = () => {
               <div className="p-6 space-y-8">
                 {/* Organization Switcher */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Organization
                   </p>
                   <OrganizationSwitcher
@@ -118,7 +118,7 @@ export const MobileNav = () => {
 
                 {/* Navigation Links */}
                 <div className="pt-2">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Navigation
                   </p>
                   <nav className="space-y-1">
@@ -130,13 +130,13 @@ export const MobileNav = () => {
                           href={route.href}
                           onClick={closeMenu}
                           className={cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 touch-manipulation active:scale-98 min-h-[48px]",
+                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 touch-manipulation min-h-[48px]",
                             route.active
-                              ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30"
-                              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700"
+                              ? "gradient-brand text-white shadow-md"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
                           )}
                         >
-                          <Icon className="h-5 w-5" />
+                          <Icon className="h-5 w-5 shrink-0" />
                           <span className="text-[15px] font-medium">{route.label}</span>
                         </Link>
                       );

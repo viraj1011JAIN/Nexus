@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, LayoutGrid, Layers, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -27,14 +27,14 @@ interface DashboardBoard {
   cardCount: number;
 }
 
-// Modern, bold gradient colors for board icons
-const boardColors = [
-  "from-purple-600 to-indigo-600",
-  "from-pink-600 to-rose-600",
-  "from-blue-600 to-cyan-600",
-  "from-emerald-600 to-green-600",
-  "from-orange-600 to-amber-600",
-  "from-red-600 to-pink-600",
+// Rich gradient palettes for board cover fallbacks
+const boardGradients = [
+  { from: "from-violet-600",  to: "to-purple-700",  text: "text-violet-100"  },
+  { from: "from-blue-500",    to: "to-indigo-600",  text: "text-blue-100"    },
+  { from: "from-rose-500",    to: "to-pink-600",    text: "text-rose-100"    },
+  { from: "from-emerald-500", to: "to-teal-600",    text: "text-emerald-100" },
+  { from: "from-orange-500",  to: "to-red-600",     text: "text-orange-100"  },
+  { from: "from-cyan-500",    to: "to-blue-600",    text: "text-cyan-100"    },
 ];
 
 // Helper function to format dates safely
@@ -147,100 +147,108 @@ export function BoardList() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-muted-foreground text-sm">Loading boards...</div>
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="h-4 w-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+          <span className="text-sm">Loading boards...</span>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
-            Boards
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {boards.length} {boards.length === 1 ? "workspace" : "workspaces"}
-          </p>
+      <div className="max-w-6xl mx-auto p-6 sm:p-8 lg:p-10">
+
+        {/* ── Page Header ─────────────────────────────────────────────── */}
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              My Boards
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {boards.length === 0
+                ? "No boards yet — create your first below"
+                : `${boards.length} board${boards.length !== 1 ? "s" : ""} in your workspace`}
+            </p>
+          </div>
+          {boards.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full border border-border">
+              <LayoutGrid className="h-3 w-3" />
+              {boards.length}
+            </span>
+          )}
         </div>
 
-        {/* Create Board */}
-        <form onSubmit={handleCreateBoard} className="mb-8">
-          {/* Selected photo preview */}
+        {/* ── Create Board Form ────────────────────────────────────────── */}
+        <form onSubmit={handleCreateBoard} className="mb-10">
+
+          {/* Photo preview banner */}
           {selectedPhoto && (
             <div
-              className="w-full max-w-2xl h-24 rounded-lg mb-2 bg-cover bg-center relative overflow-hidden"
+              className="w-full max-w-2xl h-24 rounded-xl mb-2 bg-cover bg-center relative overflow-hidden border border-border"
               style={{ backgroundImage: `url(${selectedPhoto.thumbUrl})` }}
             >
-              <div className="absolute inset-0 bg-black/20" />
-              <p className="absolute bottom-1.5 right-2 text-[10px] text-white/70">
+              <div className="absolute inset-0 bg-black/25" />
+              <p className="absolute bottom-2 right-2.5 text-[10px] text-white/80">
                 Photo by{" "}
-                <a
-                  href={selectedPhoto.userLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
+                <a href={selectedPhoto.userLink} target="_blank" rel="noopener noreferrer" className="underline">
                   {selectedPhoto.userName}
-                </a>{" "}
-                on{" "}
-                <a
-                  href="https://unsplash.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  Unsplash
-                </a>
+                </a>{" "}on{" "}
+                <a href="https://unsplash.com" target="_blank" rel="noopener noreferrer" className="underline">Unsplash</a>
               </p>
             </div>
           )}
 
-          {/* Main create row */}
+          {/* Input row */}
           <div className="flex gap-2 max-w-2xl">
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Create new board..."
-              className="flex-1 px-4 py-2.5 text-sm bg-muted text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              placeholder="Name your new board..."
+              className="flex-1 px-4 py-2.5 text-sm bg-card text-foreground placeholder:text-muted-foreground rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-sm"
               disabled={isPending}
               autoComplete="off"
             />
-            <Button type="submit" disabled={isPending} size="default">
+            <Button
+              type="submit"
+              disabled={isPending}
+              size="default"
+              className="gradient-brand text-white shadow-sm hover:opacity-90 border-0 font-medium"
+            >
               {isPending ? (
-                <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
                   <Plus className="h-4 w-4" />
-                  <span className="ml-2">New Board</span>
+                  <span className="ml-1.5">New Board</span>
                 </>
               )}
             </Button>
             <Button
               type="button"
               variant="outline"
-              size="default"
+              size="icon"
               onClick={() => setShowAdvanced((v) => !v)}
               aria-label="Toggle advanced options"
+              className="shrink-0"
             >
               {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </div>
 
-          {/* Advanced options: background + template */}
+          {/* Advanced options */}
           {showAdvanced && (
-            <div className="mt-3 max-w-2xl p-4 rounded-lg border bg-muted/30 space-y-3">
+            <div className="mt-3 max-w-2xl p-4 rounded-xl border border-border bg-card space-y-4 shadow-sm">
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Background Photo</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Background Photo</p>
                 <UnsplashPicker
                   selectedId={selectedPhoto?.id}
                   onSelect={(photo) => setSelectedPhoto(photo)}
                   onClear={() => setSelectedPhoto(null)}
                 />
               </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Start from Template</p>
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Start from Template</p>
                 <TemplatePicker
                   selectedId={selectedTemplate?.id}
                   onSelect={(tmpl) => setSelectedTemplate(tmpl)}
@@ -251,91 +259,96 @@ export function BoardList() {
           )}
         </form>
 
-        {/* Boards Grid */}
+        {/* ── Boards Grid ──────────────────────────────────────────────── */}
         {boards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-6 bg-card rounded-lg">
-            <div className="w-12 h-12 mb-4 rounded-lg bg-muted flex items-center justify-center">
-              <Plus className="h-6 w-6 text-muted-foreground" />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-20 px-6 border border-dashed border-border rounded-2xl bg-card"
+          >
+            <div className="w-14 h-14 mb-5 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <LayoutGrid className="h-7 w-7 text-primary" />
             </div>
-            <h3 className="text-base font-semibold text-foreground mb-1">
+            <h3 className="text-base font-semibold text-foreground mb-1.5">
               No boards yet
             </h3>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Create your first board to start organizing
+            <p className="text-sm text-muted-foreground text-center max-w-xs leading-relaxed">
+              Create your first board above to start organizing your work.
             </p>
-          </div>
+          </motion.div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {boards.map((board, index) => (
-              <motion.div
-                key={board.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="group"
-              >
-                <Link href={`/board/${board.id}`}>
-                  <div className="bg-card rounded-lg hover:shadow-md hover:ring-2 hover:ring-primary/20 transition-all duration-200 overflow-hidden">
-                    {/* Board Header — image when available, gradient fallback */}
-                    {board.imageThumbUrl ? (
-                      <div
-                        className="h-24 w-full bg-cover bg-center"
-                        style={{ backgroundImage: `url(${board.imageThumbUrl})` }}
-                      />
-                    ) : (
-                      <div
-                        className={`h-24 w-full bg-linear-to-br ${
-                          boardColors[index % boardColors.length]
-                        } flex items-center justify-center`}
-                      >
-                        <span className="text-white/25 font-bold text-6xl select-none">
-                          {board.title.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+            {boards.map((board, index) => {
+              const grad = boardGradients[index % boardGradients.length];
+              return (
+                <motion.div
+                  key={board.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.25 }}
+                  className="group"
+                >
+                  <Link href={`/board/${board.id}`}>
+                    <div className="bg-card rounded-xl border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 overflow-hidden">
 
-                    {/* Title & Actions */}
-                    <div className="p-4 flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                          {board.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Updated {formatRelativeDate(board.updatedAt)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (confirm(`Delete "${board.title}"?`)) {
-                            handleDeleteBoard(board.id, board.title);
-                          }
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded transition-all"
-                        disabled={isPending}
-                        aria-label={`Delete board ${board.title}`}
-                        title={`Delete board ${board.title}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                      {/* Board cover — photo or gradient */}
+                      {board.imageThumbUrl ? (
+                        <div
+                          className="h-[104px] w-full bg-cover bg-center"
+                          style={{ backgroundImage: `url(${board.imageThumbUrl})` }}
+                        />
+                      ) : (
+                        <div className={`h-[104px] w-full bg-linear-to-br ${grad.from} ${grad.to} flex items-end p-3`}>
+                          <span className={`text-[11px] font-semibold uppercase tracking-widest ${grad.text} opacity-70 select-none`}>
+                            {board.title.substring(0, 12)}
+                          </span>
+                        </div>
+                      )}
 
-                    {/* Stats */}
-                    <div className="px-4 pb-4 flex items-center gap-3 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        <span>{board.listCount} {board.listCount === 1 ? "list" : "lists"}</span>
+                      {/* Title row */}
+                      <div className="px-4 pt-3.5 pb-0 flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-[14px] text-foreground truncate group-hover:text-primary transition-colors leading-snug">
+                            {board.title}
+                          </h3>
+                          <p className="text-[11.5px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5 shrink-0" />
+                            {formatRelativeDate(board.updatedAt)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (confirm(`Delete "${board.title}"?`)) {
+                              handleDeleteBoard(board.id, board.title);
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 mt-0.5 p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground/60 hover:text-destructive transition-all shrink-0"
+                          disabled={isPending}
+                          aria-label={`Delete board ${board.title}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                        <span>{board.cardCount} {board.cardCount === 1 ? "card" : "cards"}</span>
+
+                      {/* Stats footer */}
+                      <div className="px-4 py-3 mt-3 border-t border-border/60 flex items-center gap-3 text-[11.5px] text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Layers className="h-3 w-3 text-primary/70" />
+                          <span>{board.listCount} {board.listCount === 1 ? "list" : "lists"}</span>
+                        </div>
+                        <div className="w-px h-3 bg-border" />
+                        <div className="flex items-center gap-1.5">
+                          <LayoutGrid className="h-3 w-3 text-muted-foreground/60" />
+                          <span>{board.cardCount} {board.cardCount === 1 ? "card" : "cards"}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>
