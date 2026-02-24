@@ -1,10 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Layout, Settings, Activity, CreditCard, Plus, Moon, Sun, Monitor } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
+
+const OrganizationSwitcher = dynamic(
+  () => import("@clerk/nextjs").then((m) => m.OrganizationSwitcher),
+  { ssr: false }
+);
+const UserButton = dynamic(
+  () => import("@clerk/nextjs").then((m) => m.UserButton),
+  { ssr: false }
+);
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";

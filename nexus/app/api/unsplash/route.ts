@@ -4,9 +4,13 @@ import { createApi } from "unsplash-js";
 
 // Unsplash API client (server-side only — access key never exposed to client)
 function getUnsplashClient() {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!accessKey) {
-    throw new Error("UNSPLASH_ACCESS_KEY environment variable is not set");
+  // Support both the server-only var and the NEXT_PUBLIC_ alias for flexibility
+  const accessKey =
+    process.env.UNSPLASH_ACCESS_KEY ??
+    process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
+
+  if (!accessKey || accessKey === "your_access_key_here") {
+    return null;
   }
   // `fetch` is available globally in Node 18+ / Next.js edge runtime
   return createApi({ accessKey, fetch: globalThis.fetch });
@@ -49,6 +53,18 @@ export async function GET(req: NextRequest) {
 
   try {
     const unsplash = getUnsplashClient();
+
+    // Key not configured — return an empty but valid response so the UI degrades gracefully
+    if (!unsplash) {
+      return NextResponse.json({
+        photos: [],
+        total: 0,
+        totalPages: 0,
+        page,
+        unconfigured: true,
+      });
+    }
+
     const result = await unsplash.search.getPhotos({
       query,
       page,

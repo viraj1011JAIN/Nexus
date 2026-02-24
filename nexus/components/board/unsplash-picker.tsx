@@ -29,6 +29,7 @@ export function UnsplashPicker({ onSelect, onClear, selectedId }: UnsplashPicker
   const [photos, setPhotos] = useState<UnsplashPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unconfigured, setUnconfigured] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +38,7 @@ export function UnsplashPicker({ onSelect, onClear, selectedId }: UnsplashPicker
   const fetchPhotos = useCallback(async (q: string, p: number) => {
     setLoading(true);
     setError(null);
+    setUnconfigured(false);
     try {
       const res = await fetch(
         `/api/unsplash?query=${encodeURIComponent(q)}&page=${p}`
@@ -44,6 +46,11 @@ export function UnsplashPicker({ onSelect, onClear, selectedId }: UnsplashPicker
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Failed to load photos");
+        return;
+      }
+      if (json.unconfigured) {
+        setUnconfigured(true);
+        setPhotos([]);
         return;
       }
       setPhotos(p === 1 ? json.photos : (prev) => [...prev, ...json.photos]);
@@ -181,6 +188,16 @@ export function UnsplashPicker({ onSelect, onClear, selectedId }: UnsplashPicker
             <div className="flex-1 overflow-y-auto p-4">
               {error && (
                 <p className="text-sm text-destructive text-center py-8">{error}</p>
+              )}
+              {unconfigured && (
+                <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+                  <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                  <p className="text-sm font-medium text-muted-foreground">Unsplash not configured</p>
+                  <p className="text-xs text-muted-foreground/70 max-w-xs">
+                    Add your <code className="font-mono bg-muted px-1 rounded">UNSPLASH_ACCESS_KEY</code> to{" "}
+                    <code className="font-mono bg-muted px-1 rounded">.env</code> to enable photo search.
+                  </p>
+                </div>
               )}
               {loading && photos.length === 0 && (
                 <div className="flex items-center justify-center py-16">
