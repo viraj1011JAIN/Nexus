@@ -290,57 +290,79 @@ async function deliverSingle(
     ? new https.Agent({ lookup: pinnedLookup, keepAlive: false })
     : new http.Agent({ lookup: pinnedLookup, keepAlive: false });
 
-  try {
-    const sig = sign(body, webhook.secret);
-
-    const controller = new AbortController();
-    const abortTimeout = setTimeout(() => controller.abort(), 10_000); // 10 s timeout
-
+  // ── 3-attempt exponential backoff retry ─────────────────────────────────
+  // Retry on: network errors, timeouts, and HTTP 5xx responses.
+  // Do NOT retry on HTTP 4xx (client error — retrying won't help).
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      await new Promise<void>((resolve, reject) => {
-        const proto = isHttps ? https : http;
-        const reqOptions = {
-          hostname: originalParsed.hostname, // used for TLS SNI / cert validation
-          port: Number(originalParsed.port) || (isHttps ? 443 : 80),
-          path: (originalParsed.pathname || "/") + originalParsed.search,
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Nexus-Webhook/1.0",
-            "Host": originalParsed.host,
-            "X-Nexus-Event": event,
-            "X-Nexus-Signature-256": `sha256=${sig}`,
-            "X-Nexus-Delivery": crypto.randomUUID(),
-            "Content-Length": String(Buffer.byteLength(body)),
-          },
-          agent,
-        };
+      const sig = sign(body, webhook.secret);
 
-        const req = proto.request(reqOptions, (res) => {
-          statusCode = res.statusCode ?? null;
-          success = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 300;
-          // Drain body to release the underlying socket
-          res.resume();
-          res.on("end", resolve);
-          res.on("error", reject);
+      const controller = new AbortController();
+      const abortTimeout = setTimeout(() => controller.abort(), 10_000); // 10 s timeout
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const proto = isHttps ? https : http;
+          const reqOptions = {
+            hostname: originalParsed.hostname, // used for TLS SNI / cert validation
+            port: Number(originalParsed.port) || (isHttps ? 443 : 80),
+            path: (originalParsed.pathname || "/") + originalParsed.search,
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "User-Agent": "Nexus-Webhook/1.0",
+              "Host": originalParsed.host,
+              "X-Nexus-Event": event,
+              "X-Nexus-Signature-256": `sha256=${sig}`,
+              "X-Nexus-Delivery": crypto.randomUUID(),
+              "Content-Length": String(Buffer.byteLength(body)),
+            },
+            agent,
+          };
+
+          const req = proto.request(reqOptions, (res) => {
+            statusCode = res.statusCode ?? null;
+            success = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 300;
+            // Drain body to release the underlying socket
+            res.resume();
+            res.on("end", resolve);
+            res.on("error", reject);
+          });
+
+          req.on("error", reject);
+          controller.signal.addEventListener("abort", () => {
+            req.destroy(new Error("Request timeout"));
+            reject(new Error("Request timeout"));
+          });
+
+          req.write(body);
+          req.end();
         });
+      } finally {
+        clearTimeout(abortTimeout);
+      }
 
-        req.on("error", reject);
-        controller.signal.addEventListener("abort", () => {
-          req.destroy(new Error("Request timeout"));
-          reject(new Error("Request timeout"));
-        });
-
-        req.write(body);
-        req.end();
-      });
-    } finally {
-      clearTimeout(abortTimeout);
+      // 2xx → done. 4xx → don't retry (permanent client error).
+      if (success || (statusCode !== null && statusCode < 500)) break;
+    } catch (err) {
+      if (attempt === MAX_ATTEMPTS - 1) {
+        // All attempts exhausted — record as failure
+        success = false;
+        console.warn(
+          `[WebhookDelivery] Delivery failed for webhook ${webhook.id} after ${MAX_ATTEMPTS} attempt(s):`,
+          err
+        );
+        break;
+      }
     }
-  } catch (err) {
-    // Network errors, timeouts, DNS failures — record as failure
-    success = false;
-    console.warn(`[WebhookDelivery] Delivery failed for webhook ${webhook.id}:`, err);
+
+    // Exponential backoff before next attempt: 1 s, 2 s
+    const delayMs = 1_000 * (2 ** attempt);
+    console.info(
+      `[WebhookDelivery] Retrying webhook ${webhook.id} in ${delayMs}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})...`
+    );
+    await new Promise<void>((r) => setTimeout(r, delayMs));
   }
 
   const duration = Date.now() - startMs;

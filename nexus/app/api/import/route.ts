@@ -10,13 +10,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth }                     from "@clerk/nextjs/server";
-import { importFromJSON, importFromTrello } from "@/actions/import-export-actions";
+import { importFromJSON, importFromTrello, importFromJira } from "@/actions/import-export-actions";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
 const ImportSchema = z.object({
-  format: z.enum(["nexus", "trello"]),
+  format: z.enum(["nexus", "trello", "jira"]),
   data:   z.unknown(),
 });
 
@@ -39,8 +39,10 @@ export async function POST(req: NextRequest) {
 
   if (format === "nexus") {
     result = await importFromJSON(data);
-  } else {
+  } else if (format === "trello") {
     result = await importFromTrello(data);
+  } else {
+    result = await importFromJira(data as string);
   }
 
   if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });

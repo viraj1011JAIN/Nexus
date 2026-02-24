@@ -8,11 +8,21 @@ import { usePathname } from "next/navigation";
 
 const OrganizationSwitcher = dynamic(
   () => import("@clerk/nextjs").then((m) => m.OrganizationSwitcher),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-7 w-40 rounded-md bg-muted animate-pulse" />
+    ),
+  }
 );
 const UserButton = dynamic(
   () => import("@clerk/nextjs").then((m) => m.UserButton),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+    ),
+  }
 );
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

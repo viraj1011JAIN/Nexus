@@ -10,6 +10,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { authenticateApiKey, apiError } from "@/lib/api-key-auth";
+import { STRIPE_CONFIG } from "@/lib/stripe";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -65,11 +66,21 @@ export async function POST(req: NextRequest) {
   const parsed = CreateBoardSchema.safeParse(body);
   if (!parsed.success) return apiError(parsed.error.issues[0].message, 422);
 
-  // Enforce board limits for FREE plan
+  // Enforce plan-based board limits — reads from STRIPE_CONFIG so the limit
+  // stays in sync with the server-action path (create-board.ts).
   const org = await db.organization.findUnique({ where: { id: auth.ctx.orgId }, select: { subscriptionPlan: true } });
-  if (org?.subscriptionPlan === "FREE") {
-    const count = await db.board.count({ where: { orgId: auth.ctx.orgId } });
-    if (count >= 5) return apiError("Free plan limit: 5 boards. Upgrade to Pro.", 403);
+  if (org) {
+    const plan = org.subscriptionPlan as keyof typeof STRIPE_CONFIG.limits;
+    const boardLimit = STRIPE_CONFIG.limits[plan]?.boards ?? Infinity;
+    if (boardLimit !== Infinity) {
+      const count = await db.board.count({ where: { orgId: auth.ctx.orgId } });
+      if (count >= boardLimit) {
+        return apiError(
+          `${plan} plan limit: ${boardLimit} board${boardLimit === 1 ? "" : "s"}. Upgrade to Pro.`,
+          403
+        );
+      }
+    }
   }
 
   const board = await db.board.create({

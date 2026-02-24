@@ -52,14 +52,44 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     return { error: "Failed to update." };
   }
 
-  // Deferred event emission is registered OUTSIDE the try/catch so that an
+  // Deferred event emissions are registered OUTSIDE the try/catch so that an
   // after() registration failure cannot shadow a successfully committed update.
-  // emitCardEvent now returns Promise<void>; async callback lets after() track it.
+  // Each field change emits its own typed event so the automation engine can
+  // match triggers that check individual field transitions.
+  const cardMeta = { cardId: card!.id, cardTitle: card!.title, boardId, orgId: ctx.orgId };
+
   if (values.title) {
     after(async () => {
       await emitCardEvent(
         { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card!.id, context: { cardTitle: card!.title } },
-        { cardId: card!.id, cardTitle: card!.title, boardId, orgId: ctx.orgId }
+        cardMeta
+      );
+    });
+  }
+
+  if (values.priority !== undefined) {
+    after(async () => {
+      await emitCardEvent(
+        { type: "PRIORITY_CHANGED", orgId: ctx.orgId, boardId, cardId: card!.id, context: { priority: card!.priority } },
+        cardMeta
+      );
+    });
+  }
+
+  if ("dueDate" in values && values.dueDate !== undefined) {
+    after(async () => {
+      await emitCardEvent(
+        { type: "DUE_DATE_SET", orgId: ctx.orgId, boardId, cardId: card!.id, context: { dueDate: card!.dueDate } },
+        cardMeta
+      );
+    });
+  }
+
+  if (values.description !== undefined) {
+    after(async () => {
+      await emitCardEvent(
+        { type: "CARD_DESCRIPTION_UPDATED", orgId: ctx.orgId, boardId, cardId: card!.id, context: {} },
+        cardMeta
       );
     });
   }

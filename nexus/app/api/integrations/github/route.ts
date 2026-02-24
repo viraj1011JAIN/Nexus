@@ -3,15 +3,17 @@
  *
  * POST /api/integrations/github
  *
- * Listens for GitHub webhook events and creates/updates Nexus cards:
- *   - push       → adds a comment to cards referenced in commit messages (#CARD-ID)
- *   - pull_request opened/closed → updates card status
+ * Listens for GitHub webhook events:
+ *   - push                          → creates AuditLog entry per card referenced in commit messages (#CARD-ID)
+ *   - pull_request opened/closed    → creates AuditLog entry per referenced card
+ *   - pull_request closed + merged  → moves referenced cards to the board's Done/Complete list
  *
  * Webhook secret: GITHUB_WEBHOOK_SECRET env var
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { db }                        from "@/lib/db";
+import { generateNextOrder }          from "@/lib/lexorank";
 import crypto                        from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -69,27 +71,84 @@ export async function POST(req: NextRequest) {
   }
 
   if (event === "pull_request") {
-    const pr     = payload.pull_request as { title: string; html_url: string; state: string } | undefined;
+    const pr     = payload.pull_request as { title: string; html_url: string; state: string; merged: boolean; body?: string } | undefined;
     const action = payload.action as string | undefined;
 
     if (pr && (action === "opened" || action === "closed")) {
-      const cardIds = extractCardIds(pr.title + " " + (payload.body as string ?? ""));
-      await Promise.allSettled(
-        cardIds.map((cardId) =>
-          db.auditLog.create({
-            data: {
-              entityId:    cardId,
-              entityTitle: `GitHub PR ${action}: ${pr.title.slice(0, 80)}`,
-              entityType:  "CARD",
-              action:      action === "closed" ? "UPDATE" : "CREATE",
-              orgId:       "github-webhook",
-              userId:      "github-webhook",
-              userImage:   "",
-              userName:    "GitHub Webhook",
-            },
-          }).catch(() => null)
-        )
-      );
+      const cardIds = extractCardIds(pr.title + " " + (pr.body ?? "") + " " + (payload.body as string ?? ""));
+
+      if (action === "closed" && pr.merged) {
+        // PR merged — move referenced cards to the board's Done/Complete list
+        await Promise.allSettled(
+          cardIds.map(async (cardId) => {
+            try {
+              const card = await db.card.findUnique({
+                where: { id: cardId },
+                include: { list: { include: { board: true } } },
+              });
+              if (!card) return null;
+
+              const doneList = await db.list.findFirst({
+                where: {
+                  boardId: card.list.boardId,
+                  OR: [
+                    { title: { contains: "done",     mode: "insensitive" } },
+                    { title: { contains: "complete",  mode: "insensitive" } },
+                    { title: { contains: "merged",    mode: "insensitive" } },
+                  ],
+                },
+              });
+              if (!doneList || doneList.id === card.listId) return null;
+
+              // Place card at end of target list
+              const lastCard = await db.card.findFirst({
+                where:   { listId: doneList.id },
+                orderBy: { order: "desc" },
+                select:  { order: true },
+              });
+              const newOrder = generateNextOrder(lastCard?.order ?? null);
+
+              await db.card.update({
+                where: { id: cardId },
+                data:  { listId: doneList.id, order: newOrder },
+              });
+
+              await db.auditLog.create({
+                data: {
+                  entityId:    cardId,
+                  entityTitle: `Moved to "${doneList.title}" on PR merge: ${pr.title.slice(0, 60)}`,
+                  entityType:  "CARD",
+                  action:      "UPDATE",
+                  orgId:       card.list.board.orgId,
+                  userId:      "github-webhook",
+                  userImage:   "",
+                  userName:    "GitHub (PR merged)",
+                },
+              });
+            } catch {
+              return null;
+            }
+          })
+        );
+      } else {
+        // Opened, or closed without merge — create audit log entries only
+        await Promise.allSettled(
+          cardIds.map((cardId) =>
+            db.auditLog.create({
+              data: {
+                entityId:    cardId,
+                entityTitle: `GitHub PR ${action}: ${pr.title.slice(0, 80)}`,
+                entityType:  "CARD",
+                action:      action === "closed" ? "UPDATE" : "CREATE",
+                orgId:       "github-webhook",
+                userId:      "github-webhook",
+                userImage:   "",
+                userName:    "GitHub Webhook",
+              },
+            }).catch(() => null)
+          )
+        );
+      }
     }
     return NextResponse.json({ ok: true });
   }

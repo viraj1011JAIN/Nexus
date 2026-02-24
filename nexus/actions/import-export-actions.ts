@@ -262,3 +262,112 @@ export async function importFromTrello(payload: unknown): Promise<{ data?: { boa
   revalidatePath(`/organization/${orgId}`);
   return { data: { boardId: board.id } };
 }
+
+// ─── Import: Jira XML ──────────────────────────────────────────────────────────
+// Parses Jira RSS/XML exports (File > Export Issues > XML)
+// Expected structure: <rss><channel><item>...</item></channel></rss>
+
+function extractTag(xml: string, tag: string): string {
+  const cdataMatch = xml.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>`, "i"));
+  if (cdataMatch) return cdataMatch[1].trim();
+  const plainMatch = xml.match(new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, "i"));
+  return plainMatch ? plainMatch[1].trim() : "";
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function jiraPriorityToNexus(priority: string): "URGENT" | "HIGH" | "MEDIUM" | "LOW" {
+  const p = priority.toLowerCase();
+  if (p === "blocker" || p === "critical") return "URGENT";
+  if (p === "major"   || p === "high")     return "HIGH";
+  if (p === "minor"   || p === "low")      return "LOW";
+  return "MEDIUM";
+}
+
+function jiraStatusToList(status: string): string {
+  const s = status.toLowerCase();
+  if (s.includes("in progress") || s.includes("in_progress")) return "In Progress";
+  if (s === "done" || s === "resolved" || s === "closed")      return "Done";
+  return "To Do";
+}
+
+export async function importFromJira(
+  xmlString: string,
+): Promise<{ data?: { boardId: string }; error?: string }> {
+  const { userId, orgId } = await auth();
+  if (!userId || !orgId) return { error: "Unauthorized" };
+
+  if (typeof xmlString !== "string" || !xmlString.includes("<item")) {
+    return { error: "Invalid Jira XML export file." };
+  }
+
+  const itemMatches = [...xmlString.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
+  if (itemMatches.length === 0) return { error: "No issues found in Jira export." };
+
+  const channelTitle = extractTag(xmlString, "title") || "Jira Import";
+
+  const board = await db.board.create({
+    data: {
+      title:         `${channelTitle} (from Jira)`,
+      orgId,
+      imageId:       "jira-import",
+      imageLinkHTML: "",
+      imageUserName: "",
+    },
+  });
+
+  const listTitles = ["To Do", "In Progress", "Done"];
+  const listMap: Record<string, string> = {};
+  for (let i = 0; i < listTitles.length; i++) {
+    const list = await db.list.create({
+      data: { title: listTitles[i], boardId: board.id, order: String(i).padStart(6, "0") },
+    });
+    listMap[listTitles[i]] = list.id;
+  }
+
+  type JiraCard = { title: string; description: string; dueDate?: Date; priority: string };
+  const cardsByList: Record<string, JiraCard[]> = {
+    "To Do": [], "In Progress": [], "Done": [],
+  };
+
+  for (const match of itemMatches) {
+    const item        = match[1];
+    const title       = extractTag(item, "summary") || extractTag(item, "title") || "Untitled";
+    const rawDesc     = extractTag(item, "description");
+    const description = stripHtml(rawDesc);
+    const priority    = extractTag(item, "priority");
+    const status      = extractTag(item, "status");
+    const dueStr      = extractTag(item, "due");
+    const listName    = jiraStatusToList(status);
+
+    if (!cardsByList[listName]) continue;
+    cardsByList[listName].push({
+      title, description,
+      dueDate:  dueStr ? new Date(dueStr) : undefined,
+      priority: jiraPriorityToNexus(priority),
+    });
+  }
+
+  for (const [listName, cards] of Object.entries(cardsByList)) {
+    const listId = listMap[listName];
+    if (!listId) continue;
+    for (let ci = 0; ci < cards.length; ci++) {
+      const c = cards[ci];
+      await db.card.create({
+        data: {
+          title:       c.title,
+          description: c.description || undefined,
+          dueDate:     c.dueDate,
+          priority:    c.priority as "URGENT" | "HIGH" | "MEDIUM" | "LOW",
+          listId,
+          order:       String(ci).padStart(6, "0"),
+        },
+      });
+    }
+  }
+
+  revalidatePath(`/organization/${orgId}`);
+  return { data: { boardId: board.id } };
+}

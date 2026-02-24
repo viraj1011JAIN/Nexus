@@ -1,6 +1,6 @@
 "use client";
 
-import { ElementRef, useRef, useState } from "react";
+import { ElementRef, useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { createCard } from "@/actions/create-card";
 import { deleteList } from "@/actions/delete-list";
 import { logger } from "@/lib/logger"; 
-import { updateList } from "@/actions/update-list"; // <--- Import new action
+import { updateList } from "@/actions/update-list";
+import { suggestPriority } from "@/actions/ai-actions";
 import { CardItem } from "./card-item";
-import { Trash2 } from "lucide-react"; 
+import { Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ListWithCards = List & { cards: Card[] };
 
@@ -30,6 +32,33 @@ export const ListItem = ({
   const [isEditing, setIsEditing] = useState(false);
   const formRef = useRef<ElementRef<"form">>(null);
   const inputRef = useRef<ElementRef<"input">>(null);
+
+  // AI priority suggestion for card creation (TASK-022)
+  const [suggestedPriority, setSuggestedPriority] = useState<string | null>(null);
+  const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
+
+  const handleCardTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSuggestedPriority(null);
+    clearTimeout(debounceRef.current);
+    if (value.trim().length < 5) return;
+    debounceRef.current = setTimeout(async () => {
+      setIsLoadingSuggestion(true);
+      try {
+        const result = await suggestPriority({ title: value });
+        if (result?.data?.priority) setSuggestedPriority(result.data.priority);
+      } catch {
+        // Silent fail — suggestion is non-blocking
+      } finally {
+        setIsLoadingSuggestion(false);
+      }
+    }, 800);
+  };
 
   const {
     attributes,
@@ -182,6 +211,7 @@ export const ListItem = ({
                   <input
                     name="title"
                     placeholder="Add a card..."
+                    onChange={handleCardTitleChange}
                     className="flex-1 px-3 py-2 text-sm rounded-lg bg-muted hover:bg-accent focus:bg-accent transition-all outline-none focus:ring-2 focus:ring-primary font-medium placeholder:text-muted-foreground text-card-foreground"
                     required
                   />
@@ -189,6 +219,39 @@ export const ListItem = ({
                     +
                   </Button>
                 </div>
+
+                {/* AI Priority Suggestion Pill (TASK-022) */}
+                {isLoadingSuggestion && (
+                  <p className="text-xs text-muted-foreground mt-1 animate-pulse">✨ Thinking...</p>
+                )}
+                {suggestedPriority && !isLoadingSuggestion && (
+                  <div className="flex items-center gap-2 mt-1 text-xs">
+                    <span className="text-muted-foreground">✨ Suggested:</span>
+                    <span className={cn(
+                      "font-medium",
+                      suggestedPriority === "URGENT" && "text-red-500",
+                      suggestedPriority === "HIGH"   && "text-orange-500",
+                      suggestedPriority === "MEDIUM" && "text-yellow-500",
+                      suggestedPriority === "LOW"    && "text-green-500",
+                    )}>
+                      {suggestedPriority}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestedPriority(null)}
+                      className="text-primary underline-offset-2 hover:underline"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestedPriority(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
               </form>
         </div>
       </div>

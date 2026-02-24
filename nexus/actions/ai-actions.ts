@@ -17,7 +17,14 @@ import { db }    from "@/lib/db";
 import OpenAI    from "openai";
 import { z }     from "zod";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
+const _rawKey = process.env.OPENAI_API_KEY ?? "";
+if (!_rawKey || _rawKey.includes("REPLACE") || _rawKey.length < 20) {
+  console.error(
+    "[ai-actions] ⚠  OPENAI_API_KEY is missing or is still the placeholder value.\n" +
+    "            Add your real key to .env.local:  OPENAI_API_KEY=sk-..."
+  );
+}
+const openai = new OpenAI({ apiKey: _rawKey });
 
 const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? 50);
 const AI_MODEL       = process.env.AI_MODEL ?? "gpt-4o-mini";

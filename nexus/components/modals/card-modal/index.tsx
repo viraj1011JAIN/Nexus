@@ -20,6 +20,8 @@ import {
   Timer,
   Link2,
   Settings2,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser, useOrganization } from "@clerk/nextjs";
@@ -73,6 +75,7 @@ import {
   addReaction,
   removeReaction 
 } from "@/actions/phase3-actions";
+import { generateCardDescription } from "@/actions/ai-actions";
 import { ErrorBoundary } from "@/components/error-boundary-realtime";
 import type { CardLabel } from "@/hooks/use-optimistic-card";
 
@@ -119,6 +122,10 @@ export const CardModal = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [attachmentCount, setAttachmentCount] = useState(0);
   const [priorityOpen, setPriorityOpen] = useState(false);
+
+  // AI state (TASK-022)
+  const [aiDescLoading, setAiDescLoading] = useState(false);
+
   // Refs for keyboard-shortcut-triggered picker opens (TASK-016)
   const labelWrapperRef = useRef<HTMLDivElement>(null);
   const assigneeWrapperRef = useRef<HTMLDivElement>(null);
@@ -219,6 +226,21 @@ export const CardModal = () => {
       setCardData(card as unknown as CardWithRelations);
       setAuditLogs(logs);
       setCardLabels(cardLabelsList);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!cardData) return;
+    setAiDescLoading(true);
+    const result = await generateCardDescription({
+      title: cardData.title,
+      context: cardData.list?.title,
+    });
+    setAiDescLoading(false);
+    if (result.error) { toast.error(result.error); return; }
+    if (result.data?.description) {
+      await handleSaveDescription(result.data.description);
+      toast.success("Description generated");
     }
   };
 
@@ -778,6 +800,22 @@ export const CardModal = () => {
                           </div>
                         }
                       >
+                        {/* AI Generate button (TASK-022) */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Description</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleGenerateDescription}
+                            disabled={aiDescLoading}
+                            className="h-7 gap-1.5 text-xs text-purple-600 border-purple-200 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-800 dark:hover:bg-purple-950/30"
+                          >
+                            {aiDescLoading
+                              ? <Loader2 className="h-3 w-3 animate-spin" />
+                              : <Sparkles className="h-3 w-3" />}
+                            {aiDescLoading ? "Generating…" : "✨ Generate"}
+                          </Button>
+                        </div>
                         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                           <RichTextEditor
                             content={cardData.description || ""}
@@ -889,6 +927,7 @@ export const CardModal = () => {
                         <ChecklistsTab
                           cardId={cardData.id}
                           boardId={boardId}
+                          cardTitle={cardData.title}
                         />
                       )}
                     </motion.div>

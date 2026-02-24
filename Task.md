@@ -678,10 +678,12 @@ Create `components/board/calendar-view.tsx`. Month grid showing cards by due dat
 
 ---
 
-#### TASK-011C · Timeline / Gantt View
+#### TASK-011C · Timeline / Gantt View ✅
 **Effort:** 1 week
 
 The most complex view. Horizontal bars showing card duration from creation to due date, grouped by list.
+
+> **Status: COMPLETE** — `components/board/gantt-view.tsx` (398 lines): day/week/month zoom, today indicator, priority-coloured bars, unscheduled strip, click-to-open card modal. Integrated in `board-tabs.tsx` as the Timeline tab (keyboard shortcut `4`).
 
 **Schema — add to Card:**
 ```prisma
@@ -1641,9 +1643,9 @@ New monorepo workspace `apps/mobile/` using Expo (React Native). Share:
 | TASK-008 | File Attachments | P1 | 1d | ⬜ |
 | TASK-009 | Card Checklists | P1 | 8h | ⬜ |
 | TASK-010 | Card Cover Images | P1 | 3h | ⬜ |
-| TASK-011A | Table View | P1 | 3d | ⬜ |
-| TASK-011B | Calendar View | P1 | 2d | ⬜ |
-| TASK-011C | Timeline/Gantt View | P1 | 1w | ⬜ |
+| TASK-011A | Table View | P1 | 3d | ✅ |
+| TASK-011B | Calendar View | P1 | 2d | ✅ |
+| TASK-011C | Timeline/Gantt View | P1 | 1w | ✅ |
 | TASK-012 | Advanced Filtering & Saved Views | P1 | 3d | ⬜ |
 | TASK-013 | Sprints (Agile Mode) | P1 | 1w | ⬜ |
 | TASK-014 | Card Dependencies | P1 | 3d | ⬜ |

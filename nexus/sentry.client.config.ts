@@ -14,36 +14,33 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // Adjust this value in production, 0.1 = 10% of transactions
-  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+  // No tracing overhead in dev — set to 0 so spans are never created
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 0,
 
-  // Session Replay: Record user sessions to debug issues
-  // 10% of sessions in production, 100% in dev
-  replaysSessionSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
-
-  // Capture 100% of sessions with errors
-  replaysOnErrorSampleRate: 1.0,
+  // Session Replay: production only — recording in dev kills performance
+  replaysSessionSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 0,
+  replaysOnErrorSampleRate: process.env.NODE_ENV === "production" ? 1.0 : 0,
 
   // Set environment
   environment: process.env.NODE_ENV,
 
-  // Enable debug mode in development
-  debug: process.env.NODE_ENV === "development",
+  // No debug noise in console
+  debug: false,
 
-  // Integrations
-  integrations: [
-    // Browser tracing for performance monitoring
-    Sentry.browserTracingIntegration(),
-
-    // Session Replay (see user's screen during errors)
-    Sentry.replayIntegration({
-      maskAllText: false, // Show actual text (disable in sensitive apps)
-      blockAllMedia: false, // Show images/videos
-    }),
-
-    // Browser profiling
-    Sentry.browserProfilingIntegration(),
-  ],
+  // Integrations: skip replay and profiling entirely in dev
+  integrations: process.env.NODE_ENV === "production"
+    ? [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({
+          maskAllText: false,
+          blockAllMedia: false,
+        }),
+        Sentry.browserProfilingIntegration(),
+      ]
+    : [
+        // Minimal set in dev — no recording, no profiling
+        Sentry.browserTracingIntegration(),
+      ],
 
   // Filter out noise
   ignoreErrors: [

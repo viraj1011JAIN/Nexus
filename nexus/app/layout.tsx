@@ -65,9 +65,16 @@ export default function RootLayout({
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         </head>
         <body className={inter.className} suppressHydrationWarning>
+          {/* Skip navigation link — keyboard / screen-reader UX (TASK-036) */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-md focus:shadow-lg focus:outline-none"
+          >
+            Skip to main content
+          </a>
           <PerformanceWrapper>
             <ThemeProvider>
-              <div className="bg-background text-foreground min-h-screen contain-layout" suppressHydrationWarning>
+              <div id="main-content" className="bg-background text-foreground min-h-screen contain-layout" suppressHydrationWarning>
                 <AriaLiveRegion />
                 <CommandPalette />
                 <ModalProvider />

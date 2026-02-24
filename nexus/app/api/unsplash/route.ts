@@ -4,10 +4,15 @@ import { createApi } from "unsplash-js";
 
 // Unsplash API client (server-side only — access key never exposed to client)
 function getUnsplashClient() {
-  // Support both the server-only var and the NEXT_PUBLIC_ alias for flexibility
-  const accessKey =
-    process.env.UNSPLASH_ACCESS_KEY ??
-    process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+
+  // Warn developers who accidentally set the NEXT_PUBLIC_ variant instead
+  if (!accessKey && process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY) {
+    console.warn(
+      "[unsplash] NEXT_PUBLIC_UNSPLASH_ACCESS_KEY is set but will not be used on the server. " +
+      "Set UNSPLASH_ACCESS_KEY (without NEXT_PUBLIC_) to keep the key out of client bundles."
+    );
+  }
 
   if (!accessKey || accessKey === "your_access_key_here") {
     return null;

@@ -13,20 +13,19 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // Adjust this value in production
-  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+  // No tracing overhead in dev
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 0,
 
   // Set environment
   environment: process.env.NODE_ENV,
 
-  // Enable debug mode in development
-  debug: process.env.NODE_ENV === "development",
+  // No debug console spam
+  debug: false,
 
-  // Integrations for Node.js
-  integrations: [
-    // PostgreSQL query tracking
-    Sentry.prismaIntegration(),
-  ],
+  // Prisma integration patches every query — skip in dev
+  integrations: process.env.NODE_ENV === "production"
+    ? [Sentry.prismaIntegration()]
+    : [],
 
   // Filter out noise
   ignoreErrors: [

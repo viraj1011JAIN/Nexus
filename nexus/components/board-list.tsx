@@ -116,10 +116,12 @@ export function BoardList() {
         ...(selectedTemplate ? { templateId: selectedTemplate.id } : {}),
       });
 
-      if (result.error) {
+      if (result.fieldErrors?.title) {
+        toast.error(result.fieldErrors.title[0]);
+      } else if (result.error) {
         toast.error(result.error);
-      } else {
-        toast.success(`Board "${result.data?.title}" created!`);
+      } else if (result.data) {
+        toast.success(`Board "${result.data.title}" created!`);
         setTitle("");
         setSelectedPhoto(null);
         setSelectedTemplate(null);

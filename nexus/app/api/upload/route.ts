@@ -30,6 +30,12 @@ function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Supabase env vars are missing");
+  if (key.length < 100) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY looks like a placeholder (too short). " +
+      "Copy the service_role JWT from Supabase Dashboard → Settings → API."
+    );
+  }
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -128,7 +134,13 @@ export async function POST(req: NextRequest) {
     .upload(storagePath, arrayBuffer, { contentType: file.type, upsert: false });
 
   if (uploadError) {
-    console.error("[UPLOAD] Supabase storage error:", uploadError.message);
+    console.error("[UPLOAD] Supabase storage error:", uploadError.message, "| status:", (uploadError as { statusCode?: string }).statusCode ?? "unknown");
+    const msg = uploadError.message?.toLowerCase() ?? "";
+    if (msg.includes("invalid api key") || msg.includes("unauthorized")) {
+      console.error("[UPLOAD] ⚠ SUPABASE_SERVICE_ROLE_KEY is invalid or missing — check .env.local");
+    } else if (msg.includes("bucket") && msg.includes("not found")) {
+      console.error("[UPLOAD] ⚠ Bucket 'card-attachments' does not exist — run: npx tsx scripts/setup-storage.ts");
+    }
     return NextResponse.json({ error: "File upload failed. Please try again." }, { status: 500 });
   }
 

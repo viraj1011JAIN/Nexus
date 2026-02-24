@@ -21,8 +21,13 @@ interface Announcement {
 }
 
 export function AriaLiveRegion() {
+  const [mounted, setMounted] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const counterRef = useRef(0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     function onAnnounce(e: Event) {
@@ -36,6 +41,8 @@ export function AriaLiveRegion() {
     window.addEventListener("nexus:announce", onAnnounce);
     return () => window.removeEventListener("nexus:announce", onAnnounce);
   }, []);
+
+  if (!mounted) return null;
 
   return (
     <>

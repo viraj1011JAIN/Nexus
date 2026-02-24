@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   // Performance optimizations
-  reactStrictMode: true,
+  reactStrictMode: !isDev, // disable double-render in dev
   poweredByHeader: false,
   compress: true,
   
@@ -20,15 +22,41 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'plus.unsplash.com',
+      },
+    ],
   },
   
   // Experimental performance features (Next.js 16+)
   experimental: {
-    optimizePackageImports: ['@/components', '@/lib'],
+    // Tree-shake large icon/animation/editor packages — real npm packages only
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-tooltip',
+      'date-fns',
+    ],
   },
-  
-  // Optimize production builds
+
+  // Keep Prisma and native deps on the server side — prevents bundling issues
+  serverExternalPackages: ['@prisma/client', 'prisma'],
+
+  // Only generate source maps in production
   productionBrowserSourceMaps: false,
+  
 };
 
 export default nextConfig;

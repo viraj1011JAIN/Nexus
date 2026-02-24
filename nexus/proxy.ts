@@ -52,13 +52,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 export const config = {
   matcher: [
     /*
-     * Match all request paths EXCEPT:
-     *   - _next/static (compiled assets)
-     *   - _next/image  (image optimisation)
-     *   - favicon.ico, robots.txt, sitemap.xml (public metadata)
-     *   - Files with an extension (images, fonts, etc.)
+     * Match all request paths EXCEPT static assets, images, and metadata files.
+     * Single rule — avoids double-processing API routes.
      */
     "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|otf|eot)).*)",
-    "/(api|trpc)(.*)",
   ],
 };
