@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
@@ -24,27 +24,27 @@ type FilterType = "ALL" | "CARD" | "LIST" | "MY_ACTIONS";
 
 const actionConfig = {
   CREATE: {
-    bg: "bg-[#ECFDF5] dark:bg-[#064E3B]",
-    text: "text-[#10B981] dark:text-[#34D399]",
-    border: "border-[#10B981]",
+    bg: "bg-success/10 dark:bg-success/20",
+    text: "text-success",
+    border: "border-success",
     label: "CREATE",
   },
   UPDATE: {
-    bg: "bg-[#EFF6FF] dark:bg-[#1E3A8A]",
-    text: "text-[#3B82F6] dark:text-[#60A5FA]",
-    border: "border-[#3B82F6]",
+    bg: "bg-blue-50 dark:bg-blue-900/30",
+    text: "text-blue-500 dark:text-blue-400",
+    border: "border-blue-500",
     label: "UPDATE",
   },
   DELETE: {
-    bg: "bg-[#FEF2F2] dark:bg-[#7F1D1D]",
-    text: "text-[#EF4444] dark:text-[#F87171]",
-    border: "border-[#EF4444]",
+    bg: "bg-destructive/10 dark:bg-destructive/20",
+    text: "text-destructive",
+    border: "border-destructive",
     label: "DELETE",
   },
   MOVE: {
-    bg: "bg-[#F5F3FF] dark:bg-[#2E1A2E]",
-    text: "text-[#7C3AED] dark:text-[#A78BFA]",
-    border: "border-[#7C3AED]",
+    bg: "bg-accent",
+    text: "text-primary",
+    border: "border-primary",
     label: "MOVE",
   },
 };
@@ -130,7 +130,7 @@ export default function ActivityPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-[#64748B] dark:text-[#94A3B8] text-base"
+          className="text-muted-foreground text-base"
         >
           Loading activity...
         </motion.div>
@@ -158,11 +158,11 @@ export default function ActivityPage() {
               transition={{ duration: 2, repeat: Infinity }}
             />
           </div>
-          <h1 className="text-[32px] font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
+          <h1 className="text-[32px] font-semibold text-foreground">
             Activity Log
           </h1>
         </div>
-        <p className="text-[15px] text-[#64748B] dark:text-[#94A3B8] ml-[60px]">
+        <p className="text-[15px] text-muted-foreground ml-[60px]">
           Track all changes and actions across your boards
         </p>
       </motion.div>
@@ -181,8 +181,8 @@ export default function ActivityPage() {
             className={cn(
               "h-8 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 border",
               filter === filterType
-                ? "bg-[#7C3AED] text-white border-[#7C3AED] shadow-[0_2px_8px_rgba(124,58,237,0.25)]"
-                : "bg-white dark:bg-[#1A1F2E] text-[#475569] dark:text-[#CBD5E1] border-[#E5E7EB] dark:border-[#252B3A] hover:border-[#7C3AED]/50 hover:bg-[#F5F3FF] dark:hover:bg-[#2E1A2E]"
+                ? "bg-primary text-primary-foreground border-primary shadow-[0_2px_8px_rgba(124,58,237,0.25)]"
+                : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:bg-accent"
             )}
           >
             {filterType === "ALL"
@@ -200,15 +200,15 @@ export default function ActivityPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, delay: 0.2 }}
-          className="flex flex-col items-center justify-center py-16 px-8 bg-white dark:bg-[#1A1F2E] rounded-2xl border border-[#E5E7EB] dark:border-[#252B3A]"
+          className="flex flex-col items-center justify-center py-16 px-8 bg-card rounded-2xl border border-border"
         >
-          <div className="w-20 h-20 rounded-full bg-[#F3F4F6] dark:bg-[#252B3A] flex items-center justify-center mb-4">
-            <ActivityIcon className="h-10 w-10 text-[#94A3B8] dark:text-[#64748B]" />
+          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
+            <ActivityIcon className="h-10 w-10 text-muted-foreground" />
           </div>
-          <p className="text-[15px] text-[#64748B] dark:text-[#94A3B8] font-medium mb-1">
+          <p className="text-[15px] text-muted-foreground font-medium mb-1">
             No activity yet
           </p>
-          <p className="text-[13px] text-[#94A3B8] dark:text-[#64748B]">
+          <p className="text-[13px] text-muted-foreground">
             Start creating boards and cards to see activity here
           </p>
         </motion.div>
@@ -226,10 +226,10 @@ export default function ActivityPage() {
               >
                 {/* Section Header */}
                 <div className="flex items-center gap-4 mb-4">
-                  <h3 className="text-[13px] font-semibold text-[#64748B] dark:text-[#94A3B8] uppercase tracking-wider">
+                  <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">
                     {dateGroup}
                   </h3>
-                  <div className="flex-1 h-px bg-[#E5E7EB] dark:bg-[#252B3A]" />
+                  <div className="flex-1 h-px bg-muted" />
                 </div>
 
                 {/* Activity Cards */}
@@ -247,7 +247,7 @@ export default function ActivityPage() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 10 }}
                           transition={{ duration: 0.2, delay: index * 0.03 }}
-                          className="bg-white dark:bg-[#1A1F2E] rounded-xl border border-[#E5E7EB] dark:border-[#252B3A] p-4 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-0.5"
+                          className="bg-card rounded-xl border border-border p-4 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-0.5"
                         >
                           <div className="flex items-start gap-4">
                             {/* Avatar */}
@@ -277,7 +277,7 @@ export default function ActivityPage() {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center flex-wrap gap-2 mb-1">
-                                <span className="font-semibold text-[15px] text-[#0F172A] dark:text-[#F1F5F9]">
+                                <span className="font-semibold text-[15px] text-foreground">
                                   {log.userName}
                                 </span>
                                 <span
@@ -289,15 +289,15 @@ export default function ActivityPage() {
                                 >
                                   {config.label}
                                 </span>
-                                <span className="px-2 py-0.5 rounded bg-[#F3F4F6] dark:bg-[#252B3A] text-[11px] font-mono text-[#64748B] dark:text-[#94A3B8] uppercase">
+                                <span className="px-2 py-0.5 rounded bg-muted text-[11px] font-mono text-muted-foreground uppercase">
                                   {log.entityType}
                                 </span>
-                                <span className="text-[15px] text-[#7C3AED] dark:text-[#A78BFA] font-medium truncate">
+                                <span className="text-[15px] text-primary font-medium truncate">
                                   &quot;{log.entityTitle}&quot;
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-1 text-[13px] text-[#94A3B8] dark:text-[#64748B]">
+                              <div className="flex items-center gap-1 text-[13px] text-muted-foreground">
                                 <Clock className="h-3 w-3" />
                                 <span>{formatTime(log.createdAt)}</span>
                               </div>

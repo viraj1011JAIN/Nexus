@@ -43,7 +43,7 @@ export const MobileNav = () => {
   return (
     <>
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#1A1F2E]/95 backdrop-blur-md border-b border-[#E5E7EB] dark:border-[#252B3A] z-50 flex items-center justify-between px-4 transition-all duration-200">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-md border-b border-border z-50 flex items-center justify-between px-4 transition-all duration-200">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#A855F7] flex items-center justify-center">
@@ -94,7 +94,7 @@ export const MobileNav = () => {
                 stiffness: 300,
                 mass: 0.8
               }}
-              className="lg:hidden fixed right-0 top-16 bottom-0 w-72 bg-white/98 dark:bg-[#1A1F2E]/98 backdrop-blur-xl border-l border-[#E5E7EB] dark:border-[#252B3A] z-40 shadow-2xl overflow-y-auto overscroll-contain"
+              className="lg:hidden fixed right-0 top-16 bottom-0 w-72 bg-card/98 backdrop-blur-xl border-l border-border z-40 shadow-2xl overflow-y-auto overscroll-contain"
             >
               <div className="p-6 space-y-8">
                 {/* Organization Switcher */}

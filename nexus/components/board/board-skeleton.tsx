@@ -2,7 +2,7 @@
 
 export function BoardCardSkeleton() {
   return (
-    <div className="bg-white dark:bg-[#1A1F2E] border border-[#E5E7EB] dark:border-[#252B3A] rounded-2xl overflow-hidden h-80">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden h-80">
       <div className="h-32 bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse" />
       <div className="p-6 space-y-4">
         <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4" />
@@ -22,7 +22,7 @@ export function BoardCardSkeleton() {
 
 export function BoardListSkeleton() {
   return (
-    <div className="min-h-screen bg-[#FAFBFC] p-8">
+    <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
         {/* Hero Skeleton */}
         <div className="mb-12 space-y-3">

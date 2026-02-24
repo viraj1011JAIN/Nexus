@@ -9,7 +9,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-[#020617]">
+    <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Desktop Sidebar - Hidden on mobile */}
       <div className="hidden lg:block">
         <Sidebar />
@@ -19,7 +19,7 @@ export default function DashboardLayout({
       <MobileNav />
       
       {/* Main Content */}
-      <main className="flex-1 h-full overflow-y-auto relative bg-slate-50 dark:bg-[#020617] w-full">
+      <main className="flex-1 h-full overflow-y-auto relative bg-background w-full">
         {children}
       </main>
     </div>
