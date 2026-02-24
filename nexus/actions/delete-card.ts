@@ -24,6 +24,9 @@ export async function deleteCard(id: string, boardId: string) {
 
   // Capture card title before deletion for the audit log fallback and event payload
   const card = await dal.cards.findUnique(id);
+  if (!card) {
+    throw new Error(`Card ${id} not found or access denied.`);
+  }
   const cardTitle = card.title;
 
   // dal.cards.delete verifies Card→List→Board→orgId === ctx.orgId before deleting

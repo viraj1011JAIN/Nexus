@@ -37,6 +37,9 @@ async function verifyCardOwnership(cardId: string, orgId: string) {
  * Returns true if `blockerId` is reachable, which means adding
  * blockerId→blockedId would create a cycle (A→B→…→A).
  */
+/** Hard cap on BFS nodes to prevent unbounded DB queries on adversarial graphs. */
+const MAX_VISITED = 500;
+
 async function wouldCreateCycle(
   blockerId: string,
   blockedId: string,
@@ -46,10 +49,18 @@ async function wouldCreateCycle(
   let frontier = [blockedId];
 
   while (frontier.length > 0) {
+    if (visited.size > MAX_VISITED) {
+      throw new Error(
+        "Dependency graph is too large to validate safely. Reduce the number of card dependencies and try again."
+      );
+    }
+
     const edges = await db.cardDependency.findMany({
       where: {
         blockerId: { in: frontier },
+        // Restrict both sides of the edge to this org to prevent cross-tenant traversal.
         blocker: { list: { board: { orgId } } },
+        blocked: { list: { board: { orgId } } },
         type: "BLOCKS",
       },
       select: { blockedId: true },

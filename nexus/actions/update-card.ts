@@ -44,11 +44,15 @@ const handler = async (data: InputType): Promise<ReturnType> => {
 
     revalidatePath(`/board/${boardId}`);
 
-    // Fire CARD_TITLE_CONTAINS event if the title was updated (TASK-019) — fire-and-forget
+    // Fire CARD_TITLE_CONTAINS event if the title was updated (TASK-019) — fire-and-forget.
+    // Deferred via Promise.resolve().then() so a synchronous throw from emitCardEvent
+    // cannot be caught by the outer try/catch and turned into a false failure response.
     if (values.title) {
-      void emitCardEvent(
-        { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card.id, context: { cardTitle: values.title } },
-        { cardId: card.id, cardTitle: card.title, boardId, orgId: ctx.orgId }
+      void Promise.resolve().then(() =>
+        emitCardEvent(
+          { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card.id, context: { cardTitle: values.title } },
+          { cardId: card.id, cardTitle: card.title, boardId, orgId: ctx.orgId }
+        )
       ).catch((err) => console.error("[update-card] emitCardEvent failed", err));
     }
 
