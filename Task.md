@@ -1639,44 +1639,44 @@ New monorepo workspace `apps/mobile/` using Expo (React Native). Share:
 
 | Task | Feature | Priority | Effort | Status |
 |------|---------|---------|--------|--------|
-| TASK-001 | PWA Icons | P0 | 30m | ⬜ |
-| TASK-002 | GitHub Actions CI/CD | P0 | 45m | ⬜ |
-| TASK-003 | Board Backgrounds | P0 | 4h | ⬜ |
-| TASK-004 | Security Test Suite | P1 | 6h | ⬜ |
-| TASK-005 | E2E Tests (Playwright) | P1 | 1d | ⬜ |
-| TASK-006 | @Mention UI + Notifications | P1 | 8h | ⬜ |
-| TASK-007 | Email Delivery (Resend) | P1 | 6h | ⬜ |
-| TASK-008 | File Attachments | P1 | 1d | ⬜ |
-| TASK-009 | Card Checklists | P1 | 8h | ⬜ |
-| TASK-010 | Card Cover Images | P1 | 3h | ⬜ |
+| TASK-001 | PWA Icons | P0 | 30m | ✅ |
+| TASK-002 | GitHub Actions CI/CD | P0 | 45m | ✅ |
+| TASK-003 | Board Backgrounds | P0 | 4h | ✅ |
+| TASK-004 | Security Test Suite | P1 | 6h | ✅ |
+| TASK-005 | E2E Tests (Playwright) | P1 | 1d | ✅ |
+| TASK-006 | @Mention UI + Notifications | P1 | 8h | ✅ |
+| TASK-007 | Email Delivery (Resend) | P1 | 6h | ✅ |
+| TASK-008 | File Attachments | P1 | 1d | ✅ |
+| TASK-009 | Card Checklists | P1 | 8h | ✅ |
+| TASK-010 | Card Cover Images | P1 | 3h | ✅ |
 | TASK-011A | Table View | P1 | 3d | ✅ |
 | TASK-011B | Calendar View | P1 | 2d | ✅ |
 | TASK-011C | Timeline/Gantt View | P1 | 1w | ✅ |
-| TASK-012 | Advanced Filtering & Saved Views | P1 | 3d | ⬜ |
-| TASK-013 | Sprints (Agile Mode) | P1 | 1w | ⬜ |
-| TASK-014 | Card Dependencies | P1 | 3d | ⬜ |
-| TASK-015 | Bulk Operations | P1 | 2d | ⬜ |
-| TASK-016 | Keyboard Shortcuts | P1 | 2d | ⬜ |
-| TASK-017 | Workload View | P1 | 3d | ⬜ |
-| TASK-018 | Custom Fields | P2 | 1w | ⬜ |
-| TASK-019 | Automation Engine | P2 | 2w | ⬜ |
-| TASK-020 | Webhooks (Outbound) | P2 | 2d | ⬜ |
-| TASK-021 | Public REST API + API Keys | P2 | 1w | ⬜ |
-| TASK-022 | AI Features | P2 | 2w | ⬜ |
-| TASK-023 | Roadmap View (Epic/Initiative) | P2 | 1w | ⬜ |
-| TASK-024 | Full-Text Search | P2 | 3d | ⬜ |
-| TASK-025 | Time Tracking | P2 | 3d | ⬜ |
-| TASK-026 | Import / Export | P2 | 4d | ⬜ |
-| TASK-027 | Integrations (GitHub, Slack) | P2 | 3w | ⬜ |
-| TASK-028 | Advanced Analytics | P2 | 1w | ⬜ |
-| TASK-029 | Desktop Push Notifications | P3 | 1w | ⬜ |
-| TASK-030 | Board Sharing & Guest Access | P2 | 3d | ⬜ |
-| TASK-031 | Complete Test Coverage | P1 | ongoing | ⬜ |
-| TASK-032 | Observability & Monitoring | P1 | 2d | ⬜ |
-| TASK-033 | GDPR & Privacy Compliance | P1 | 3d | ⬜ |
-| TASK-034 | Onboarding Flow | P1 | 3d | ⬜ |
-| TASK-035 | Performance Hardening | P1 | 3d | ⬜ |
-| TASK-036 | Accessibility (a11y) | P1 | 3d | ⬜ |
+| TASK-012 | Advanced Filtering & Saved Views | P1 | 3d | ✅ |
+| TASK-013 | Sprints (Agile Mode) | P1 | 1w | ✅ |
+| TASK-014 | Card Dependencies | P1 | 3d | ✅ |
+| TASK-015 | Bulk Operations | P1 | 2d | ✅ |
+| TASK-016 | Keyboard Shortcuts | P1 | 2d | ✅ |
+| TASK-017 | Workload View | P1 | 3d | ✅ |
+| TASK-018 | Custom Fields | P2 | 1w | ✅ |
+| TASK-019 | Automation Engine | P2 | 2w | ✅ |
+| TASK-020 | Webhooks (Outbound) | P2 | 2d | ✅ |
+| TASK-021 | Public REST API + API Keys | P2 | 1w | ✅ |
+| TASK-022 | AI Features | P2 | 2w | ✅ |
+| TASK-023 | Roadmap View (Epic/Initiative) | P2 | 1w | ✅ |
+| TASK-024 | Full-Text Search | P2 | 3d | ✅ |
+| TASK-025 | Time Tracking | P2 | 3d | ✅ |
+| TASK-026 | Import / Export | P2 | 4d | ✅ |
+| TASK-027 | Integrations (GitHub, Slack) | P2 | 3w | ✅ |
+| TASK-028 | Advanced Analytics | P2 | 1w | ✅ |
+| TASK-029 | Desktop Push Notifications | P3 | 1w | ✅ |
+| TASK-030 | Board Sharing & Guest Access | P2 | 3d | ✅ |
+| TASK-031 | Complete Test Coverage | P1 | ongoing | ✅ |
+| TASK-032 | Observability & Monitoring | P1 | 2d | ✅ |
+| TASK-033 | GDPR & Privacy Compliance | P1 | 3d | ✅ |
+| TASK-034 | Onboarding Flow | P1 | 3d | ✅ |
+| TASK-035 | Performance Hardening | P1 | 3d | 🔄 |
+| TASK-036 | Accessibility (a11y) | P1 | 3d | ✅ |
 | TASK-037 | Mobile App | P3 | 6w | ⬜ |
 
 ---
