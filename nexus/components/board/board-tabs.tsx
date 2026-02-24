@@ -226,6 +226,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
       />
 
       <Tabs
+        id="board-tabs"
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as TabValue)}
         className="w-full relative z-10"

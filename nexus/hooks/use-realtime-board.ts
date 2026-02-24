@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Card, List, Comment, CommentReaction } from "@prisma/client";
 import { getAuthenticatedSupabaseClient } from "@/lib/supabase/client";
@@ -90,8 +90,10 @@ export function useRealtimeBoard({
   const { getToken } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [retryTimeout, setRetryTimeout] = useState<NodeJS.Timeout | null>(null);
+  // Use refs so retry bookkeeping never triggers re-renders (avoiding
+  // the infinite loop: CHANNEL_ERROR → setState → effect re-runs → new sub → error)
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Stable callback refs to prevent re-subscriptions
   const handleCardChange = useCallback(
@@ -277,29 +279,28 @@ export function useRealtimeBoard({
             if (status === "SUBSCRIBED") {
               setIsConnected(true);
               setError(null);
-              setRetryCount(0); // Reset retry count on success
+              retryCountRef.current = 0; // Reset retry count on success
               console.log(`✅ Real-time connected to board: ${boardId} (Phase 3 enabled)`);
             } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
               setIsConnected(false);
-              
+
               // Implement exponential backoff retry (max 5 attempts)
-              if (retryCount < 5) {
-                const delay = Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30s
-                const timeout = setTimeout(() => {
-                  setRetryCount(prev => prev + 1);
-                  // Trigger re-subscription by updating state
-                  setupRealtimeSubscription();
-                }, delay);
-                setRetryTimeout(timeout);
-                
+              if (retryCountRef.current < 5) {
+                const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000); // Max 30s
+
                 // Only log on first retry to reduce noise
-                if (retryCount === 0) {
+                if (retryCountRef.current === 0) {
                   console.log(`🔄 Real-time connection ${status === "TIMED_OUT" ? "timed out" : "failed"}, retrying...`);
                 }
+
+                retryTimeoutRef.current = setTimeout(() => {
+                  retryCountRef.current += 1;
+                  setupRealtimeSubscription();
+                }, delay);
               } else {
                 // Only show error after all retries exhausted
                 setError("Connection failed after multiple attempts");
-                console.warn(`⚠️ Real-time connection failed for board: ${boardId} after ${retryCount} retries`);
+                console.warn(`⚠️ Real-time connection failed for board: ${boardId} after ${retryCountRef.current} retries`);
               }
             }
           });
@@ -312,9 +313,9 @@ export function useRealtimeBoard({
 
     // Cleanup: unsubscribe when component unmounts or boardId changes
     return () => {
-      if (retryTimeout) {
-        clearTimeout(retryTimeout);
-        setRetryTimeout(null);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
       }
       if (channel && supabase) {
         supabase.removeChannel(channel);
