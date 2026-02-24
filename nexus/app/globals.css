@@ -4,53 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================================
-   BASE RESETS & TYPOGRAPHY DEFAULTS
+   BASE RESETS — all base styles live in @layer base (further below)
+   so they are properly ordered relative to Tailwind's generated utilities.
    ============================================================================ */
-
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-/* Font rendering — crisp & smooth on all platforms */
-html {
-  background-color: rgb(var(--background));
-  color: rgb(var(--foreground));
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  scroll-behavior: smooth;
-}
-
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-}
-
-/* Subtle transitions only on interactive elements — NOT on every element */
-button, a, [role="button"], input, textarea, select,
-[data-radix-collection-item] {
-  transition-property: color, background-color, border-color, opacity, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Smooth scrolling for all scrollable containers */
-.overflow-auto, .overflow-scroll, .overflow-y-auto, .overflow-x-auto {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
-
-/* Better touch targets on mobile */
-@media (hover: none) and (pointer: coarse) {
-  button, a, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  button, a { -webkit-user-select: none; user-select: none; }
-}
 
 /* ============================================================================
    THEME INLINE CONFIGURATION
@@ -751,19 +707,23 @@ html:not(.theme-mounted) * {
    ============================================================================ */
 
 @layer base {
-  * {
+  *, *::before, *::after {
+    box-sizing: border-box;
     @apply border-border;
   }
   
   html {
-    /* Ultra-smooth scrolling with momentum */
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
     scroll-behavior: smooth;
+    /* Ultra-smooth scrolling with momentum */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeSpeed;
     color-scheme: light dark;
-    
-    /* Performance optimizations */
     overflow-x: hidden;
     overflow-y: scroll;
   }
@@ -771,18 +731,29 @@ html:not(.theme-mounted) * {
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    
-    /* GPU acceleration + smooth scrolling */
-    transform: translateZ(0);
-    backface-visibility: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: none;
-    
-    /* Prevent layout shifts */
     min-height: 100vh;
     min-height: 100dvh;
   }
-  
+
+  /* Targeted transitions — only on interactive elements */
+  button, a, [role="button"], input, textarea, select,
+  [data-radix-collection-item] {
+    transition-property: color, background-color, border-color, opacity, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Better touch targets on mobile */
+  @media (hover: none) and (pointer: coarse) {
+    button, a, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    button, a { -webkit-user-select: none; user-select: none; }
+  }
+
   /* Mobile-optimized input handling */
   input, textarea, select {
     font-size: 16px; /* Prevent zoom on iOS */
