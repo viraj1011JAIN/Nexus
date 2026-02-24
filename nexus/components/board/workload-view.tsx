@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Users, User, Flag, Clock, AlertTriangle, ChevronDown, ChevronUp,
   BarChart2, Circle,
@@ -8,12 +8,18 @@ import {
 import { format, isPast, isToday, parseISO, isValid } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useCardModal } from "@/hooks/use-card-modal";
+import {
+  DndContext, DragOverlay, PointerSensor,
+  useSensor, useSensors, useDroppable, useDraggable,
+  type DragEndEvent, type DragStartEvent,
+} from "@dnd-kit/core";
+import { assignUser, unassignUser } from "@/actions/assignee-actions";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,10 +160,42 @@ function WorkloadCardTile({ card }: { card: WorkloadCard }) {
   );
 }
 
+// ─── DraggableCardTile ────────────────────────────────────────────────────────
+
+function DraggableCardTile({
+  card,
+  currentMemberId,
+}: {
+  card: WorkloadCard;
+  currentMemberId: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: card.id,
+    data: { currentMemberId },
+  });
+
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 9999 }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("touch-none cursor-grab active:cursor-grabbing", isDragging && "opacity-30")}
+      {...attributes}
+      {...listeners}
+    >
+      <WorkloadCardTile card={card} />
+    </div>
+  );
+}
+
 // ─── MemberRow ────────────────────────────────────────────────────────────────
 
 function MemberRow({ member }: { member: WorkloadMember }) {
   const [expanded, setExpanded] = useState(true);
+  const { setNodeRef, isOver } = useDroppable({ id: member.id });
   const capacityLevel = getCapacityLevel(member.cards.length);
   const cap = CAPACITY_CONFIG[capacityLevel];
 
@@ -171,7 +209,15 @@ function MemberRow({ member }: { member: WorkloadMember }) {
   const barWidth = Math.min((member.cards.length / HEAVY_THRESHOLD) * 100, 100);
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-xl overflow-hidden border transition-all duration-150",
+        isOver
+          ? "border-indigo-400 ring-2 ring-indigo-400/40 dark:border-indigo-500"
+          : "border-slate-200 dark:border-slate-700"
+      )}
+    >
       {/* Header */}
       <div
         role="button"
@@ -258,7 +304,7 @@ function MemberRow({ member }: { member: WorkloadMember }) {
             ) : (
               <div className="p-4 flex gap-2.5 overflow-x-auto pb-4">
                 {member.cards.map((card) => (
-                  <WorkloadCardTile key={card.id} card={card} />
+                  <DraggableCardTile key={card.id} card={card} currentMemberId={member.id} />
                 ))}
               </div>
             )}
@@ -273,10 +319,19 @@ function MemberRow({ member }: { member: WorkloadMember }) {
 
 function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
   const [expanded, setExpanded] = useState(false);
+  const { setNodeRef, isOver } = useDroppable({ id: "__unassigned__" });
   if (cards.length === 0) return null;
 
   return (
-    <div className="border border-dashed border-slate-300 dark:border-slate-600 rounded-xl overflow-hidden">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-xl overflow-hidden border border-dashed transition-all duration-150",
+        isOver
+          ? "border-indigo-400 ring-2 ring-indigo-400/40 bg-indigo-50/30 dark:bg-indigo-950/10 dark:border-indigo-500"
+          : "border-slate-300 dark:border-slate-600"
+      )}
+    >
       <div
         role="button"
         tabIndex={0}
@@ -308,7 +363,7 @@ function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
           >
             <div className="p-4 flex gap-2.5 overflow-x-auto pb-4">
               {cards.map((card) => (
-                <WorkloadCardTile key={card.id} card={card} />
+                <DraggableCardTile key={card.id} card={card} currentMemberId="__unassigned__" />
               ))}
             </div>
           </motion.div>
@@ -321,13 +376,18 @@ function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
 // ─── WorkloadView ─────────────────────────────────────────────────────────────
 
 export function WorkloadView({ boardId, lists }: WorkloadViewProps) {
-  // Build member → cards map
-  const { members, unassigned } = useMemo(() => {
-    const memberMap = new Map<
-      string,
-      { id: string; name: string; imageUrl?: string | null; cards: WorkloadCard[] }
-    >();
-    const unassignedCards: WorkloadCard[] = [];
+  // Optimistic override map: cardId → target memberId ("__unassigned__" to unassign)
+  const [cardMemberOverrides, setCardMemberOverrides] = useState<Record<string, string>>({});
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  // Two-pass member→cards map: pass 1 collects member info, pass 2 applies overrides
+  const { members, unassigned, allCardsFlat } = useMemo(() => {
+    const memberInfoMap = new Map<string, { name: string; imageUrl?: string | null }>();
+    const rawCards: Array<{ card: WorkloadCard; originalMemberId: string | null }> = [];
 
     for (const list of lists ?? []) {
       for (const card of list.cards ?? []) {
@@ -342,32 +402,107 @@ export function WorkloadView({ boardId, lists }: WorkloadViewProps) {
         };
 
         if (card.assignee) {
-          const key = card.assignee.userId ?? card.assignee.name ?? "unknown";
-          if (!memberMap.has(key)) {
-            memberMap.set(key, {
-              id: key,
+          const memberId = card.assignee.id; // ← correct field (.id, not .userId)
+          if (!memberInfoMap.has(memberId)) {
+            memberInfoMap.set(memberId, {
               name: card.assignee.name ?? "Unknown",
               imageUrl: card.assignee.imageUrl ?? null,
-              cards: [],
             });
           }
-          memberMap.get(key)!.cards.push(workloadCard);
+          rawCards.push({ card: workloadCard, originalMemberId: memberId });
         } else {
-          unassignedCards.push(workloadCard);
+          rawCards.push({ card: workloadCard, originalMemberId: null });
         }
       }
     }
 
-    // Sort members by card count desc
+    // Pass 2: apply overrides and assemble final member map
+    const memberMap = new Map<
+      string,
+      { id: string; name: string; imageUrl?: string | null; cards: WorkloadCard[] }
+    >();
+    const unassignedCards: WorkloadCard[] = [];
+    const cardMap = new Map<string, WorkloadCard>();
+
+    for (const { card, originalMemberId } of rawCards) {
+      cardMap.set(card.id, card);
+
+      const override = cardMemberOverrides[card.id];
+      const effectiveMemberId =
+        override !== undefined
+          ? override === "__unassigned__" ? null : override
+          : originalMemberId;
+
+      if (effectiveMemberId) {
+        if (!memberMap.has(effectiveMemberId)) {
+          const info = memberInfoMap.get(effectiveMemberId);
+          memberMap.set(effectiveMemberId, {
+            id: effectiveMemberId,
+            name: info?.name ?? "Unknown",
+            imageUrl: info?.imageUrl ?? null,
+            cards: [],
+          });
+        }
+        memberMap.get(effectiveMemberId)!.cards.push(card);
+      } else {
+        unassignedCards.push(card);
+      }
+    }
+
     const sortedMembers = [...memberMap.values()].sort((a, b) => b.cards.length - a.cards.length);
-    return { members: sortedMembers, unassigned: unassignedCards };
-  }, [lists]);
+    return { members: sortedMembers, unassigned: unassignedCards, allCardsFlat: cardMap };
+  }, [lists, cardMemberOverrides]);
 
   // Summary stats
   const totalCards = useMemo(
     () => members.reduce((s, m) => s + m.cards.length, 0) + unassigned.length,
     [members, unassigned]
   );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveCardId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setActiveCardId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const cardId = active.id as string;
+    const targetMemberId = over.id as string;
+    const currentMemberId = (active.data.current as { currentMemberId: string }).currentMemberId;
+
+    if (targetMemberId === currentMemberId) return; // dropped back on same member
+
+    // Optimistic update
+    setCardMemberOverrides((prev) => ({ ...prev, [cardId]: targetMemberId }));
+
+    try {
+      if (targetMemberId === "__unassigned__") {
+        const result = await unassignUser({ cardId });
+        if (result?.error) throw new Error(result.error);
+        toast.success("Card unassigned");
+      } else {
+        const result = await assignUser({ cardId, assigneeId: targetMemberId });
+        if (result?.error) throw new Error(result.error);
+        toast.success("Card reassigned");
+      }
+      // Server revalidation will refresh the lists prop; clear stale override
+      setCardMemberOverrides((prev) => {
+        const next = { ...prev };
+        delete next[cardId];
+        return next;
+      });
+    } catch (err) {
+      // Revert optimistic update on failure
+      setCardMemberOverrides((prev) => {
+        const next = { ...prev };
+        delete next[cardId];
+        return next;
+      });
+      toast.error(err instanceof Error ? err.message : "Failed to reassign card");
+    }
+  }, []);
 
   if (members.length === 0 && unassigned.length === 0) {
     return (
@@ -381,40 +516,53 @@ export function WorkloadView({ boardId, lists }: WorkloadViewProps) {
     );
   }
 
+  const activeCard = activeCardId ? (allCardsFlat.get(activeCardId) ?? null) : null;
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-          <BarChart2 className="h-4 w-4 text-indigo-500" />
-        </div>
-        <div>
-          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
-            Team Workload
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {members.length} member{members.length !== 1 ? "s" : ""} · {totalCards} total cards
-          </p>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+            <BarChart2 className="h-4 w-4 text-indigo-500" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+              Team Workload
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {members.length} member{members.length !== 1 ? "s" : ""} · {totalCards} total cards
+            </p>
+          </div>
+
+          {/* Legend */}
+          <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
+            {Object.entries(CAPACITY_CONFIG).map(([key, val]) => (
+              <span key={key} className="flex items-center gap-1.5">
+                <span className={cn("h-2 w-2 rounded-full", val.barColor)} />
+                {val.label}
+              </span>
+            ))}
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
-          {Object.entries(CAPACITY_CONFIG).map(([key, val]) => (
-            <span key={key} className="flex items-center gap-1.5">
-              <span className={cn("h-2 w-2 rounded-full", val.barColor)} />
-              {val.label}
-            </span>
+        {/* Member rows */}
+        <div className="space-y-3">
+          {members.map((member) => (
+            <MemberRow key={member.id} member={member} />
           ))}
+          <UnassignedRow cards={unassigned} />
         </div>
       </div>
 
-      {/* Member rows */}
-      <div className="space-y-3">
-        {members.map((member) => (
-          <MemberRow key={member.id} member={member} />
-        ))}
-        <UnassignedRow cards={unassigned} />
-      </div>
-    </div>
+      {/* Ghost tile following the pointer during drag */}
+      <DragOverlay dropAnimation={null}>
+        {activeCard ? (
+          <div className="rotate-2 opacity-90 pointer-events-none">
+            <WorkloadCardTile card={activeCard} />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

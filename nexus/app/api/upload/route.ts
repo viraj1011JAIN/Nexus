@@ -84,6 +84,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // TASK-008: Enforce plan-based attachment limits
+  // FREE plan: max 10 attachments per org across all boards
+  const FREE_ATTACHMENT_LIMIT = 10;
+  const org = await db.organization.findUnique({
+    where: { id: ctx.orgId },
+    select: { subscriptionPlan: true },
+  });
+  if (org?.subscriptionPlan === "FREE") {
+    const attachmentCount = await db.attachment.count({
+      where: { card: { list: { board: { orgId: ctx.orgId } } } },
+    });
+    if (attachmentCount >= FREE_ATTACHMENT_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Free plan allows a maximum of ${FREE_ATTACHMENT_LIMIT} attachments per workspace. Upgrade to Pro to add more.`,
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   // Fetch the uploader's display name — user is guaranteed to exist since
   // getTenantContext() provisions the User row on first access.
   const user = await db.user.findUnique({
