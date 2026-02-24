@@ -69,24 +69,45 @@ export async function POST(req: NextRequest) {
   // Enforce plan-based board limits — reads from STRIPE_CONFIG so the limit
   // stays in sync with the server-action path (create-board.ts).
   const org = await db.organization.findUnique({ where: { id: auth.ctx.orgId }, select: { subscriptionPlan: true } });
-  if (org) {
-    const plan = org.subscriptionPlan as keyof typeof STRIPE_CONFIG.limits;
-    const boardLimit = STRIPE_CONFIG.limits[plan]?.boards ?? Infinity;
-    if (boardLimit !== Infinity) {
-      const count = await db.board.count({ where: { orgId: auth.ctx.orgId } });
-      if (count >= boardLimit) {
-        return apiError(
-          `${plan} plan limit: ${boardLimit} board${boardLimit === 1 ? "" : "s"}. Upgrade to Pro.`,
-          403
-        );
-      }
-    }
-  }
+  if (!org) return apiError("Organization not found.", 404);
 
-  const board = await db.board.create({
-    data: { title: parsed.data.title, orgId: auth.ctx.orgId },
-    select: { id: true, title: true, createdAt: true, updatedAt: true },
-  });
+  const planKey = org.subscriptionPlan;
+  // Fail closed: if the plan value is not a known key in STRIPE_CONFIG.limits,
+  // block creation rather than silently falling back to Infinity.
+  if (!(planKey in STRIPE_CONFIG.limits)) {
+    return apiError(`Unknown subscription plan (${planKey}). Contact support.`, 403);
+  }
+  const boardLimit = STRIPE_CONFIG.limits[planKey as keyof typeof STRIPE_CONFIG.limits].boards;
+
+  // Use an atomic transaction to eliminate the TOCTOU race between count and create.
+  let board: { id: string; title: string; createdAt: Date; updatedAt: Date } | null = null;
+  try {
+    board = await db.$transaction(async (tx) => {
+      if (boardLimit !== Infinity) {
+        const count = await tx.board.count({ where: { orgId: auth.ctx.orgId } });
+        if (count >= boardLimit) {
+          const err = new Error("plan_limit") as Error & { planKey: string; boardLimit: number };
+          err.planKey = planKey;
+          err.boardLimit = boardLimit;
+          throw err;
+        }
+      }
+      return tx.board.create({
+        data: { title: parsed.data.title, orgId: auth.ctx.orgId },
+        select: { id: true, title: true, createdAt: true, updatedAt: true },
+      });
+    });
+  } catch (err) {
+    const e = err as Error & { planKey?: string; boardLimit?: number };
+    if (e.message === "plan_limit" && e.planKey !== undefined) {
+      const bl = e.boardLimit ?? boardLimit;
+      return apiError(
+        `${e.planKey} plan limit: ${bl} board${bl === 1 ? "" : "s"}. Please upgrade your plan.`,
+        403
+      );
+    }
+    throw err;
+  }
 
   return Response.json({ data: board }, { status: 201 });
 }

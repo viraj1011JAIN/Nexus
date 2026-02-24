@@ -4,7 +4,7 @@ const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   // Performance optimizations
-  reactStrictMode: !isDev, // disable double-render in dev
+  reactStrictMode: true, // enable double-render checks in dev (intentional)
   poweredByHeader: false,
   compress: true,
   
@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
     ],
   },
   
-  // Experimental performance features (Next.js 16+)
+  // Experimental performance features (Next.js 13.5+)
   experimental: {
     // Tree-shake large icon/animation/editor packages — real npm packages only
     optimizePackageImports: [
@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
   // Keep Prisma and native deps on the server side — prevents bundling issues
   serverExternalPackages: ['@prisma/client', 'prisma'],
 
-  // Only generate source maps in production
+  // Disable browser source maps in production (reduces bundle exposure)
   productionBrowserSourceMaps: false,
   
 };

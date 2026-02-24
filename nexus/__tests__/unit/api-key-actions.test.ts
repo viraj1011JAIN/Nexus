@@ -63,7 +63,7 @@ describe("api-key-actions", () => {
   describe("getApiKeys", () => {
     it("returns keys scoped to org (never returning keyHash)", async () => {
       (db.apiKey.findMany as jest.Mock).mockResolvedValueOnce([
-        { id: KEY_ID, name: "CI Key", keyPrefix: "nxk_abc123", scopes: ["boards:read"] },
+        { id: KEY_ID, name: "CI Key", keyPrefix: "nxk_abc123", scopes: ["boards:read"], keyHash: "secretHashValue" },
       ]);
       const result = await getApiKeys();
       expect(result.error).toBeUndefined();
@@ -75,6 +75,13 @@ describe("api-key-actions", () => {
     it("returns error on failure", async () => {
       const { getTenantContext } = jest.requireMock("@/lib/tenant-context") as { getTenantContext: jest.Mock };
       getTenantContext.mockRejectedValueOnce(new Error("DB error"));
+      const result = await getApiKeys();
+      expect(result.error).toBeDefined();
+    });
+
+    it("returns error on DB failure", async () => {
+      // getTenantContext succeeds, but findMany rejects — simulates a DB-level error.
+      (db.apiKey.findMany as jest.Mock).mockRejectedValueOnce(new Error("DB error"));
       const result = await getApiKeys();
       expect(result.error).toBeDefined();
     });
@@ -171,6 +178,9 @@ describe("api-key-actions", () => {
     it("returns error in demo mode", async () => {
       const { isDemoContext } = jest.requireMock("@/lib/tenant-context") as { isDemoContext: jest.Mock };
       isDemoContext.mockReturnValue(true);
+      // Ensure a valid key record is returned so execution reaches the demo-mode guard
+      // (some implementations look up the key before checking demo context).
+      (db.apiKey.findFirst as jest.Mock).mockResolvedValueOnce({ id: KEY_ID, orgId: "org_1" });
       const result = await deleteApiKey(KEY_ID);
       expect(result.error).toBeDefined();
     });

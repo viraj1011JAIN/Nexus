@@ -684,6 +684,8 @@ Create `components/board/calendar-view.tsx`. Month grid showing cards by due dat
 The most complex view. Horizontal bars showing card duration from creation to due date, grouped by list.
 
 > **Status: COMPLETE** — `components/board/gantt-view.tsx` (398 lines): day/week/month zoom, today indicator, priority-coloured bars, unscheduled strip, click-to-open card modal. Integrated in `board-tabs.tsx` as the Timeline tab (keyboard shortcut `4`).
+>
+> **Note:** Dependency arrows/lines between cards are **not yet implemented** — pending TASK-014.
 
 **Schema — add to Card:**
 ```prisma
@@ -901,6 +903,10 @@ Create `hooks/use-keyboard-shortcuts.ts` with a `useHotkeys`-style implementatio
 - `Cmd+Shift+D` — Delete card (with confirmation)
 
 **Board navigation:**
+- `1` — Board (Kanban) view
+- `2` — Calendar view
+- `3` — Table view
+- `4` — Timeline (Gantt) view
 - `→` / `←` — Navigate between lists
 - `↑` / `↓` — Navigate between cards in a list
 - `Enter` — Open focused card

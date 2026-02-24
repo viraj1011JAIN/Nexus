@@ -80,9 +80,9 @@ describe("dependency-actions", () => {
       expect(result.data?.blockedBy).toHaveLength(0);
     });
 
-    it("returns error when db throws", async () => {
+    it("returns error when tenant context throws", async () => {
       const { getTenantContext } = jest.requireMock("@/lib/tenant-context") as { getTenantContext: jest.Mock };
-      getTenantContext.mockRejectedValueOnce(new Error("DB failure"));
+      getTenantContext.mockRejectedValueOnce(new Error("tenant context failure"));
 
       const result = await getCardDependencies(CARD_A);
       expect(result.error).toBeDefined();
@@ -110,7 +110,12 @@ describe("dependency-actions", () => {
     });
 
     it("returns error when input fails Zod validation", async () => {
-      const result = await addCardDependency({ blockerId: "not-a-uuid", blockedId: CARD_B });
+      const result = await addCardDependency({
+        blockerId: "not-a-uuid",
+        blockedId: CARD_B,
+        type: "BLOCKS" as const,
+        boardId: BOARD_ID,
+      });
       expect(result.error).toBeDefined();
     });
 

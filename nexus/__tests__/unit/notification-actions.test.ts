@@ -69,10 +69,17 @@ describe("notification-actions", () => {
       expect(result.data).toHaveLength(2);
     });
 
-    it("returns error on db failure", async () => {
+    it("returns error when getTenantContext rejects", async () => {
       const { getTenantContext } = jest.requireMock("@/lib/tenant-context") as { getTenantContext: jest.Mock };
-      getTenantContext.mockRejectedValueOnce(new Error("DB error"));
+      getTenantContext.mockRejectedValueOnce(new Error("tenant context failure"));
 
+      const result = await getNotifications();
+      expect(result.error).toBeDefined();
+    });
+
+    it("returns error when db.notification.findMany rejects", async () => {
+      // getTenantContext succeeds; DB layer fails — distinct from the auth failure path.
+      (db.notification.findMany as jest.Mock).mockRejectedValueOnce(new Error("DB error"));
       const result = await getNotifications();
       expect(result.error).toBeDefined();
     });
@@ -111,6 +118,7 @@ describe("notification-actions", () => {
 
   describe("markNotificationRead", () => {
     it("calls updateMany with the correct filter", async () => {
+      const { revalidatePath } = jest.requireMock("next/cache") as { revalidatePath: jest.Mock };
       (db.notification.updateMany as jest.Mock).mockResolvedValueOnce({ count: 1 });
 
       const result = await markNotificationRead("n1");
@@ -119,6 +127,7 @@ describe("notification-actions", () => {
         where: { id: "n1", userId: "user_1", orgId: "org_1" },
         data: { isRead: true },
       });
+      expect(revalidatePath).toHaveBeenCalledWith("/");
     });
 
     it("returns error on db failure", async () => {
@@ -133,6 +142,7 @@ describe("notification-actions", () => {
 
   describe("markAllNotificationsRead", () => {
     it("marks all unread notifications for the user", async () => {
+      const { revalidatePath } = jest.requireMock("next/cache") as { revalidatePath: jest.Mock };
       (db.notification.updateMany as jest.Mock).mockResolvedValueOnce({ count: 5 });
 
       const result = await markAllNotificationsRead();
@@ -142,6 +152,7 @@ describe("notification-actions", () => {
           where: expect.objectContaining({ userId: "user_1", orgId: "org_1", isRead: false }),
         })
       );
+      expect(revalidatePath).toHaveBeenCalledWith("/");
     });
 
     it("returns error on db failure", async () => {

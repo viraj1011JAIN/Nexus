@@ -24,7 +24,9 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
   // AI suggest state (TASK-022)
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [addingItem, setAddingItem] = useState<string | null>(null);
+  // Use a Set to track each in-flight item independently — prevents duplicate
+  // addChecklist calls when the user quickly taps multiple suggestions.
+  const [addingItem, setAddingItem] = useState<Set<string>>(new Set());
 
   const load = async () => {
     setLoading(true);
@@ -48,8 +50,9 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
     try {
       const result = await suggestChecklists({ title: cardTitle });
       if (result?.data?.items?.length) {
-        setSuggestions(result.data.items);
-      } else if (result.error) {
+        // Deduplicate items to avoid stable-key collisions in the rendered list.
+        setSuggestions([...new Set(result.data.items)]);
+      } else if (result?.error) {
         toast.error(result.error);
       }
     } catch {
@@ -60,7 +63,7 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
   };
 
   const handleAddSuggestion = async (item: string) => {
-    setAddingItem(item);
+    setAddingItem(prev => new Set(prev).add(item));
     try {
       // Use first checklist if one exists, otherwise create one
       let targetChecklistId = checklists[0]?.id as string | undefined;
@@ -76,8 +79,15 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
       if (res.error) { toast.error(res.error); return; }
       setSuggestions(prev => prev.filter(s => s !== item));
       await load();
+    } catch (err) {
+      toast.error("Failed to add checklist item");
+      console.error("[checklists] handleAddSuggestion error:", err);
     } finally {
-      setAddingItem(null);
+      setAddingItem(prev => {
+        const next = new Set(prev);
+        next.delete(item);
+        return next;
+      });
     }
   };
 
@@ -134,19 +144,20 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
         {suggestions.length > 0 && (
           <div className="mt-2 space-y-1">
             <p className="text-xs text-muted-foreground mb-2">Click + to add items:</p>
-            {suggestions.map((item, i) => (
+            {suggestions.map((item) => (
               <div
-                key={i}
+                key={item}
                 className="flex items-center justify-between gap-2 text-sm px-2 py-1.5 rounded-md bg-muted/40 hover:bg-muted/60"
               >
                 <span className="text-foreground">{item}</span>
                 <button
                   type="button"
+                  aria-label={addingItem.has(item) ? "Adding suggestion" : "Add suggestion"}
                   onClick={() => handleAddSuggestion(item)}
-                  disabled={addingItem === item}
+                  disabled={addingItem.has(item)}
                   className="text-primary hover:text-primary/80 flex-shrink-0 disabled:opacity-40"
                 >
-                  {addingItem === item
+                  {addingItem.has(item)
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     : <Plus className="h-3.5 w-3.5" />}
                 </button>

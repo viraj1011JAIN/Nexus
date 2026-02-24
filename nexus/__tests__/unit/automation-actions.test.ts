@@ -178,6 +178,9 @@ describe("automation-actions", () => {
     it("returns error in demo mode", async () => {
       const { isDemoContext } = jest.requireMock("@/lib/tenant-context") as { isDemoContext: jest.Mock };
       isDemoContext.mockReturnValue(true);
+      // Provide a valid automation record so execution reaches the demo-mode guard
+      // rather than short-circuiting on "automation not found".
+      (db.automation.findFirst as jest.Mock).mockResolvedValueOnce({ id: AUTOMATION_ID, orgId: "org_1" });
       const result = await deleteAutomation(AUTOMATION_ID);
       expect(result.error).toBeDefined();
     });

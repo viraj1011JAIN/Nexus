@@ -5,6 +5,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TERMS_LAST_UPDATED } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Terms of Service | NEXUS",
@@ -12,7 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default function TermsPage() {
-  const lastUpdated = "January 1, 2025";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -23,7 +23,7 @@ export default function TermsPage() {
             ← Back to NEXUS
           </Link>
           <h1 className="mt-6 text-4xl font-bold tracking-tight">Terms of Service</h1>
-          <p className="mt-2 text-muted-foreground">Last updated: {lastUpdated}</p>
+          <p className="mt-2 text-muted-foreground">Last updated: {TERMS_LAST_UPDATED}</p>
         </div>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">

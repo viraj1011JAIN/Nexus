@@ -299,11 +299,30 @@ export async function importFromJira(
   const { userId, orgId } = await auth();
   if (!userId || !orgId) return { error: "Unauthorized" };
 
-  if (typeof xmlString !== "string" || !xmlString.includes("<item")) {
+  if (typeof xmlString !== "string") {
     return { error: "Invalid Jira XML export file." };
   }
 
-  const itemMatches = [...xmlString.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
+  // Guard against huge/malicious files that would OOM when matched
+  const MAX_XML_BYTES = 5 * 1_024 * 1_024; // 5 MB
+  if (xmlString.length > MAX_XML_BYTES) {
+    return { error: "Jira XML file is too large (max 5 MB)." };
+  }
+
+  if (!xmlString.includes("<item")) {
+    return { error: "Invalid Jira XML export file." };
+  }
+
+  // Attribute-tolerant regex + iterative exec to avoid materialising all
+  // matches at once and to correctly capture <item rdf:about="..."> style tags.
+  const ITEM_RE = /<item\b[^>]*>([\s\S]*?)<\/item>/gi;
+  const MAX_ITEMS = 2_000;
+  const itemMatches: RegExpExecArray[] = [];
+  let _m: RegExpExecArray | null;
+  ITEM_RE.lastIndex = 0;
+  while (((_m = ITEM_RE.exec(xmlString)) !== null) && itemMatches.length < MAX_ITEMS) {
+    itemMatches.push(_m);
+  }
   if (itemMatches.length === 0) return { error: "No issues found in Jira export." };
 
   const channelTitle = extractTag(xmlString, "title") || "Jira Import";
@@ -320,11 +339,18 @@ export async function importFromJira(
 
   const listTitles = ["To Do", "In Progress", "Done"];
   const listMap: Record<string, string> = {};
-  for (let i = 0; i < listTitles.length; i++) {
-    const list = await db.list.create({
-      data: { title: listTitles[i], boardId: board.id, order: String(i).padStart(6, "0") },
-    });
-    listMap[listTitles[i]] = list.id;
+
+  // Batch all three list inserts and retrieve their IDs in a single round-trip.
+  // createManyAndReturn requires Prisma ≥5.14.
+  const createdLists = await db.list.createManyAndReturn({
+    data: listTitles.map((title, i) => ({
+      title,
+      boardId: board.id,
+      order: String(i).padStart(6, "0"),
+    })),
+  });
+  for (const list of createdLists) {
+    listMap[list.title] = list.id;
   }
 
   type JiraCard = { title: string; description: string; dueDate?: Date; priority: string };
@@ -343,29 +369,56 @@ export async function importFromJira(
     const listName    = jiraStatusToList(status);
 
     if (!cardsByList[listName]) continue;
+
+    // Validate the date string before constructing a Date object to avoid
+    // writing an Invalid Date to Prisma/PostgreSQL.
+    let parsedDue: Date | undefined;
+    if (dueStr) {
+      const ts = Date.parse(dueStr);
+      if (!Number.isNaN(ts)) parsedDue = new Date(ts);
+      else console.warn(`[importFromJira] Skipping unparseable dueDate: ${dueStr}`);
+    }
+
     cardsByList[listName].push({
       title, description,
-      dueDate:  dueStr ? new Date(dueStr) : undefined,
+      dueDate:  parsedDue,
       priority: jiraPriorityToNexus(priority),
     });
   }
 
+  // Collect all cards and insert them in a single createMany call.
+  // Card IDs are not needed after import, so createMany (no return) is sufficient.
+  type CardRow = {
+    title: string; description: string | undefined;
+    dueDate: Date | undefined; priority: string; listId: string; order: string;
+  };
+  const allCards: CardRow[] = [];
   for (const [listName, cards] of Object.entries(cardsByList)) {
     const listId = listMap[listName];
     if (!listId) continue;
     for (let ci = 0; ci < cards.length; ci++) {
       const c = cards[ci];
-      await db.card.create({
-        data: {
-          title:       c.title,
-          description: c.description || undefined,
-          dueDate:     c.dueDate,
-          priority:    c.priority as "URGENT" | "HIGH" | "MEDIUM" | "LOW",
-          listId,
-          order:       String(ci).padStart(6, "0"),
-        },
+      allCards.push({
+        title:       c.title,
+        description: c.description || undefined,
+        dueDate:     c.dueDate,
+        priority:    c.priority,
+        listId,
+        order:       String(ci).padStart(6, "0"),
       });
     }
+  }
+  if (allCards.length > 0) {
+    await db.card.createMany({
+      data: allCards.map((c) => ({
+        title:       c.title,
+        description: c.description,
+        dueDate:     c.dueDate,
+        priority:    c.priority as "URGENT" | "HIGH" | "MEDIUM" | "LOW",
+        listId:      c.listId,
+        order:       c.order,
+      })),
+    });
   }
 
   revalidatePath(`/organization/${orgId}`);

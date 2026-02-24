@@ -36,7 +36,10 @@ export const ListItem = ({
   // AI priority suggestion for card creation (TASK-022)
   const [suggestedPriority, setSuggestedPriority] = useState<string | null>(null);
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
+  const [formPriority, setFormPriority] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  // Tracks the most-recent request so stale responses are silently discarded.
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     return () => clearTimeout(debounceRef.current);
@@ -47,15 +50,21 @@ export const ListItem = ({
     setSuggestedPriority(null);
     clearTimeout(debounceRef.current);
     if (value.trim().length < 5) return;
+    const currentRequestId = ++requestIdRef.current;
     debounceRef.current = setTimeout(async () => {
       setIsLoadingSuggestion(true);
       try {
         const result = await suggestPriority({ title: value });
-        if (result?.data?.priority) setSuggestedPriority(result.data.priority);
+        // Ignore stale responses that arrived after a newer request was fired.
+        if (requestIdRef.current === currentRequestId && result?.data?.priority) {
+          setSuggestedPriority(result.data.priority);
+        }
       } catch {
         // Silent fail — suggestion is non-blocking
       } finally {
-        setIsLoadingSuggestion(false);
+        if (requestIdRef.current === currentRequestId) {
+          setIsLoadingSuggestion(false);
+        }
       }
     }, 800);
   };
@@ -197,15 +206,19 @@ export const ListItem = ({
                     const title = formData.get("title") as string;
                     const listIdValue = formData.get("listId") as string;
                     const boardIdValue = formData.get("boardId") as string;
-                    const result = await createCard({ title, listId: listIdValue, boardId: boardIdValue });
+                    const priority = (formData.get("priority") as string | null) ?? undefined;
+                    const result = await createCard({ title, listId: listIdValue, boardId: boardIdValue, ...(priority ? { priority: priority as "URGENT" | "HIGH" | "MEDIUM" | "LOW" } : {}) });
                     if (result.error) {
                         logger.error("Failed to create card", { error: result.error, listId: listIdValue, boardId: boardIdValue });
                     }
+                    // Clear applied priority after submission
+                    setFormPriority(null);
                 }} 
                 className="mt-2"
              >
                 <input hidden name="listId" value={data.id} readOnly />
                 <input hidden name="boardId" value={boardId} readOnly />
+                {formPriority && <input hidden name="priority" value={formPriority} readOnly />}
                 
                 <div className="flex gap-2 items-center">
                   <input
@@ -238,13 +251,15 @@ export const ListItem = ({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setSuggestedPriority(null)}
+                      onClick={() => { setFormPriority(suggestedPriority); setSuggestedPriority(null); }}
                       className="text-primary underline-offset-2 hover:underline"
                     >
                       Apply
                     </button>
                     <button
                       type="button"
+                      aria-label="Dismiss suggested priority"
+                      title="Dismiss suggested priority"
                       onClick={() => setSuggestedPriority(null)}
                       className="text-muted-foreground hover:text-foreground"
                     >

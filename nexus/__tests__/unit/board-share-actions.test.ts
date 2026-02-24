@@ -124,6 +124,9 @@ describe("board-share-actions", () => {
       );
 
       const result = await createBoardShareLink({ boardId: BOARD_ID, requiresPassword: false });
+      expect(result.error).toBeUndefined();
+      expect(result.data?.token).toBeDefined();
+      expect(result.data?.boardId).toBe(BOARD_ID);
       const createCall = (db.boardShare.create as jest.Mock).mock.calls[0][0];
       expect(createCall.data.token).toBeDefined();
       expect(typeof createCall.data.token).toBe("string");
@@ -161,6 +164,65 @@ describe("board-share-actions", () => {
       (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce(null);
       const result = await checkShareRequiresPassword("invalidtoken");
       expect(result.error).toBeDefined();
+    });
+  });
+
+  // ─── getSharedBoardData ─────────────────────────────────────────────────
+
+  describe("getSharedBoardData", () => {
+    const MOCK_SHARE = {
+      id: SHARE_ID,
+      passwordHash: null as string | null,
+      board: { id: BOARD_ID, title: "Test Board", lists: [] },
+      allowComments: false,
+      allowCopyCards: false,
+      viewCount: 4,
+    };
+
+    it("returns board data for valid share with no password", async () => {
+      (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce(MOCK_SHARE);
+      (db.boardShare.update as jest.Mock).mockResolvedValueOnce({ ...MOCK_SHARE, viewCount: 5 });
+
+      const result = await getSharedBoardData(TOKEN);
+      expect(result.error).toBeUndefined();
+      expect(result.data?.board.id).toBe(BOARD_ID);
+      // viewCount is incremented in-action: original 4 + 1
+      expect(result.data?.share.viewCount).toBe(5);
+    });
+
+    it("returns board data when the correct password is supplied", async () => {
+      // scryptSync mock always returns Buffer.from("hashedpassword").
+      // Build a stored hash whose hex part matches that buffer so verifyPassword succeeds.
+      const correctPasswordHash = `scrypt$anysalt$${Buffer.from("hashedpassword").toString("hex")}`;
+      (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce({
+        ...MOCK_SHARE,
+        passwordHash: correctPasswordHash,
+      });
+      (db.boardShare.update as jest.Mock).mockResolvedValueOnce({ ...MOCK_SHARE, viewCount: 5 });
+
+      const result = await getSharedBoardData(TOKEN, "anypassword");
+      expect(result.error).toBeUndefined();
+      expect(result.data?.board).toBeDefined();
+    });
+
+    it("returns INVALID_TOKEN error for invalid/inactive token", async () => {
+      (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce(null);
+      const result = await getSharedBoardData("invalid-token");
+      expect(result.error).toBeDefined();
+      expect(result.code).toBe("INVALID_TOKEN");
+    });
+
+    it("returns INVALID_TOKEN error when password is wrong", async () => {
+      // A malformed passwordHash string fails the 3-part scrypt split check →
+      // verifyPassword returns false without reaching timingSafeEqual.
+      (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce({
+        ...MOCK_SHARE,
+        passwordHash: "malformed-not-scrypt-format",
+      });
+
+      const result = await getSharedBoardData(TOKEN, "wrongpassword");
+      expect(result.error).toBeDefined();
+      expect(result.code).toBe("INVALID_TOKEN");
     });
   });
 

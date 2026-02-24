@@ -345,6 +345,15 @@ async function deliverSingle(
 
       // 2xx → done. 4xx → don't retry (permanent client error).
       if (success || (statusCode !== null && statusCode < 500)) break;
+
+      // Don't sleep after the final attempt — we have exhausted all retries.
+      if (attempt === MAX_ATTEMPTS - 1) {
+        success = false;
+        console.warn(
+          `[WebhookDelivery] Delivery failed for webhook ${webhook.id} after ${MAX_ATTEMPTS} attempt(s): HTTP ${statusCode ?? "no-response"}`
+        );
+        break;
+      }
     } catch (err) {
       if (attempt === MAX_ATTEMPTS - 1) {
         // All attempts exhausted — record as failure

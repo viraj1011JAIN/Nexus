@@ -11,7 +11,7 @@ const OrganizationSwitcher = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-7 w-40 rounded-md bg-muted animate-pulse" />
+      <div className="h-7 w-full rounded-md bg-muted animate-pulse" />
     ),
   }
 );
@@ -20,7 +20,7 @@ const UserButton = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+      <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
     ),
   }
 );

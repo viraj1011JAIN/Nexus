@@ -90,6 +90,12 @@ describe("time-tracking-actions", () => {
       expect(result.error).toBeDefined();
     });
 
+    it("returns error for negative minutes", async () => {
+      // -1 also violates the min(1) schema constraint.
+      const result = await logTime(CARD_ID, -1);
+      expect(result.error).toBeDefined();
+    });
+
     it("returns error for minutes exceeding 100000", async () => {
       const result = await logTime(CARD_ID, 100001);
       expect(result.error).toBeDefined();

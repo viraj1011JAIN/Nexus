@@ -18,13 +18,25 @@ import OpenAI    from "openai";
 import { z }     from "zod";
 
 const _rawKey = process.env.OPENAI_API_KEY ?? "";
-if (!_rawKey || _rawKey.includes("REPLACE") || _rawKey.length < 20) {
-  console.error(
+const _keyValid = Boolean(_rawKey) && !_rawKey.includes("REPLACE") && _rawKey.length >= 20;
+
+if (!_keyValid) {
+  console.warn(
     "[ai-actions] ⚠  OPENAI_API_KEY is missing or is still the placeholder value.\n" +
-    "            Add your real key to .env.local:  OPENAI_API_KEY=sk-..."
+    "            AI features are disabled. Add your real key to .env.local:  OPENAI_API_KEY=sk-..."
   );
 }
-const openai = new OpenAI({ apiKey: _rawKey });
+
+// Null when key is missing/invalid — callers must check via getOpenAI() before calling the API.
+const openai: OpenAI | null = _keyValid ? new OpenAI({ apiKey: _rawKey }) : null;
+
+/** Returns the OpenAI client or throws a descriptive error if not configured. */
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    throw new Error("AI features are disabled: OPENAI_API_KEY is missing or invalid. Set it in .env.local.");
+  }
+  return openai;
+}
 
 const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? 50);
 const AI_MODEL       = process.env.AI_MODEL ?? "gpt-4o-mini";
@@ -90,7 +102,7 @@ ${parsed.data.description ? `Description: ${parsed.data.description}` : ""}
 
 Respond with ONLY valid JSON: { "priority": "URGENT"|"HIGH"|"MEDIUM"|"LOW", "reasoning": "<1-2 sentences>" }`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: AI_MODEL,
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
@@ -138,7 +150,7 @@ ${parsed.data.context ? `Context: ${parsed.data.context}` : ""}
 Write 2-4 sentences describing what needs to be done, acceptance criteria, and any relevant technical notes.
 Keep the tone professional and action-oriented. Do NOT use markdown headers — plain prose only.`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: AI_MODEL,
     messages: [{ role: "user", content: prompt }],
     max_tokens: 300,
@@ -178,7 +190,7 @@ ${parsed.data.description ? `Description: ${parsed.data.description}` : ""}
 Respond with ONLY valid JSON: { "items": ["<checklist item>", ...] }
 Provide 4-8 actionable items. Each item should be a short imperative sentence (e.g., "Write unit tests for the auth module").`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: AI_MODEL,
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },

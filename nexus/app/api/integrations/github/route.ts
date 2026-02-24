@@ -75,10 +75,67 @@ export async function POST(req: NextRequest) {
     const action = payload.action as string | undefined;
 
     if (pr && (action === "opened" || action === "closed")) {
-      const cardIds = extractCardIds(pr.title + " " + (pr.body ?? "") + " " + (payload.body as string ?? ""));
+      const cardIds = extractCardIds(pr.title + " " + (pr.body ?? ""));
 
       if (action === "closed" && pr.merged) {
         // PR merged — move referenced cards to the board's Done/Complete list
+        await Promise.allSettled(
+          cardIds.map(async (cardId) => {
+            try {
+              await db.$transaction(async (tx) => {
+                const card = await tx.card.findUnique({
+                  where: { id: cardId },
+                  include: { list: { include: { board: true } } },
+                });
+                if (!card) return;
+
+                const doneList = await tx.list.findFirst({
+                  where: {
+                    boardId: card.list.boardId,
+                    OR: [
+                      { title: { contains: "done",     mode: "insensitive" } },
+                      { title: { contains: "complete",  mode: "insensitive" } },
+                      { title: { contains: "merged",    mode: "insensitive" } },
+                    ],
+                  },
+                  orderBy: { order: "asc" },
+                });
+                if (!doneList || doneList.id === card.listId) return;
+
+                // Place card at end of target list
+                const lastCard = await tx.card.findFirst({
+                  where:   { listId: doneList.id },
+                  orderBy: { order: "desc" },
+                  select:  { order: true },
+                });
+                const newOrder = generateNextOrder(lastCard?.order ?? null);
+
+                await tx.card.update({
+                  where: { id: cardId },
+                  data:  { listId: doneList.id, order: newOrder },
+                });
+
+                await tx.auditLog.create({
+                  data: {
+                    entityId:    cardId,
+                    entityTitle: `Moved to "${doneList.title}" on PR merge: ${pr.title.slice(0, 60)}`,
+                    entityType:  "CARD",
+                    action:      "UPDATE",
+                    orgId:       card.list.board.orgId,
+                    userId:      "github-webhook",
+                    userImage:   "",
+                    userName:    "GitHub (PR merged)",
+                  },
+                });
+              });
+            } catch (err) {
+              console.error(`[github/route] Failed to move card ${cardId}:`, err);
+            }
+          })
+        );
+      } else {
+        // Opened, or closed without merge — create audit log entries only.
+        // Look up each card to obtain the real orgId for the audit record.
         await Promise.allSettled(
           cardIds.map(async (cardId) => {
             try {
@@ -86,67 +143,23 @@ export async function POST(req: NextRequest) {
                 where: { id: cardId },
                 include: { list: { include: { board: true } } },
               });
-              if (!card) return null;
-
-              const doneList = await db.list.findFirst({
-                where: {
-                  boardId: card.list.boardId,
-                  OR: [
-                    { title: { contains: "done",     mode: "insensitive" } },
-                    { title: { contains: "complete",  mode: "insensitive" } },
-                    { title: { contains: "merged",    mode: "insensitive" } },
-                  ],
-                },
-              });
-              if (!doneList || doneList.id === card.listId) return null;
-
-              // Place card at end of target list
-              const lastCard = await db.card.findFirst({
-                where:   { listId: doneList.id },
-                orderBy: { order: "desc" },
-                select:  { order: true },
-              });
-              const newOrder = generateNextOrder(lastCard?.order ?? null);
-
-              await db.card.update({
-                where: { id: cardId },
-                data:  { listId: doneList.id, order: newOrder },
-              });
-
+              const orgId = card?.list.board.orgId
+                ?? (payload.repository as { owner?: { login?: string } })?.owner?.login
+                ?? "github-webhook";
               await db.auditLog.create({
                 data: {
                   entityId:    cardId,
-                  entityTitle: `Moved to "${doneList.title}" on PR merge: ${pr.title.slice(0, 60)}`,
+                  entityTitle: `GitHub PR ${action}: ${pr.title.slice(0, 80)}`,
                   entityType:  "CARD",
-                  action:      "UPDATE",
-                  orgId:       card.list.board.orgId,
+                  action:      action === "closed" ? "UPDATE" : "CREATE",
+                  orgId,
                   userId:      "github-webhook",
                   userImage:   "",
-                  userName:    "GitHub (PR merged)",
+                  userName:    "GitHub Webhook",
                 },
               });
-            } catch {
-              return null;
-            }
+            } catch { return null; }
           })
-        );
-      } else {
-        // Opened, or closed without merge — create audit log entries only
-        await Promise.allSettled(
-          cardIds.map((cardId) =>
-            db.auditLog.create({
-              data: {
-                entityId:    cardId,
-                entityTitle: `GitHub PR ${action}: ${pr.title.slice(0, 80)}`,
-                entityType:  "CARD",
-                action:      action === "closed" ? "UPDATE" : "CREATE",
-                orgId:       "github-webhook",
-                userId:      "github-webhook",
-                userImage:   "",
-                userName:    "GitHub Webhook",
-              },
-            }).catch(() => null)
-          )
         );
       }
     }

@@ -15,10 +15,11 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-const ImportSchema = z.object({
-  format: z.enum(["nexus", "trello", "jira"]),
-  data:   z.unknown(),
-});
+const ImportSchema = z.discriminatedUnion("format", [
+  z.object({ format: z.literal("nexus"),  data: z.unknown() }),
+  z.object({ format: z.literal("trello"), data: z.unknown() }),
+  z.object({ format: z.literal("jira"),   data: z.string({ required_error: "data must be an XML string for jira format" }) }),
+]);
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -41,8 +42,10 @@ export async function POST(req: NextRequest) {
     result = await importFromJSON(data);
   } else if (format === "trello") {
     result = await importFromTrello(data);
+  } else if (format === "jira") {
+    result = await importFromJira(data); // data: string guaranteed by schema
   } else {
-    result = await importFromJira(data as string);
+    return NextResponse.json({ error: "Unsupported import format" }, { status: 422 });
   }
 
   if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });

@@ -231,16 +231,28 @@ export const CardModal = () => {
 
   const handleGenerateDescription = async () => {
     if (!cardData) return;
+    // Confirm before overwriting a non-empty existing description.
+    if (cardData.description?.trim()) {
+      const confirmed = window.confirm(
+        "This will replace the current description with AI-generated content. Continue?"
+      );
+      if (!confirmed) return;
+    }
     setAiDescLoading(true);
-    const result = await generateCardDescription({
-      title: cardData.title,
-      context: cardData.list?.title,
-    });
-    setAiDescLoading(false);
-    if (result.error) { toast.error(result.error); return; }
-    if (result.data?.description) {
-      await handleSaveDescription(result.data.description);
-      toast.success("Description generated");
+    try {
+      const result = await generateCardDescription({
+        title: cardData.title,
+        context: cardData.list?.title,
+      });
+      if (result.error) { toast.error(result.error); return; }
+      if (result.data?.description) {
+        await handleSaveDescription(result.data.description);
+        toast.success("Description generated");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate description");
+    } finally {
+      setAiDescLoading(false);
     }
   };
 
@@ -813,7 +825,7 @@ export const CardModal = () => {
                             {aiDescLoading
                               ? <Loader2 className="h-3 w-3 animate-spin" />
                               : <Sparkles className="h-3 w-3" />}
-                            {aiDescLoading ? "Generating…" : "✨ Generate"}
+                            {aiDescLoading ? "Generating..." : "Generate"}
                           </Button>
                         </div>
                         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">

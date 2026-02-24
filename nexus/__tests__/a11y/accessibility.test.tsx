@@ -105,7 +105,7 @@ describe("Skip-to-main-content link (TASK-036)", () => {
         >
           Skip to main content
         </a>
-        <div id="main-content">Page content</div>
+        <div id="main-content" tabIndex={-1}>Page content</div>
       </>
     );
     const link = container.querySelector("a[href='#main-content']");
@@ -117,7 +117,7 @@ describe("Skip-to-main-content link (TASK-036)", () => {
     const { container } = render(
       <>
         <a href="#main-content">Skip to main content</a>
-        <main id="main-content">Main area</main>
+        <main id="main-content" tabIndex={-1}>Main area</main>
       </>
     );
     const target = container.querySelector("#main-content");
@@ -130,7 +130,7 @@ describe("Skip-to-main-content link (TASK-036)", () => {
         <a href="#main-content" className="sr-only focus:not-sr-only">
           Skip to main content
         </a>
-        <main id="main-content">
+        <main id="main-content" tabIndex={-1}>
           <h1>Page Title</h1>
           <p>Main page content.</p>
         </main>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getTenantContext, TenantError } from "@/lib/tenant-context";
-import { createDAL } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 
@@ -41,12 +40,10 @@ export async function POST() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const dal = await createDAL(ctx);
-
-  // ── Perform in-place anonymisation inside a single transaction ────────────
-  await db.$transaction([
+  // ── Perform in-place anonymisation AND record the compliance event atomically ────────────
+  await db.$transaction(async (tx) => {
     // 1. Scrub the user's profile fields
-    db.user.update({
+    await tx.user.update({
       where: { id: user.id },
       data: {
         name: "Deleted User",
@@ -55,26 +52,35 @@ export async function POST() {
         imageUrl: null,
         pushSubscription: null,
       },
-    }),
+    });
+
     // 2. Unassign cards (remove personal association without deleting work)
-    db.card.updateMany({
+    await tx.card.updateMany({
       where: { assigneeId: user.id },
       data: { assigneeId: null },
-    }),
-    // 3. Anonymise comment authorship — text is preserved for audit/work trail
-    db.comment.updateMany({
-      where: { userId: ctx.userId },
-      data: { userId: "deleted" },
-    }),
-  ]);
+    });
 
-  // Log the completed erasure in the audit log for compliance tooling
-  await dal.auditLogs.create({
-    action: "DELETE",
-    entityType: "ORGANIZATION",
-    entityId: user.id ?? ctx.userId,
-    entityTitle: "GDPR erasure completed",
-    userName: "Deleted User",
+    // 3. Anonymise comment authorship — text is preserved for audit/work trail.
+    //    Filter by DB primary key (user.id), NOT the Clerk external ID (ctx.userId).
+    await tx.comment.updateMany({
+      where: { userId: user.id },
+      data: { userId: "deleted" },
+    });
+
+    // 4. Record the erasure for compliance inside the same transaction: if any
+    //    step above fails, this log entry rolls back too — no audit without erasure.
+    await tx.auditLog.create({
+      data: {
+        action:      "DELETE",
+        entityType:  "ORGANIZATION",
+        entityId:    user.id,
+        entityTitle: "GDPR erasure completed",
+        orgId:       ctx.orgId,
+        userId:      user.id,
+        userImage:   "",
+        userName:    "Deleted User",
+      },
+    });
   });
 
   // Send confirmation email to the original address (before it was anonymised)
@@ -91,7 +97,7 @@ export async function POST() {
 
   // Log only non-sensitive identifiers — never log email addresses
   console.info(
-    `[gdpr/delete-request] Erasure completed — id=${user.id ?? ctx.userId} orgId=${ctx.orgId}`
+    `[gdpr/delete-request] Erasure completed — id=${user.id} orgId=${ctx.orgId}`
   );
 
   return NextResponse.json({

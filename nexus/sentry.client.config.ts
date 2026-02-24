@@ -32,8 +32,11 @@ Sentry.init({
     ? [
         Sentry.browserTracingIntegration(),
         Sentry.replayIntegration({
-          maskAllText: false,
-          blockAllMedia: false,
+          // Use safe defaults: all text masked, media blocked.
+          // Add ignore/mask/block options below to selectively unmask specific
+          // known-safe static UI elements if needed.
+          maskAllText: true,
+          blockAllMedia: true,
         }),
         Sentry.browserProfilingIntegration(),
       ]

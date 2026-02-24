@@ -548,29 +548,33 @@ async function main() {
   console.log("📋 Seeding board templates...");
 
   for (const tpl of TEMPLATES) {
-    // Delete old version if it exists so we can re-seed cleanly
-    await prisma.boardTemplate.deleteMany({ where: { id: tpl.id } });
+    // Delete old version and create new one atomically so a failed create
+    // doesn't leave the template permanently deleted.
+    await prisma.$transaction(async (tx) => {
+      await tx.boardTemplate.deleteMany({ where: { id: tpl.id } });
 
-    await prisma.boardTemplate.create({
-      data: {
-        id: tpl.id,
-        title: tpl.title,
-        description: tpl.description,
-        category: tpl.category,
-        orgId: null, // global — visible to all orgs
-        lists: {
-          create: tpl.lists.map((list) => ({
-            title: list.title,
-            order: list.order,
-            cards: {
-              create: list.cards.map((cardTitle, i) => ({
-                title: cardTitle,
-                order: String.fromCharCode(97 + i), // "a", "b", "c", …
-              })),
-            },
-          })),
+      await tx.boardTemplate.create({
+        data: {
+          id: tpl.id,
+          title: tpl.title,
+          description: tpl.description,
+          category: tpl.category,
+          orgId: null, // global — visible to all orgs
+          lists: {
+            create: tpl.lists.map((list) => ({
+              title: list.title,
+              order: list.order,
+              cards: {
+                create: list.cards.map((cardTitle, i) => ({
+                  title: cardTitle,
+                  // Zero-padded numeric order supports >26 cards without overflow.
+                  order: String(i).padStart(3, "0"),
+                })),
+              },
+            })),
+          },
         },
-      },
+      });
     });
 
     console.log(`  ✓ ${tpl.category.padEnd(12)} — ${tpl.title}`);
