@@ -320,7 +320,9 @@ function MemberRow({ member }: { member: WorkloadMember }) {
 function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
   const [expanded, setExpanded] = useState(false);
   const { setNodeRef, isOver } = useDroppable({ id: "__unassigned__" });
-  if (cards.length === 0) return null;
+  // Always render the droppable zone — when empty it shows a "Drop here to unassign"
+  // placeholder so users have a valid drag target even with no unassigned cards.
+  const isEmpty = cards.length === 0;
 
   return (
     <div
@@ -334,27 +336,35 @@ function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
     >
       <div
         role="button"
-        tabIndex={0}
-        aria-expanded={expanded}
-        aria-label={`Unassigned: ${cards.length} cards. Click to ${expanded ? "collapse" : "expand"}`}
-        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
-        onClick={() => setExpanded(!expanded)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(!expanded); } }}
+        tabIndex={isEmpty ? -1 : 0}
+        aria-expanded={isEmpty ? undefined : expanded}
+        aria-label={isEmpty ? "Unassigned: no cards. Drop here to unassign a card." : `Unassigned: ${cards.length} cards. Click to ${expanded ? "collapse" : "expand"}`}
+        className={cn(
+          "flex items-center gap-4 p-4 transition-colors",
+          isEmpty ? "cursor-default" : "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30"
+        )}
+        onClick={() => !isEmpty && setExpanded(!expanded)}
+        onKeyDown={(e) => { if (!isEmpty && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setExpanded(!expanded); } }}
       >
         <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
           <User className="h-4 w-4 text-slate-500" />
         </div>
         <div>
           <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Unassigned</p>
-          <p className="text-xs text-muted-foreground">{cards.length} cards with no assignee</p>
+          {isEmpty
+            ? <p className="text-xs text-muted-foreground">Drop cards here to remove their assignee</p>
+            : <p className="text-xs text-muted-foreground">{cards.length} cards with no assignee</p>
+          }
         </div>
-        <span className="ml-auto text-muted-foreground" aria-hidden="true">
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </span>
+        {!isEmpty && (
+          <span className="ml-auto text-muted-foreground" aria-hidden="true">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </span>
+        )}
       </div>
 
       <AnimatePresence>
-        {expanded && (
+        {expanded && !isEmpty && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -375,7 +385,8 @@ function UnassignedRow({ cards }: { cards: WorkloadCard[] }) {
 
 // ─── WorkloadView ─────────────────────────────────────────────────────────────
 
-export function WorkloadView({ boardId, lists }: WorkloadViewProps) {
+export function WorkloadView({ boardId: _boardId, lists }: WorkloadViewProps) {
+  // TODO: use _boardId for board-scoped revalidation (e.g. router.refresh after drag)
   // Optimistic override map: cardId → target memberId ("__unassigned__" to unassign)
   const [cardMemberOverrides, setCardMemberOverrides] = useState<Record<string, string>>({});
   const [activeCardId, setActiveCardId] = useState<string | null>(null);

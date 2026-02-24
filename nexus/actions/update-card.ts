@@ -32,9 +32,12 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     return { error: "Cannot update cards in demo mode." };
   }
 
+  // Capture card outside try so it is accessible after the catch block.
+  let card: Card | undefined;
+
   try {
     // DAL verifies Card→List→Board→orgId === ctx.orgId before updating
-    const card = await dal.cards.update(id, values);
+    card = await dal.cards.update(id, values);
 
     await dal.auditLogs.create({
       entityId: card.id,
@@ -44,28 +47,24 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     });
 
     revalidatePath(`/board/${boardId}`);
-
-    // Fire CARD_TITLE_CONTAINS event if the title was updated (TASK-019) — fire-and-forget.
-    // Deferred via Promise.resolve().then() so a synchronous throw from emitCardEvent
-    // cannot be caught by the outer try/catch and turned into a false failure response.
-    // Use card.title (post-write canonical value) rather than values.title (input) in
-    // the event context so automation rules see the authoritative stored title.
-    if (values.title) {
-      // emitCardEvent is fully fire-and-forget (returns void, handles errors internally).
-      // Defer via after() so the event fires post-response without blocking the action.
-      after(() => {
-        emitCardEvent(
-          { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card.id, context: { cardTitle: card.title } },
-          { cardId: card.id, cardTitle: card.title, boardId, orgId: ctx.orgId }
-        );
-      });
-    }
-
-    return { data: card };
   } catch (error) {
     console.error("[UPDATE_CARD_ERROR]", error);
     return { error: "Failed to update." };
   }
+
+  // Deferred event emission is registered OUTSIDE the try/catch so that an
+  // after() registration failure cannot shadow a successfully committed update.
+  // emitCardEvent now returns Promise<void>; async callback lets after() track it.
+  if (values.title) {
+    after(async () => {
+      await emitCardEvent(
+        { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card!.id, context: { cardTitle: card!.title } },
+        { cardId: card!.id, cardTitle: card!.title, boardId, orgId: ctx.orgId }
+      );
+    });
+  }
+
+  return { data: card };
 };
 
 export const updateCard = createSafeAction(UpdateCard, handler);

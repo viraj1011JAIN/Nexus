@@ -87,8 +87,10 @@ export function KeyboardShortcutsModal({ open: openProp, onClose, shortcuts: ext
 
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : openInternal;
-  const setOpen = isControlled
-    ? (val: boolean) => { if (!val) onClose?.(); }
+  // Fall back to setOpenInternal when openProp is supplied without an onClose handler
+  // so that close events (Escape, overlay click) are not silently discarded.
+  const setOpen = (isControlled && onClose)
+    ? (val: boolean) => { if (!val) onClose(); }
     : setOpenInternal;
 
   // When used standalone, register the "?" shortcut ourselves.

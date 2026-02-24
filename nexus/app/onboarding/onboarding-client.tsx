@@ -26,15 +26,6 @@ const STEP_LABELS: Record<Step, string> = {
   done: "Done",
 };
 
-const BOARD_COLOR_PRESETS = [
-  { label: "Ocean", value: "#0ea5e9" },
-  { label: "Forest", value: "#22c55e" },
-  { label: "Sunset", value: "#f97316" },
-  { label: "Lavender", value: "#a855f7" },
-  { label: "Rose", value: "#f43f5e" },
-  { label: "Slate", value: "#64748b" },
-];
-
 // ─── Slide animations ─────────────────────────────────────────────────────────
 
 const slideVariants = {
@@ -126,7 +117,6 @@ function CreateBoardStep({
   onCreated: (boardId: string) => void;
 }) {
   const [title, setTitle] = useState("");
-  const [color, setColor] = useState(BOARD_COLOR_PRESETS[0].value);
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
@@ -178,41 +168,11 @@ function CreateBoardStep({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Product Roadmap, Sprint Q1, Marketing…"
             maxLength={50}
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            onKeyDown={(e) => e.key === "Enter" && !loading && handleCreate()}
             className="text-base"
             autoFocus
           />
           <p className="text-xs text-muted-foreground mt-1">{title.length}/50 characters</p>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1.5">
-            Accent colour
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {BOARD_COLOR_PRESETS.map((preset) => (
-              <button
-                key={preset.value}
-                title={preset.label}
-                onClick={() => setColor(preset.value)}
-                className={cn(
-                  "w-7 h-7 rounded-full transition-all border-2",
-                  color === preset.value
-                    ? "border-slate-800 dark:border-white scale-110"
-                    : "border-transparent hover:scale-105"
-                )}
-                style={{ backgroundColor: preset.value }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Board preview */}
-        <div
-          className="rounded-xl p-4 text-white font-semibold text-sm shadow-md"
-          style={{ background: `linear-gradient(135deg, ${color}cc, ${color}66)`, border: `1px solid ${color}` }}
-        >
-          {title || "Your Board Name"}
         </div>
       </div>
 

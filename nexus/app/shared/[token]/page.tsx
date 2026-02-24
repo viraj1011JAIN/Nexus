@@ -7,9 +7,9 @@
  *  - Expired or revoked shares → 404.
  *  - Password-protected shares → render PasswordGate (client component) instead of
  *    the board view so the raw board data is never sent to the browser before the
- *    password is verified.  The PasswordGate calls getSharedBoardData again from the
- *    client with the entered password; the server action only returns board data after
- *    a correct bcrypt comparison — no race condition or auth bypass.
+ *    password is verified.  The PasswordGate client component calls the
+ *    getSharedBoardData server action with the entered password; the action only
+ *    returns board data after a correct bcrypt comparison — no race condition or auth bypass.
  */
 
 import { db } from "@/lib/db";
@@ -75,6 +75,7 @@ export default async function SharedBoardPage({ params }: SharedBoardPageProps) 
   const share = await db.boardShare.findFirst({
     where: {
       id: shareLight.id,
+      passwordHash: null, // Guard against a race where a password is added between the two queries
       isActive: true,
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },

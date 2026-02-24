@@ -45,9 +45,9 @@ export async function POST() {
   // compliance tooling and cannot be silently dropped.
   await dal.auditLogs.create({
     action: "DELETE",
-    entityType: "ORGANIZATION", // Closest valid type — represents an account-level action
-    entityId: user.id,
-    entityTitle: `GDPR erasure request — ${user.email ?? user.name ?? ctx.userId}`,
+    entityType: "ORGANIZATION",
+    entityId: user.id ?? ctx.userId,
+    entityTitle: `GDPR erasure request`,
     userName: user.name ?? undefined,
   });
 
@@ -55,13 +55,14 @@ export async function POST() {
   //   await queue.enqueue("gdpr.erase", { userId: ctx.userId, orgId: ctx.orgId });
   // and send a confirmation email via your transactional email provider.
 
+  // Log only the non-sensitive user identifier — never log email addresses.
   console.info(
-    `[gdpr/delete-request] Erasure requested — userId=${ctx.userId} orgId=${ctx.orgId} email=${user.email}`
+    `[gdpr/delete-request] Erasure requested — id=${user.id ?? ctx.userId} orgId=${ctx.orgId}`
   );
 
   return NextResponse.json({
     success: true,
     message:
-      "Your deletion request has been received and will be processed within 30 days in accordance with GDPR Article 17. A confirmation will be sent to your email address.",
+      "Your deletion request has been received and will be processed within 30 days in accordance with GDPR Article 17.",
   });
 }

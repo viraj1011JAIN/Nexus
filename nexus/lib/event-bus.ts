@@ -31,13 +31,15 @@ const CONTEXT_WEBHOOK_ALLOWLIST = [
 ] as const;
 
 /**
- * Emit a card event fire-and-forget: schedules automation + webhook delivery and
- * returns immediately. Never throws — any errors are caught and logged internally.
+ * Emit a card event: schedules automation + webhook delivery.
+ * Returns a Promise<void> so callers can use after(emitCardEvent(...)) or
+ * await it when they need the runtime to stay alive until delivery finishes.
+ * Never rejects — any errors are caught and logged internally.
  */
 export function emitCardEvent(
   event: AutomationEvent,
   webhookData?: Record<string, unknown>
-): void {
+): Promise<void> {
   const webhookEvent = TRIGGER_TO_WEBHOOK[event.type];
 
   // Build webhook payload from an explicit allowlist of context keys to avoid
@@ -59,8 +61,8 @@ export function emitCardEvent(
     type: webhookEvent ?? event.type,
   };
 
-  // Fire-and-forget: do not block the calling server action on automation/webhook I/O.
-  void Promise.allSettled([
+  // Schedule automation / webhook I/O and return the Promise so callers can track it.
+  return Promise.allSettled([
     runAutomations(event),
     // Only fire webhooks when there is a mapped event name for this trigger type
     webhookEvent
@@ -103,5 +105,16 @@ export function emitCardEvent(
         payloadSize: safePayloadSize,
       });
     }
+  })
+  // Terminal catch: guard against any unexpected throw inside the .then() callback
+  // itself, which would otherwise create an unhandled Promise rejection.
+  .catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message.slice(0, 120) : String(err).slice(0, 120);
+    console.error("[EventBus] Unexpected error in post-dispatch handler", {
+      msg,
+      eventType: event.type,
+      cardId: event.cardId,
+      orgId: event.orgId,
+    });
   });
 }

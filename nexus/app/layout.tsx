@@ -9,6 +9,7 @@ import { ThemeProvider, themeScript } from "@/components/theme-provider";
 import { PerformanceWrapper } from "@/components/performance-wrapper";
 import { CommandPalette } from "@/components/command-palette";
 import { Toaster } from "@/components/ui/toaster";
+import { AriaLiveRegion } from "@/components/accessibility/aria-live-region";
 import "./globals.css";
 import "./editor.css";
 
@@ -67,6 +68,7 @@ export default function RootLayout({
           <PerformanceWrapper>
             <ThemeProvider>
               <div className="bg-background text-foreground min-h-screen contain-layout" suppressHydrationWarning>
+                <AriaLiveRegion />
                 <CommandPalette />
                 <ModalProvider />
                 <Toaster />

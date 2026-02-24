@@ -24,13 +24,22 @@ export async function GET() {
 
   try {
     const dbStart = Date.now();
-    await db.$queryRaw`SELECT 1`;
+    const DB_TIMEOUT_MS = 5_000;
+    await Promise.race([
+      db.$queryRaw`SELECT 1`,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("DB health-check timed out")), DB_TIMEOUT_MS)
+      ),
+    ]);
     dbLatencyMs = Date.now() - dbStart;
   } catch (err) {
     dbStatus = "error";
     dbLatencyMs = Date.now() - startMs;
     dbError = "Database unreachable";
-    console.error("[health] DB connectivity check failed:", err);
+    // Log only the error name/message — never the full error object (may contain DSN/credentials).
+    const errName = (err instanceof Error ? err.name : "UnknownError");
+    const errMsg = (err instanceof Error ? err.message : String(err)).slice(0, 120);
+    console.error(`[health] DB connectivity check failed: ${errName} — ${errMsg}`);
   }
 
   const overall = dbStatus === "ok" ? "ok" : "degraded";

@@ -941,7 +941,7 @@ function MembersTab({ d }: { d: AdvancedBoardAnalytics }) {
                     )}
                   </div>
                   {/* Completion progress bar */}
-                  <div className="flex items-center gap-2 hidden sm:flex">
+                  <div className="hidden items-center gap-2 sm:flex">
                     <span className="text-xs text-muted-foreground w-8 text-right">{completionPct}%</span>
                     <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
@@ -967,11 +967,35 @@ interface AdvancedAnalyticsProps {
   boardName: string;
 }
 
+// ─── Date-range presets ───────────────────────────────────────────────────────
+const DATE_RANGES = [
+  { label: "7d",  days: 7  },
+  { label: "14d", days: 14 },
+  { label: "30d", days: 30 },
+  { label: "60d", days: 60 },
+  { label: "All", days: 0  },
+] as const;
+
+type DaysBack = (typeof DATE_RANGES)[number]["days"];
+
+/** Slice burndown / throughput arrays to the latest `n` entries. */
+function applyDateFilter(data: AdvancedBoardAnalytics, days: DaysBack): AdvancedBoardAnalytics {
+  if (days === 0) return data;
+  return {
+    ...data,
+    burndown:       data.burndown.slice(-days),
+    throughput:     data.throughput.slice(-Math.ceil(days / 7)),
+    leadTimeTrend:  data.leadTimeTrend.slice(-Math.ceil(days / 7)),
+    cumulativeFlow: data.cumulativeFlow.slice(-Math.min(14, days)),
+  };
+}
+
 export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps) {
   const [data, setData] = useState<AdvancedBoardAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [daysBack, setDaysBack] = useState<DaysBack>(30);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -1024,7 +1048,7 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <BarChart2 className="h-6 w-6 text-indigo-500" />
@@ -1032,7 +1056,30 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
           </h2>
           <p className="text-muted-foreground text-sm mt-0.5">{boardName}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date range selector */}
+          <div
+            className="flex items-center rounded-lg border bg-muted/50 p-0.5 gap-0.5"
+            role="group"
+            aria-label="Date range"
+          >
+            {DATE_RANGES.map(({ label, days }) => (
+              <button
+                key={label}
+                className={cn(
+                  "px-2.5 py-1 text-xs rounded-md font-medium transition-colors",
+                  daysBack === days
+                    ? "bg-background shadow text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => setDaysBack(days)}
+                aria-pressed={daysBack === days}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -1055,72 +1102,63 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
         </div>
       </div>
 
-      {/* Top KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
-          title="Health Score"
-          value={`${data.scores.healthScore}/100`}
-          icon={Activity}
-          color={data.scores.healthScore >= 70 ? "text-emerald-600" : data.scores.healthScore >= 40 ? "text-amber-600" : "text-red-600"}
-          sub="composite board health"
-        />
-        <StatCard
-          title="Avg Cycle Time"
-          value={`${data.cycleTime.avg}h`}
-          icon={Clock}
-          sub={`${data.cycleTime.sampleCount} completed cards`}
-        />
-        <StatCard
-          title="Coverage"
-          value={`${data.coverage.withBothPercent}%`}
-          icon={Users}
-          sub="cards with assignee + due date"
-          trend={data.coverage.withBothPercent >= 70 ? "up" : "down"}
-        />
-        <StatCard
-          title="On-time Score"
-          value={`${data.scores.overdueScore}/100`}
-          icon={CheckCircle2}
-          color={data.scores.overdueScore >= 80 ? "text-emerald-600" : "text-red-600"}
-          sub="higher = fewer overdue"
-        />
-      </div>
+      {/* Compute filtered view */}
+      {(() => {
+        const fd = applyDateFilter(data, daysBack);
+        return (
+          <>
+            {/* Top KPIs — always use raw data (scores are board-wide) */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <StatCard
+                title="Health Score"
+                value={`${data.scores.healthScore}/100`}
+                icon={Activity}
+                color={data.scores.healthScore >= 70 ? "text-emerald-600" : data.scores.healthScore >= 40 ? "text-amber-600" : "text-red-600"}
+                sub="composite board health"
+              />
+              <StatCard
+                title="Avg Cycle Time"
+                value={`${data.cycleTime.avg}h`}
+                icon={Clock}
+                sub={`${data.cycleTime.sampleCount} completed cards`}
+              />
+              <StatCard
+                title="Coverage"
+                value={`${data.coverage.withBothPercent}%`}
+                icon={Users}
+                sub="cards with assignee + due date"
+                trend={data.coverage.withBothPercent >= 70 ? "up" : "down"}
+              />
+              <StatCard
+                title="On-time Score"
+                value={`${data.scores.overdueScore}/100`}
+                icon={CheckCircle2}
+                color={data.scores.overdueScore >= 80 ? "text-emerald-600" : "text-red-600"}
+                sub="higher = fewer overdue"
+              />
+            </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-          <TabsTrigger value="burndown" className="text-xs">Burndown</TabsTrigger>
-          <TabsTrigger value="cycletime" className="text-xs">Cycle Time</TabsTrigger>
-          <TabsTrigger value="flow" className="text-xs">Flow</TabsTrigger>
-          <TabsTrigger value="patterns" className="text-xs">Patterns</TabsTrigger>
-          <TabsTrigger value="members" className="text-xs">Members</TabsTrigger>
-        </TabsList>
+            {/* Tabs — time-series tabs use filtered data */}
+            <Tabs defaultValue="overview">
+              <TabsList className="grid w-full grid-cols-6">
+                <TabsTrigger value="overview"  className="text-xs">Overview</TabsTrigger>
+                <TabsTrigger value="burndown"  className="text-xs">Burndown</TabsTrigger>
+                <TabsTrigger value="cycletime" className="text-xs">Cycle Time</TabsTrigger>
+                <TabsTrigger value="flow"      className="text-xs">Flow</TabsTrigger>
+                <TabsTrigger value="patterns"  className="text-xs">Patterns</TabsTrigger>
+                <TabsTrigger value="members"   className="text-xs">Members</TabsTrigger>
+              </TabsList>
 
-        <TabsContent value="overview" className="mt-4">
-          <OverviewTab d={data} />
-        </TabsContent>
-
-        <TabsContent value="burndown" className="mt-4">
-          <BurndownTab d={data} />
-        </TabsContent>
-
-        <TabsContent value="cycletime" className="mt-4">
-          <CycleTimeTab d={data} />
-        </TabsContent>
-
-        <TabsContent value="flow" className="mt-4">
-          <FlowTab d={data} />
-        </TabsContent>
-
-        <TabsContent value="patterns" className="mt-4">
-          <PatternsTab d={data} />
-        </TabsContent>
-
-        <TabsContent value="members" className="mt-4">
-          <MembersTab d={data} />
-        </TabsContent>
-      </Tabs>
+              <TabsContent value="overview"  className="mt-4"><OverviewTab  d={data} /></TabsContent>
+              <TabsContent value="burndown"  className="mt-4"><BurndownTab  d={fd} /></TabsContent>
+              <TabsContent value="cycletime" className="mt-4"><CycleTimeTab d={fd} /></TabsContent>
+              <TabsContent value="flow"      className="mt-4"><FlowTab      d={fd} /></TabsContent>
+              <TabsContent value="patterns"  className="mt-4"><PatternsTab  d={data} /></TabsContent>
+              <TabsContent value="members"   className="mt-4"><MembersTab   d={data} /></TabsContent>
+            </Tabs>
+          </>
+        );
+      })()}
     </div>
   );
 }

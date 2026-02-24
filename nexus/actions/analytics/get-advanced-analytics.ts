@@ -375,10 +375,15 @@ export async function getAdvancedBoardAnalytics(
       existing.totalCards++;
       if (doneListIds.has(card.listId)) {
         existing.completedCards++;
-        if (card.createdAt && card.updatedAt) {
+        if (card.createdAt) {
+          // Use the same completion-date logic as the burndown section: prefer a
+          // dedicated completedAt timestamp, fall back to updatedAt so lead-time
+          // is consistent across all analytics.
+          const completionDate =
+            (card as unknown as { completedAt?: Date | null }).completedAt ?? card.updatedAt;
           const hrs = Math.max(
             0,
-            (new Date(card.updatedAt).getTime() - new Date(card.createdAt).getTime()) /
+            (new Date(completionDate).getTime() - new Date(card.createdAt).getTime()) /
               (1000 * 60 * 60),
           );
           existing.leadTimes.push(hrs);

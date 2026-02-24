@@ -218,6 +218,9 @@ function CreateAutomationDialog({
   const handleTriggerChange = (v: string) => {
     const next = v as TriggerType;
     setTriggerType(next);
+    // Clear stale extras (e.g. daysBeforeDue, keyword) so they don't bleed into
+    // the new trigger type after a switch.
+    setTriggerExtras({});
     // When switching to CARD_DELETED, remove any actions that cannot run on a deleted card.
     if (next === "CARD_DELETED") {
       setActionList((prev) => {

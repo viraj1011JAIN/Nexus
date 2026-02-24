@@ -57,11 +57,11 @@ export async function updateCardOrder(items: CardUpdate[], boardId: string) {
     for (const item of items) {
       const prev = cardMap.get(item.id);
       if (!prev || prev.listId === item.listId) continue; // same list — skip
-      // Wrap in after() so the event fires after the response is sent,
-      // ensuring the card-move succeeds even if automation/webhook delivery is slow.
-      // emitCardEvent returns void and handles all internal errors.
-      after(() => {
-        emitCardEvent(
+      // Wrap in after() so the event fires after the response is sent.
+      // The async callback lets after() track the Promise so the serverless function
+      // stays alive until emitCardEvent's I/O resolves.
+      after(async () => {
+        await emitCardEvent(
           {
             type: "CARD_MOVED",
             orgId: ctx.orgId,

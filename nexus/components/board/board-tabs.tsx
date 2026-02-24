@@ -16,8 +16,9 @@ import { BulkSelectionProvider, useBulkSelection } from "@/lib/bulk-selection-co
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import {
-  BarChart3, LayoutDashboard, Table2, GitBranch, Calendar, Users,
+  BarChart3, LayoutDashboard, Table2, GitBranch, Calendar, Users, GanttChart,
 } from "lucide-react";
+import { GanttView } from "@/components/board/gantt-view";
 
 // â”€â”€â”€ Tab definitions (order matters â€” keys 1â€“6 map to tabs by index) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -25,6 +26,7 @@ const TABS = [
   { value: "board",     label: "Board",     Icon: LayoutDashboard },
   { value: "table",     label: "Table",     Icon: Table2 },
   { value: "calendar",  label: "Calendar",  Icon: Calendar },
+  { value: "timeline",  label: "Timeline",  Icon: GanttChart },
   { value: "sprints",   label: "Sprints",   Icon: GitBranch },
   { value: "workload",  label: "Workload",  Icon: Users },
   { value: "analytics", label: "Analytics", Icon: BarChart3 },
@@ -170,17 +172,21 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
   }, [handleTabChange]);
 
   const selectAllVisible = useCallback(() => {
-    bulk.selectAll(filteredCards.map((c) => c.id));
-  }, [bulk, filteredCards]);
+    // filteredCards is only meaningful (calendar filters dates) on the calendar tab;
+    // on all other tabs use allCards so Ctrl+A truly selects every card.
+    const cards = activeTab === "calendar" ? filteredCards : allCards;
+    bulk.selectAll(cards.map((c) => c.id));
+  }, [bulk, filteredCards, allCards, activeTab]);
 
   const shortcuts = useMemo(() => [
     // â”€â”€ View switch (1â€“6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "1", description: "Switch to Board view",    action: () => switchToTab("board"),     ignoreInInput: true },
     { key: "2", description: "Switch to Table view",    action: () => switchToTab("table"),     ignoreInInput: true },
     { key: "3", description: "Switch to Calendar view", action: () => switchToTab("calendar"),  ignoreInInput: true },
-    { key: "4", description: "Switch to Sprints view",  action: () => switchToTab("sprints"),   ignoreInInput: true },
-    { key: "5", description: "Switch to Workload view", action: () => switchToTab("workload"),  ignoreInInput: true },
-    { key: "6", description: "Switch to Analytics",     action: () => switchToTab("analytics"), ignoreInInput: true },
+    { key: "4", description: "Switch to Timeline view", action: () => switchToTab("timeline"),  ignoreInInput: true },
+    { key: "5", description: "Switch to Sprints view",  action: () => switchToTab("sprints"),   ignoreInInput: true },
+    { key: "6", description: "Switch to Workload view", action: () => switchToTab("workload"),  ignoreInInput: true },
+    { key: "7", description: "Switch to Analytics",     action: () => switchToTab("analytics"), ignoreInInput: true },
     // â”€â”€ Bulk selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     { key: "b", description: "Toggle bulk selection mode", action: () => bulk.isBulkMode ? bulk.exitBulkMode() : bulk.enterBulkMode(), ignoreInInput: true },
     { key: "a", modifiers: { ctrl: true } as const, description: "Select all visible cards", action: selectAllVisible, ignoreInInput: true },
@@ -262,6 +268,12 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
         <TabsContent value="calendar" className="mt-0 p-6 pt-4">
           <ErrorBoundary>
             <CalendarView cards={filteredCards} boardId={boardId} />
+          </ErrorBoundary>
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-0 p-4 pt-4">
+          <ErrorBoundary>
+            <GanttView lists={lists} />
           </ErrorBoundary>
         </TabsContent>
 

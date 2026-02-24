@@ -404,7 +404,7 @@ export const CardModal = () => {
   const cardModalShortcuts = useMemo(() => {
     if (!isOpen || !cardData) return [];
     return [
-      { key: "p", description: "Set priority",         action: () => { if (cardData.priority) setPriorityOpen(true); },                                          ignoreInInput: true },
+      { key: "p", description: "Set priority",         action: () => setPriorityOpen(true),                                          ignoreInInput: true },
       { key: "l", description: "Open label picker",    action: () => labelWrapperRef.current?.querySelector<HTMLElement>("button")?.click(),    ignoreInInput: true },
       { key: "a", description: "Open assignee picker", action: () => assigneeWrapperRef.current?.querySelector<HTMLElement>("button")?.click(), ignoreInInput: true },
       { key: "d", description: "Open due date picker", action: () => dueDateWrapperRef.current?.querySelector<HTMLElement>("button")?.click(),  ignoreInInput: true },

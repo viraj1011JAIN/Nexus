@@ -1,9 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
-import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { emitCardEvent } from "@/lib/event-bus";
 
@@ -34,26 +35,32 @@ export async function deleteCard(id: string, boardId: string) {
     throw new Error(`Card ${id} not found or access denied.`);
   }
   const cardTitle = card.title;
-  // Use the DB-verified boardId; fall back to the caller param only as a last resort
-  // (e.g. the list row was already deleted in an unusual concurrent-delete scenario).
-  const trustedBoardId = card.list?.boardId ?? boardId;
+  // Require that the list relation was fetched: without it the DB-verified boardId is
+  // unavailable and we refuse to fall back to the untrusted caller-supplied parameter.
+  if (!card.list) {
+    throw new Error(`Card ${id} is missing its list association — cannot resolve a trusted boardId.`);
+  }
+  const trustedBoardId = card.list.boardId;
 
   // dal.cards.delete verifies Card→List→Board→orgId === ctx.orgId before deleting
   await dal.cards.delete(id);
 
-  // Fire CARD_DELETED event for automations + webhooks (TASK-019) — fire-and-forget.
-  // emitCardEvent returns void and handles all internal errors; no .catch() needed.
-  emitCardEvent(
-    { type: "CARD_DELETED", orgId: ctx.orgId, boardId: trustedBoardId, cardId: id },
-    { cardId: id, cardTitle, boardId: trustedBoardId, orgId: ctx.orgId }
-  );
-
+  // Write audit log BEFORE emitting the event so that any consumer that processes
+  // CARD_DELETED will always find a corresponding audit entry.
   await dal.auditLogs.create({
     entityId: id,
     entityType: "CARD",
     entityTitle: cardTitle,
     action: "DELETE",
   });
+
+  // Fire CARD_DELETED event for automations + webhooks (TASK-019).
+  // Wrapped in after() so the serverless runtime keeps the function alive until
+  // delivery completes, and the event is guaranteed to fire after the audit write.
+  after(() => emitCardEvent(
+    { type: "CARD_DELETED", orgId: ctx.orgId, boardId: trustedBoardId, cardId: id },
+    { cardId: id, cardTitle, boardId: trustedBoardId, orgId: ctx.orgId }
+  ));
 
   revalidatePath(`/board/${trustedBoardId}`);
 }

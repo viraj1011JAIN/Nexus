@@ -40,11 +40,16 @@ export function AttachmentsTab({ cardId, boardId, onCountChange }: AttachmentsTa
         if (!cancelled) {
           // JSON serialization turns Date objects into ISO strings; convert back
           // so formatDistanceToNow and any date comparisons receive real Date objects.
+          // Guard against missing or un-parseable values to avoid invalid Date objects.
           const list: AttachmentDto[] = (data.attachments ?? []).map(
-            (a: Omit<AttachmentDto, "createdAt"> & { createdAt: string }) => ({
-              ...a,
-              createdAt: new Date(a.createdAt),
-            })
+            (a: Omit<AttachmentDto, "createdAt"> & { createdAt: unknown }) => {
+              let createdAt: Date | null = null;
+              if (typeof a.createdAt === "string" && a.createdAt.trim() !== "") {
+                const parsed = new Date(a.createdAt);
+                if (!isNaN(parsed.getTime())) createdAt = parsed;
+              }
+              return { ...a, createdAt } as AttachmentDto;
+            }
           );
           setAttachments(list);
           setLoading(false);

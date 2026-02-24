@@ -51,6 +51,10 @@ model Organization {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // AI rate limiting (TASK-022)
+  aiCallsToday  Int       @default(0) @map("ai_calls_today")
+  aiCallsResetAt DateTime? @map("ai_calls_reset_at")
+
   @@map("organizations")
 }
 

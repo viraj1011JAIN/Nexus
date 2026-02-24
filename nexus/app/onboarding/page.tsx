@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import OnboardingClient from "./onboarding-client";
 
@@ -14,11 +14,10 @@ export const metadata = { title: "Get Started | NEXUS" };
  * board creation is handled in the action with a LIMIT_REACHED guard).
  */
 export default async function OnboardingPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
-
   const user = await currentUser();
-  const userName = user?.firstName ?? user?.username ?? "";
+  if (!user) redirect("/sign-in");
+
+  const userName = user.firstName ?? user.username ?? "";
 
   return <OnboardingClient userName={userName} />;
 }

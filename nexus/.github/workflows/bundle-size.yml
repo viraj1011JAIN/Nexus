@@ -1,0 +1,83 @@
+name: Bundle Size Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: nexus/package-lock.json
+
+      - name: Install deps (PR)
+        working-directory: nexus
+        run: npm ci
+
+      - name: Build PR
+        working-directory: nexus
+        run: npm run build
+        env:
+          DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/nexus"
+          DIRECT_URL:   "postgresql://placeholder:placeholder@localhost:5432/nexus"
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
+          CLERK_SECRET_KEY: sk_test_placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+      - name: Analyze bundle sizes
+        id: analyze
+        working-directory: nexus
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const buildDir = '.next/static/chunks/pages';
+          const appDir   = '.next/static/chunks/app';
+          let totalBytes = 0;
+          for (const dir of [buildDir, appDir]) {
+            if (!fs.existsSync(dir)) continue;
+            for (const f of fs.readdirSync(dir, {recursive: true})) {
+              const full = path.join(dir, f.toString());
+              if (fs.statSync(full).isFile()) totalBytes += fs.statSync(full).size;
+            }
+          }
+          const kb = (totalBytes / 1024).toFixed(1);
+          console.log('BUNDLE_KB=' + kb);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'bundle_kb=' + kb + '\n');
+          "
+
+      - name: Comment bundle size on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const bundleKb = '${{ steps.analyze.outputs.bundle_kb }}';
+            const limitKb  = 2048; // 2 MB limit
+            const status   = parseFloat(bundleKb) > limitKb ? '❌ Over budget' : '✅ Within budget';
+            const body = [
+              '## 📦 Bundle Size Report',
+              `| Metric | Value |`,
+              `|--------|-------|`,
+              `| JS chunks total | **${bundleKb} KB** |`,
+              `| Budget | ${limitKb} KB |`,
+              `| Status | ${status} |`,
+              '',
+              '_Measured against `.next/static/chunks/` — gzip sizes may differ._',
+            ].join('\n');
+            github.rest.issues.createComment({ issue_number: context.issue.number, owner: context.repo.owner, repo: context.repo.repo, body });

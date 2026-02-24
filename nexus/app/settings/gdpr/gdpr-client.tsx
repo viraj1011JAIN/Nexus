@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ElementType } from "react";
 import { toast } from "sonner";
 import { Download, Trash2, Shield, Cookie, FileText, AlertTriangle, CheckCircle2, ExternalLink, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ function SectionCard({
   badgeVariant = "secondary",
   children,
 }: {
-  icon: React.ElementType;
+  icon: ElementType;
   title: string;
   description: string;
   badge?: string;
@@ -54,11 +55,12 @@ function SectionCard({
 
 export default function GdprClient({ userEmail, userName }: GdprClientProps) {
   const [exportLoading, setExportLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteRequested, setDeleteRequested] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [cookieConsent, setCookieConsent] = useState<Record<string, boolean>>({
     necessary: true,
-    analytics: true,
+    analytics: false,
     marketing: false,
   });
 
@@ -77,8 +79,11 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
       const a = document.createElement("a");
       a.href = url;
       a.download = `nexus-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      // Defer revocation so Safari has time to initiate the download
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
       toast.success("Your data export has been downloaded.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to export data. Please try again.");
@@ -94,6 +99,8 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
       setConfirmDelete(true);
       return;
     }
+    if (deleteLoading) return;
+    setDeleteLoading(true);
     try {
       const res = await fetch("/api/gdpr/delete-request", { method: "POST" });
       if (!res.ok) {
@@ -102,9 +109,11 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
       }
       setDeleteRequested(true);
       setConfirmDelete(false);
-      toast.success("Your deletion request has been submitted. You will receive a confirmation email.");
+      toast.success("Your deletion request has been submitted.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit deletion request.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -201,12 +210,13 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
                 <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <span>
                   This will permanently delete your account, boards, cards, comments, and all other personal data.
-                  You will be signed out immediately.
+                  The request will be queued and completed within 30 days — you will receive a confirmation once processing begins.
                 </span>
               </div>
             )}
             <Button
               onClick={handleDeletionRequest}
+              disabled={deleteLoading}
               variant={confirmDelete ? "destructive" : "outline"}
               className={cn("gap-2", !confirmDelete && "text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/20")}
             >
@@ -215,6 +225,7 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
             </Button>
             {confirmDelete && (
               <button
+                type="button"
                 onClick={() => setConfirmDelete(false)}
                 className="text-xs text-muted-foreground hover:text-foreground underline"
               >

@@ -22,7 +22,9 @@ interface WorkloadPageProps {
 export async function generateMetadata({ params }: WorkloadPageProps) {
   const { boardId } = await params;
   const ctx = await getTenantContext();
-  const dal = await createDAL(ctx);  try {
+  try {
+    await requireRole("MEMBER", ctx);
+    const dal = await createDAL(ctx);
     const board = await dal.boards.findUnique(boardId, { select: { title: true } });
     return { title: `Workload — ${board?.title ?? "Board"} — Nexus` };
   } catch {
@@ -65,11 +67,12 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
           },
         },
       },
-    }) as BoardWithLists | null;
+    }) as unknown as BoardWithLists | null;
   } catch (err) {
     // dal.boards.findUnique returns null for missing boards (handled by if (!board) notFound()
     // below) — this catch only handles unexpected DB/permission/runtime exceptions.
-    console.error("[WorkloadPage] Failed to fetch board:", err);
+    const msg = (err instanceof Error ? err.message : String(err)).slice(0, 200);
+    console.error(`[WorkloadPage] Failed to fetch board: ${msg}`);
     throw err;
   }
 

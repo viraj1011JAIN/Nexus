@@ -30,7 +30,14 @@ interface FileAttachmentProps {
 }
 
 export function FileAttachment({ cardId, boardId, initialAttachments = [], onAttachmentsChange }: FileAttachmentProps) {
-  const [attachments, setAttachments] = useState<AttachmentDto[]>(initialAttachments);
+  const [attachments, setAttachments] = useState<AttachmentDto[]>(
+    // Normalise createdAt to Date objects — the prop may be pre-serialised to ISO strings
+    // when passed through server-component boundaries (RSC → Client Component handoff).
+    initialAttachments.map((att) => ({
+      ...att,
+      createdAt: typeof att.createdAt === "string" ? new Date(att.createdAt) : att.createdAt,
+    }))
+  );
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);

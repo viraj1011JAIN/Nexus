@@ -74,7 +74,6 @@ export async function POST() {
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 500,
     }),
     db.attachment.findMany({
       where: { uploadedById: ctx.userId, card: { list: { board: { orgId: ctx.orgId } } } },

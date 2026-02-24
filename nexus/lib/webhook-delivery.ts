@@ -55,11 +55,35 @@ function isPrivateIPv6(ip: string): boolean {
   // IPv4-mapped addresses (::ffff:x.x.x.x or ::ffff:0:x.x.x.x) — delegate to IPv4 check
   const v4mapped = lower.match(/^::ffff:(?:0:)?(\d+\.\d+\.\d+\.\d+)$/);
   if (v4mapped) return isPrivateIPv4(v4mapped[1]);
-  return (
-    lower.startsWith("fc") ||
-    lower.startsWith("fd") ||
-    lower.startsWith("fe80:")
-  );
+
+  // 6to4 addresses (2002::/16) — the next two hextets encode an IPv4 address.
+  // Format: 2002:WWXX:YYZZ:: where WW.XX.YY.ZZ is the embedded IPv4 address.
+  const sixToFour = lower.match(/^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4}):/);
+  if (sixToFour) {
+    const h1 = sixToFour[1].padStart(4, "0");
+    const h2 = sixToFour[2].padStart(4, "0");
+    const embeddedIp = [
+      parseInt(h1.slice(0, 2), 16),
+      parseInt(h1.slice(2, 4), 16),
+      parseInt(h2.slice(0, 2), 16),
+      parseInt(h2.slice(2, 4), 16),
+    ].join(".");
+    if (isPrivateIPv4(embeddedIp)) return true;
+  }
+
+  // ULA (Unique Local Addresses): fc00::/7 — covers fc00::/8 and fd00::/8
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
+
+  // Link-local: fe80::/10 — first byte 0xfe, second byte in 0x80–0xbf
+  // (the simple "fe80:" prefix check misses fe81:: through febf:: which are also link-local)
+  const lowerHexBytes = lower.split(":")[0].padStart(4, "0");
+  if (lowerHexBytes.length >= 4) {
+    const byte1 = parseInt(lowerHexBytes.slice(0, 2), 16);
+    const byte2 = parseInt(lowerHexBytes.slice(2, 4), 16);
+    if (byte1 === 0xfe && byte2 >= 0x80 && byte2 <= 0xbf) return true;
+  }
+
+  return false;
 }
 
 /**

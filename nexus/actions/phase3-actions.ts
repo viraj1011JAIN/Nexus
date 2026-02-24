@@ -11,6 +11,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getTenantContext } from "@/lib/tenant-context";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { db } from "@/lib/db";
@@ -96,12 +97,12 @@ export const updateCardPriority = createSafeAction(
 
     revalidatePath(`/board/${boardId}`);
 
-    // Fire PRIORITY_CHANGED event for automations + webhooks (TASK-019) — fire-and-forget.
-    // emitCardEvent returns void and handles all internal errors; no .catch() needed.
-    emitCardEvent(
+    // Fire PRIORITY_CHANGED event for automations + webhooks (TASK-019).
+    // Wrapped in after() so the serverless runtime stays alive until delivery completes.
+    after(() => emitCardEvent(
       { type: "PRIORITY_CHANGED", orgId, boardId, cardId: id, context: { priority } },
       { cardId: id, cardTitle: updated.title, priority, boardId, orgId }
-    );
+    ));
 
     return { data: updated };
   }

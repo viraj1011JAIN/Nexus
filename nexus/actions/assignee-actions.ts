@@ -1,6 +1,7 @@
 ﻿"use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
@@ -57,20 +58,20 @@ async function assignUserHandler(data: z.infer<typeof AssignUserSchema>) {
   const card = await dal.assignees.assign(data.cardId, data.assigneeId);
   await logCardUpdateAndRevalidate(dal, card, data.cardId);
 
-  // Fire MEMBER_ASSIGNED event for automations + webhooks (TASK-019) — fire-and-forget
-  // Guard: only emit when boardId is known so the event has valid routing data.
+  // Fire MEMBER_ASSIGNED event for automations + webhooks (TASK-019).
+  // Wrapped in after() so the serverless runtime keeps the function alive until
+  // the Promise settles, preventing premature teardown before delivery completes.
   if (card.list?.boardId) {
-    // emitCardEvent returns void and handles all internal errors; no .catch() needed.
-    emitCardEvent(
+    after(() => emitCardEvent(
       {
         type: "MEMBER_ASSIGNED",
         orgId: ctx.orgId,
-        boardId: card.list.boardId,
+        boardId: card.list!.boardId,
         cardId: data.cardId,
         context: { assigneeId: data.assigneeId },
       },
       { cardId: data.cardId, cardTitle: card.title, assigneeId: data.assigneeId, orgId: ctx.orgId }
-    );
+    ));
   }
 
   return { data: card };

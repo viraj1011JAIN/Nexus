@@ -126,6 +126,12 @@ export async function updateCustomField(
   data: { name?: string; isRequired?: boolean; options?: string[] }
 ) {
   try {
+    // Validate fieldId as a UUID before any DB access to short-circuit invalid IDs.
+    const fieldIdParseResult = z.string().uuid("fieldId must be a valid UUID").safeParse(fieldId);
+    if (!fieldIdParseResult.success) {
+      return { error: fieldIdParseResult.error.issues[0]?.message ?? "Invalid field ID." };
+    }
+
     const ctx = await getTenantContext();
     await requireRole("ADMIN", ctx);
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
@@ -144,12 +150,20 @@ export async function updateCustomField(
     });
     if (!existing) return { error: "Field not found." };
 
+    // Field types that support an options array (SELECT / MULTI_SELECT variants).
+    const OPTION_TYPES = new Set(["SELECT", "MULTI_SELECT"]);
+    // Providing options for a field type that doesn't support them would silently
+    // overwrite the stored options array with unrelated data.
+    if (validated.options !== undefined && !OPTION_TYPES.has(existing.type)) {
+      return { error: `Options are not supported for field type "${existing.type}".` };
+    }
+
     const field = await db.customField.update({
       where: { id: fieldId },
       data: {
         ...(validated.name !== undefined ? { name: validated.name } : {}),
         ...(validated.isRequired !== undefined ? { isRequired: validated.isRequired } : {}),
-        ...(validated.options !== undefined ? { options: validated.options } : {}),
+        ...(validated.options !== undefined && OPTION_TYPES.has(existing.type) ? { options: validated.options } : {}),
       },
     });
 

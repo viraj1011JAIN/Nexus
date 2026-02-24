@@ -61,11 +61,11 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     revalidatePath(`/board/${boardId}`);
 
     // Fire automations + webhooks (TASK-019/020).
-    // `after` keeps the serverless function alive until the callback settles,
-    // preventing early termination before async work completes.
-    after(() => {
-      // emitCardEvent is fully fire-and-forget (returns void, handles errors internally).
-      emitCardEvent(
+    // `after` keeps the serverless function alive until the callback resolves.
+    // The callback is async so after() can track the returned Promise and wait
+    // for emitCardEvent to complete its I/O before the function tears down.
+    after(async () => {
+      await emitCardEvent(
         { type: "CARD_CREATED", orgId: ctx.orgId, boardId, cardId: card.id, context: { toListId: listId } },
         { cardId: card.id, cardTitle: card.title, listId, boardId, orgId: ctx.orgId }
       );

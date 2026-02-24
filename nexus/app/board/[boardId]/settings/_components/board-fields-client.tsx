@@ -218,6 +218,7 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
                       id={`req-${field.id}`}
                       checked={field.isRequired}
                       onCheckedChange={() => handleToggleRequired(field)}
+                      disabled={togglingIds.has(field.id)}
                       className="data-[state=checked]:bg-indigo-600"
                     />
                   </div>
@@ -330,7 +331,7 @@ export function BoardFieldsClient({ boardId, initialFields }: BoardFieldsClientP
       )}
 
       {/* Delete confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (deleting) return; if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>

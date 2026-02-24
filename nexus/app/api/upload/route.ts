@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getTenantContext, TenantError } from "@/lib/tenant-context";
 
@@ -91,7 +92,12 @@ export async function POST(req: NextRequest) {
     where: { id: ctx.orgId },
     select: { subscriptionPlan: true },
   });
-  if (org?.subscriptionPlan === "FREE") {
+
+  // Explicit null guard: if org row is missing, log a warning and proceed without
+  // enforcing limits (fail-open is preferable to blocking legitimate uploads).
+  if (!org) {
+    console.warn(`[upload] Org ${ctx.orgId} not found when checking subscription plan — skipping limit enforcement`);
+  } else if (org.subscriptionPlan === "FREE") {
     const attachmentCount = await db.attachment.count({
       where: { card: { list: { board: { orgId: ctx.orgId } } } },
     });
@@ -130,18 +136,56 @@ export async function POST(req: NextRequest) {
     .from("card-attachments")
     .getPublicUrl(storagePath);
 
-  const attachment = await db.attachment.create({
-    data: {
-      cardId,
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: file.type,
-      url: publicData.publicUrl,
-      storagePath,
-      uploadedById: ctx.userId,
-      uploadedByName: uploaderName,
-    },
-  });
+  const attachment = await (async () => {
+    // Wrap attachment count-check + create in a serializable transaction to
+    // prevent a TOCTOU race where concurrent uploads breach the FREE plan limit.
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        return await db.$transaction(
+          async (tx) => {
+            // Re-check the attachment limit inside the transaction when on FREE plan.
+            if (org && org.subscriptionPlan === "FREE") {
+              const count = await tx.attachment.count({
+                where: { card: { list: { board: { orgId: ctx.orgId } } } },
+              });
+              if (count >= FREE_ATTACHMENT_LIMIT) {
+                throw Object.assign(new Error("ATTACHMENT_LIMIT_REACHED"), { status: 403 });
+              }
+            }
+            return tx.attachment.create({
+              data: {
+                cardId,
+                fileName: file.name,
+                fileSize: file.size,
+                mimeType: file.type,
+                url: publicData.publicUrl,
+                storagePath,
+                uploadedById: ctx.userId,
+                uploadedByName: uploaderName,
+              },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+        );
+      } catch (e) {
+        const prismaErr = e as { code?: string; status?: number; message?: string };
+        if (prismaErr.message === "ATTACHMENT_LIMIT_REACHED") {
+          return NextResponse.json(
+            { error: `Free plan allows a maximum of ${FREE_ATTACHMENT_LIMIT} attachments per workspace. Upgrade to Pro to add more.` },
+            { status: 403 }
+          ) as unknown as never;
+        }
+        // P2034 = transaction conflict / serialization failure — retry up to MAX_RETRIES.
+        if (prismaErr.code === "P2034" && attempt < MAX_RETRIES - 1) continue;
+        throw e;
+      }
+    }
+    throw new Error("Unreachable");
+  })();
+
+  // Handle the 403 short-circuit returned from inside the transaction.
+  if (attachment instanceof NextResponse) return attachment;
 
   return NextResponse.json(attachment, { status: 201 });
 }

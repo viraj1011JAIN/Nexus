@@ -99,7 +99,7 @@ export const CardItem = ({
           role="checkbox"
           tabIndex={0}
           aria-checked={isSelected}
-          aria-label="Select card"
+          aria-label={`Select card: ${data.title}`}
           className={cn(
             "absolute top-1.5 left-1.5 z-20 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",
             isSelected

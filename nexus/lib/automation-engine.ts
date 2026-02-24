@@ -13,6 +13,7 @@
  *   5. Write an AutomationLog row (success or error).
  */
 
+import crypto from "crypto";
 import { db } from "@/lib/db";
 import { Priority } from "@prisma/client";
 import type {
@@ -29,6 +30,13 @@ export interface AutomationEvent {
   orgId: string;
   boardId: string;
   cardId: string;
+  /**
+   * Recursion depth counter. Incremented by recursive runAutomations calls so the
+   * engine can bail out when automations trigger further automations beyond MAX_DEPTH.
+   *
+   * @default 0
+   */
+  _depth?: number;
   /** Additional context depending on event type */
   context?: {
     fromListId?: string;   // CARD_MOVED  – list moved FROM
@@ -47,7 +55,20 @@ export interface AutomationEvent {
  * Fire-and-forget: run all matching automations for an event.
  * Never throw — any error is caught and logged.
  */
+/** Maximum nesting depth before the engine refuses to process further automations. */
+const MAX_AUTOMATION_DEPTH = 3;
+
 export async function runAutomations(event: AutomationEvent): Promise<void> {
+  // Recursion guard: bail out when automations triggered by automations go too deep.
+  const depth = event._depth ?? 0;
+  if (depth > MAX_AUTOMATION_DEPTH) {
+    console.warn("[AutomationEngine] Max recursion depth reached — aborting", {
+      eventType: event.type,
+      cardId: event.cardId,
+      depth,
+    });
+    return;
+  }
   try {
     // Load enabled automations scoped to this board OR org-wide (boardId == null)
     const automations = await db.automation.findMany({
@@ -110,7 +131,14 @@ async function evaluateAndExecute(event: AutomationEvent, card: any, automation:
   let matched = false;
   try {
     matched = triggerMatches(trigger, event) && conditionsPass(conditions, card, event);
-  } catch {
+  } catch (evalErr) {
+    // Log the evaluation error with minimal context before skipping this automation.
+    console.warn("[AutomationEngine] Trigger/condition evaluation error — skipping automation", {
+      automationId: automation.id,
+      trigger,
+      cardId: event.cardId,
+      error: evalErr instanceof Error ? evalErr.message : String(evalErr),
+    });
     return; // don't run if evaluation errors
   }
 
@@ -137,7 +165,10 @@ async function evaluateAndExecute(event: AutomationEvent, card: any, automation:
             checklists: { include: { items: true } },
           },
         });
-        if (refreshed) card = refreshed;
+        // Card was deleted by a mutating action (e.g. MOVE_CARD into an archive list by
+        // a concurrent delete). Stop executing further actions for this automation.
+        if (!refreshed) return;
+        card = refreshed;
       }
     }
   } catch (err) {
@@ -279,16 +310,19 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
   switch (action.type) {
     case "MOVE_CARD": {
       if (!action.listId) return;
-      // Append to end of target list (place at max order + 1)
-      const lastCard = await db.card.findFirst({
-        where: { listId: action.listId },
-        orderBy: { order: "desc" },
-        select: { order: true },
-      });
-      const newOrder = lastCard ? incrementOrder(lastCard.order) : "n";
-      await db.card.update({
-        where: { id: event.cardId },
-        data: { listId: action.listId, order: newOrder },
+      // Wrap read + update in a transaction to eliminate the TOCTOU race where two
+      // concurrent automations compute the same `newOrder` for the same target list.
+      await db.$transaction(async (tx) => {
+        const lastCard = await tx.card.findFirst({
+          where: { listId: action.listId! },
+          orderBy: { order: "desc" },
+          select: { order: true },
+        });
+        const newOrder = lastCard ? incrementOrder(lastCard.order) : "n";
+        await tx.card.update({
+          where: { id: event.cardId },
+          data: { listId: action.listId!, order: newOrder },
+        });
       });
       break;
     }
@@ -304,7 +338,10 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 
     case "ASSIGN_MEMBER": {
       // action.assigneeId: DB user.id (not Clerk ID)
+      // Reject undefined (missing) but allow null (explicit unassign).
+      // Reject empty string: it is not a valid user ID and would silently clear the assignee.
       if (action.assigneeId === undefined) return;
+      if (action.assigneeId === "") return;
       await db.card.update({
         where: { id: event.cardId },
         data: { assigneeId: action.assigneeId ?? null },
@@ -444,9 +481,12 @@ async function executeAction(action: ActionConfig, event: AutomationEvent, card:
 function incrementOrder(order: string): string {
   const MAX_ORDER_LENGTH = 32;
   if (order.length >= MAX_ORDER_LENGTH) {
-    // String has grown too long — fall back to a compact timestamp-based rank, prefixed
+    // String has grown too long — fall back to a compact timestamp+random rank, prefixed
     // with \uFFFF so it always sorts AFTER any printable-ASCII-based order string.
-    return "\uFFFF" + Date.now().toString(36);
+    // The random suffix prevents collisions when multiple cards reset in the same millisecond
+    // (e.g. batch automation runs).
+    const randomSuffix = crypto.randomBytes(4).toString("hex");
+    return "\uFFFF" + Date.now().toString(36) + "-" + randomSuffix;
   }
   // Append '~' (0x7E) which is the highest printable ASCII character,
   // ensuring this card sorts last among any standard order strings.
