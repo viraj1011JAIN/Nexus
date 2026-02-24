@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   TrendingUp, TrendingDown, Minus, BarChart2, Clock, Users,
   Tag, Calendar, Activity, AlertTriangle, CheckCircle2, RefreshCw,
-  Layers, Target, Zap,
+  Layers, Target, Zap, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -50,6 +50,80 @@ const LIST_COLORS = [
   "#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6",
   "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16", "#f97316",
 ];
+
+// ─── CSV Export ───────────────────────────────────────────────────────────────
+
+function exportCSV(data: AdvancedBoardAnalytics, boardName: string) {
+  const r: string[] = [];
+  const row = (...cells: (string | number)[]) =>
+    r.push(cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
+
+  // Header
+  row(`Analytics Export: ${boardName}`);
+  row(`Generated: ${new Date().toLocaleString()}`);
+  r.push("");
+
+  // Scores
+  row("HEALTH SCORES");
+  row("Metric", "Score");
+  row("Health Score", data.scores.healthScore);
+  row("Velocity Score", data.scores.velocityScore);
+  row("Coverage Score", data.scores.coverageScore);
+  row("On-time Score", data.scores.overdueScore);
+  r.push("");
+
+  // Cycle time
+  row("CYCLE TIME");
+  row("Metric", "Value");
+  row("Average (hours)", data.cycleTime.avg);
+  row("Median P50 (hours)", data.cycleTime.p50);
+  row("P75 (hours)", data.cycleTime.p75);
+  row("P90 (hours)", data.cycleTime.p90);
+  row("Sample Count", data.cycleTime.sampleCount);
+  r.push("");
+
+  // Throughput
+  row("WEEKLY THROUGHPUT");
+  row("Week", "Created", "Completed");
+  for (const w of data.throughput) row(w.week, w.created, w.completed);
+  r.push("");
+
+  // Lead time trend
+  row("LEAD TIME TREND (WEEKLY)");
+  row("Week", "Avg Hours", "Median Hours", "Sample Count");
+  for (const w of data.leadTimeTrend) row(w.week, w.avgHours, w.p50, w.count);
+  r.push("");
+
+  // Member stats
+  row("MEMBER ACTIVITY");
+  row("Member", "Total Cards", "Completed", "Overdue", "Avg Lead Time (h)");
+  for (const m of data.memberStats)
+    row(m.name, m.totalCards, m.completedCards, m.overdueCards, m.avgLeadTimeHours);
+  r.push("");
+
+  // List stats
+  row("LIST BOTTLENECK ANALYSIS");
+  row("List", "Card Count", "Overdue", "Avg Age (days)", "Done List");
+  for (const ls of data.listStats)
+    row(ls.listTitle, ls.cardCount, ls.overdueCount, ls.avgAgeDays, ls.completedList ? "Yes" : "No");
+  r.push("");
+
+  // Burndown
+  row("BURNDOWN DATA (LAST 30 DAYS)");
+  row("Date", "Remaining", "Ideal");
+  for (const b of data.burndown) row(b.date, b.remaining, b.ideal);
+
+  const csv = r.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${boardName.replace(/\s+/g, "-")}-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -380,6 +454,58 @@ function CycleTimeTab({ d }: { d: AdvancedBoardAnalytics }) {
       </Card>
 
       {/* Percentile visual */}
+      {/* Lead time trend */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            Lead Time Trend (Weekly)
+          </CardTitle>
+          <CardDescription>
+            Average hours from card creation to completion per week — a falling line means the team is getting faster
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {d.leadTimeTrend.some((w) => w.count > 0) ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={d.leadTimeTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} unit="h" />
+                <RechartsTooltip
+                  contentStyle={CHART_STYLE}
+                  formatter={(v: unknown) => [`${v}h`, ""]}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="avgHours"
+                  name="Avg Lead Time"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: "#6366f1" }}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="p50"
+                  name="Median (P50)"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ r: 3, fill: "#22c55e" }}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+              Move cards to your &ldquo;Done&rdquo; list to start collecting lead time data.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {hasData && (
         <Card>
           <CardHeader>
@@ -660,6 +786,168 @@ function PatternsTab({ d }: { d: AdvancedBoardAnalytics }) {
   );
 }
 
+// ─── Tab: Members ────────────────────────────────────────────────────────────
+
+function MembersTab({ d }: { d: AdvancedBoardAnalytics }) {
+  if (d.memberStats.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+        No assigned cards yet — assign cards to team members to unlock member analytics.
+      </div>
+    );
+  }
+
+  const membersWithCompletions = d.memberStats.filter((m) => m.completedCards > 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Contribution overview cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          title="Members Tracked"
+          value={d.memberStats.length}
+          icon={Users}
+          sub="with at least 1 assigned card"
+        />
+        <StatCard
+          title="Total Assigned"
+          value={d.memberStats.reduce((s, m) => s + m.totalCards, 0)}
+          icon={Activity}
+          sub="cards across all members"
+        />
+        <StatCard
+          title="Team Completion Rate"
+          value={
+            d.memberStats.reduce((s, m) => s + m.totalCards, 0) > 0
+              ? `${
+                  Math.round(
+                    (d.memberStats.reduce((s, m) => s + m.completedCards, 0) /
+                      d.memberStats.reduce((s, m) => s + m.totalCards, 0)) *
+                      100,
+                  )
+                }%`
+              : "—"
+          }
+          icon={CheckCircle2}
+          sub="completed / total assigned"
+        />
+      </div>
+
+      {/* Stacked bar: total vs completed vs overdue per member */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-indigo-500" />
+            Member Contribution
+          </CardTitle>
+          <CardDescription>Total, completed, and overdue cards per member</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={Math.max(200, d.memberStats.length * 44)}>
+            <BarChart data={d.memberStats} layout="vertical" margin={{ left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
+              <RechartsTooltip contentStyle={CHART_STYLE} />
+              <Legend />
+              <Bar dataKey="totalCards" name="Total" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="completedCards" name="Completed" fill="#22c55e" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="overdueCards" name="Overdue" fill="#ef4444" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Lead time by member */}
+      {membersWithCompletions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-blue-500" />
+              Avg Lead Time by Member
+            </CardTitle>
+            <CardDescription>Average hours from card creation to completion (members with completions only)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={Math.max(160, membersWithCompletions.length * 44)}>
+              <BarChart data={membersWithCompletions} layout="vertical" margin={{ left: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 11 }} unit="h" />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
+                <RechartsTooltip
+                  contentStyle={CHART_STYLE}
+                  formatter={(v: unknown) => [`${v}h`, "Avg Lead Time"]}
+                />
+                <Bar dataKey="avgLeadTimeHours" name="Avg Lead Time" radius={[0, 4, 4, 0]}>
+                  {membersWithCompletions.map((_, i) => (
+                    <Cell key={i} fill={LIST_COLORS[i % LIST_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Detail table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">Member Detail</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {d.memberStats.map((m, i) => {
+              const completionPct =
+                m.totalCards > 0 ? Math.round((m.completedCards / m.totalCards) * 100) : 0;
+              return (
+                <div
+                  key={m.name}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm dark:border-slate-700"
+                >
+                  <div
+                    className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ backgroundColor: LIST_COLORS[i % LIST_COLORS.length] }}
+                  >
+                    {m.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-medium min-w-[110px] truncate">{m.name}</span>
+                  <div className="flex-1 flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                    <span>
+                      <strong className="text-foreground">{m.totalCards}</strong> total
+                    </span>
+                    <span>
+                      <strong className="text-emerald-600">{m.completedCards}</strong> done
+                    </span>
+                    {m.overdueCards > 0 && (
+                      <span className="text-red-500 flex items-center gap-0.5">
+                        <AlertTriangle className="h-3 w-3" />
+                        {m.overdueCards} overdue
+                      </span>
+                    )}
+                    {m.completedCards > 0 && (
+                      <span>avg {m.avgLeadTimeHours}h lead time</span>
+                    )}
+                  </div>
+                  {/* Completion progress bar */}
+                  <div className="flex items-center gap-2 hidden sm:flex">
+                    <span className="text-xs text-muted-foreground w-8 text-right">{completionPct}%</span>
+                    <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                        style={{ width: `${completionPct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface AdvancedAnalyticsProps {
@@ -732,16 +1020,27 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
           </h2>
           <p className="text-muted-foreground text-sm mt-0.5">{boardName}</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => load(true)}
-          disabled={refreshing}
-          className="gap-2"
-        >
-          <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportCSV(data, boardName)}
+            className="gap-2"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => load(true)}
+            disabled={refreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Top KPIs */}
@@ -777,12 +1076,13 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="burndown" className="text-xs">Burndown</TabsTrigger>
           <TabsTrigger value="cycletime" className="text-xs">Cycle Time</TabsTrigger>
           <TabsTrigger value="flow" className="text-xs">Flow</TabsTrigger>
           <TabsTrigger value="patterns" className="text-xs">Patterns</TabsTrigger>
+          <TabsTrigger value="members" className="text-xs">Members</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -803,6 +1103,10 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
 
         <TabsContent value="patterns" className="mt-4">
           <PatternsTab d={data} />
+        </TabsContent>
+
+        <TabsContent value="members" className="mt-4">
+          <MembersTab d={data} />
         </TabsContent>
       </Tabs>
     </div>

@@ -59,6 +59,24 @@ export interface AdvancedBoardAnalytics {
     coverageScore: number;     // 0-100
     overdueScore: number;      // 0-100 (higher = fewer overdue)
   };
+
+  /**
+   * Lead time trend: weekly average hours from card creation to completion.
+   * Parallel to throughput weeks so the two charts can be compared side-by-side.
+   */
+  leadTimeTrend: { week: string; avgHours: number; p50: number; count: number }[];
+
+  /**
+   * Per-member contribution stats derived from assignee relationships.
+   * Sorted by total card count descending, capped at 10 members.
+   */
+  memberStats: {
+    name: string;
+    totalCards: number;
+    completedCards: number;
+    overdueCards: number;
+    avgLeadTimeHours: number;
+  }[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -176,6 +194,40 @@ export async function getAdvancedBoardAnalytics(
       }).length;
 
       throughput.push({ week: weekLabel, completed, created });
+    }
+
+    // ─── 2b. Lead time trend (last 8 weeks, same buckets as throughput) ──────
+    const leadTimeTrend: { week: string; avgHours: number; p50: number; count: number }[] = [];
+    for (let w = 7; w >= 0; w--) {
+      const weekEnd = addDays(now, -w * 7);
+      const weekStart = addDays(weekEnd, -6);
+      const weekLabel2 = dateKey(weekStart).slice(5);
+
+      const times = completedCards
+        .filter((c) => {
+          if (!c.updatedAt) return false;
+          const d = new Date(c.updatedAt);
+          return d >= weekStart && d <= weekEnd;
+        })
+        .filter((c) => c.createdAt)
+        .map((c) =>
+          Math.max(
+            0,
+            (new Date(c.updatedAt!).getTime() - new Date(c.createdAt).getTime()) /
+              (1000 * 60 * 60),
+          ),
+        )
+        .sort((a, b) => a - b);
+
+      leadTimeTrend.push({
+        week: weekLabel2,
+        avgHours:
+          times.length > 0
+            ? Math.round(times.reduce((a, b) => a + b, 0) / times.length)
+            : 0,
+        p50: percentile(times, 50),
+        count: times.length,
+      });
     }
 
     // ─── 3. Cycle time ───────────────────────────────────────────────────────
@@ -305,7 +357,51 @@ export async function getAdvancedBoardAnalytics(
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
-    // ─── 9. Scores ────────────────────────────────────────────────────────────
+    // ─── 9. Member stats ──────────────────────────────────────────────────────
+    const memberMap = new Map<
+      string,
+      { name: string; totalCards: number; completedCards: number; overdueCards: number; leadTimes: number[] }
+    >();
+
+    for (const card of allCards) {
+      if (!card.assigneeId || !card.assignee) continue;
+      const existing = memberMap.get(card.assigneeId) ?? {
+        name: card.assignee.name ?? "Unknown",
+        totalCards: 0,
+        completedCards: 0,
+        overdueCards: 0,
+        leadTimes: [],
+      };
+      existing.totalCards++;
+      if (doneListIds.has(card.listId)) {
+        existing.completedCards++;
+        if (card.createdAt && card.updatedAt) {
+          const hrs = Math.max(
+            0,
+            (new Date(card.updatedAt).getTime() - new Date(card.createdAt).getTime()) /
+              (1000 * 60 * 60),
+          );
+          existing.leadTimes.push(hrs);
+        }
+      }
+      if (card.dueDate && new Date(card.dueDate) < now && !doneListIds.has(card.listId)) {
+        existing.overdueCards++;
+      }
+      memberMap.set(card.assigneeId, existing);
+    }
+
+    const memberStats = [...memberMap.values()]
+      .sort((a, b) => b.totalCards - a.totalCards)
+      .slice(0, 10)
+      .map(({ leadTimes, ...rest }) => ({
+        ...rest,
+        avgLeadTimeHours:
+          leadTimes.length > 0
+            ? Math.round(leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length)
+            : 0,
+      }));
+
+    // ─── 10. Scores ───────────────────────────────────────────────────────────
     const overdueCount = allCards.filter(
       (c) =>
         c.dueDate &&
@@ -363,6 +459,8 @@ export async function getAdvancedBoardAnalytics(
         creationPattern,
         topLabels,
         scores,
+        leadTimeTrend,
+        memberStats,
       },
     };
   } catch (e) {
