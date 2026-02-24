@@ -35,16 +35,15 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     category: "Navigation",
     entries: [
       { keys: ["?"], description: "Open keyboard shortcuts" },
-      { keys: ["B"], description: "Jump to board list" },
-      { keys: ["/"], description: "Focus search" },
-      { keys: ["Esc"], description: "Close modal / cancel" },
+      { keys: ["Esc"], description: "Close modal / clear selection" },
+      { keys: ["1–6"], description: "Switch view (Board, Table, Calendar, Sprints, Workload, Analytics)" },
     ],
   },
   {
-    category: "Card Actions",
+    // These shortcuts fire while a card modal is open
+    category: "Card Modal",
     entries: [
-      { keys: ["N"], description: "Create new card in focused list" },
-      { keys: ["E"], description: "Edit card title (when hovering)" },
+      { keys: ["P"], description: "Set priority" },
       { keys: ["D"], description: "Set / edit due date" },
       { keys: ["L"], description: "Open label picker" },
       { keys: ["A"], description: "Open assignee picker" },
@@ -54,10 +53,9 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     category: "Global",
     entries: [
-      { keys: ["Ctrl", "Z"], description: "Undo last action" },
-      { keys: ["Ctrl", "Shift", "Z"], description: "Redo" },
       { keys: ["Ctrl", "K"], description: "Open command palette" },
-      { keys: ["Ctrl", "\\"], description: "Toggle sidebar" },
+      { keys: ["b"], description: "Toggle bulk selection mode" },
+      { keys: ["Ctrl", "A"], description: "Select all visible cards" },
     ],
   },
 ];

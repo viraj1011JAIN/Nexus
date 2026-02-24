@@ -30,6 +30,45 @@ async function verifyCardOwnership(cardId: string, orgId: string) {
   return card;
 }
 
+// ─── Cycle detection ─────────────────────────────────────────────────────────
+
+/**
+ * BFS from `blockedId` through the BLOCKS dependency graph.
+ * Returns true if `blockerId` is reachable, which means adding
+ * blockerId→blockedId would create a cycle (A→B→…→A).
+ */
+async function wouldCreateCycle(
+  blockerId: string,
+  blockedId: string,
+  orgId: string
+): Promise<boolean> {
+  const visited = new Set<string>([blockedId]);
+  let frontier = [blockedId];
+
+  while (frontier.length > 0) {
+    const edges = await db.cardDependency.findMany({
+      where: {
+        blockerId: { in: frontier },
+        blocker: { list: { board: { orgId } } },
+        type: "BLOCKS",
+      },
+      select: { blockedId: true },
+    });
+
+    const next: string[] = [];
+    for (const edge of edges) {
+      if (edge.blockedId === blockerId) return true; // cycle detected
+      if (!visited.has(edge.blockedId)) {
+        visited.add(edge.blockedId);
+        next.push(edge.blockedId);
+      }
+    }
+    frontier = next;
+  }
+
+  return false;
+}
+
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
 export async function getCardDependencies(cardId: string) {
@@ -81,10 +120,12 @@ export async function addCardDependency(raw: unknown) {
       verifyCardOwnership(input.blockedId, ctx.orgId),
     ]);
 
-    // Prevent circular dependency: if blockedId already blocks blockerId
-    const circular = await db.cardDependency.findFirst({
-      where: { blockerId: input.blockedId, blockedId: input.blockerId },
-    });
+    // Prevent circular dependency via BFS — catches multi-hop cycles (A→B→C→A),
+    // not just direct reversals. Only BLOCKS edges can form directed cycles;
+    // RELATES_TO and DUPLICATES are symmetric and don't need this check.
+    const circular =
+      input.type === "BLOCKS" &&
+      (await wouldCreateCycle(input.blockerId, input.blockedId, ctx.orgId));
     if (circular) return { error: "Adding this dependency would create a circular dependency." };
 
     const dep = await db.cardDependency.upsert({

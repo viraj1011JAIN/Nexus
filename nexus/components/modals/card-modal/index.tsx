@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, AuditLog, List, Label, Priority } from "@prisma/client";
 import { 
@@ -59,6 +59,7 @@ import { ChecklistsTab } from "./checklists";
 import { DependenciesTab } from "./dependencies";
 import { CustomFieldsPanel } from "@/components/board/custom-fields-panel";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";
 import { getOrganizationMembers } from "@/actions/assignee-actions";
 
@@ -117,7 +118,12 @@ export const CardModal = () => {
   const [orgMembers, setOrgMembers] = useState<Array<{ id: string; name: string; imageUrl: string | null; email: string }>>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [attachmentCount, setAttachmentCount] = useState(0);
-  
+  const [priorityOpen, setPriorityOpen] = useState(false);
+  // Refs for keyboard-shortcut-triggered picker opens (TASK-016)
+  const labelWrapperRef = useRef<HTMLDivElement>(null);
+  const assigneeWrapperRef = useRef<HTMLDivElement>(null);
+  const dueDateWrapperRef = useRef<HTMLDivElement>(null);
+
   const { user } = useUser();
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -393,6 +399,19 @@ export const CardModal = () => {
     );
   };
 
+  // ── Card modal keyboard shortcuts (TASK-016) ──────────────────────────────
+  // Shortcuts are only active while this modal is open and card data is loaded.
+  const cardModalShortcuts = useMemo(() => {
+    if (!isOpen || !cardData) return [];
+    return [
+      { key: "p", description: "Set priority",         action: () => setPriorityOpen(true),                                                                      ignoreInInput: true },
+      { key: "l", description: "Open label picker",    action: () => labelWrapperRef.current?.querySelector<HTMLElement>("button")?.click(),    ignoreInInput: true },
+      { key: "a", description: "Open assignee picker", action: () => assigneeWrapperRef.current?.querySelector<HTMLElement>("button")?.click(), ignoreInInput: true },
+      { key: "d", description: "Open due date picker", action: () => dueDateWrapperRef.current?.querySelector<HTMLElement>("button")?.click(),  ignoreInInput: true },
+    ];
+  }, [isOpen, cardData]);
+  useKeyboardShortcuts(cardModalShortcuts);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full sm:max-w-[95vw] lg:max-w-4xl h-[90vh] max-h-[90vh] p-0 gap-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-none flex flex-col">
@@ -501,7 +520,7 @@ export const CardModal = () => {
                   )}
 
                   {cardData.priority && (
-                    <DropdownMenu>
+                    <DropdownMenu open={priorityOpen} onOpenChange={setPriorityOpen}>
                       <DropdownMenuTrigger asChild>
                         <motion.button
                           whileHover={{ scale: 1.05 }}
@@ -552,41 +571,47 @@ export const CardModal = () => {
               className="px-8 py-5 border-b border-slate-200 dark:border-slate-700"
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Labels</Button>}>
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                    <LabelManager
-                      cardId={cardData.id}
-                      orgId={organizationId}
-                      availableLabels={orgLabels}
-                      cardLabels={cardLabels}
-                      onLabelsChange={refreshCardData}
-                    />
-                  </motion.div>
-                </ErrorBoundary>
-                
-                <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Assign</Button>}>
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                    <AssigneePicker
-                      cardId={cardData.id}
-                      orgId={organizationId}
-                      currentAssignee={cardData.assignee || null}
-                      availableUsers={orgMembers}
-                      onAssigneeChange={refreshCardData}
-                    />
-                  </motion.div>
-                </ErrorBoundary>
+                <div ref={labelWrapperRef}>
+                  <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Labels</Button>}>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                      <LabelManager
+                        cardId={cardData.id}
+                        orgId={organizationId}
+                        availableLabels={orgLabels}
+                        cardLabels={cardLabels}
+                        onLabelsChange={refreshCardData}
+                      />
+                    </motion.div>
+                  </ErrorBoundary>
+                </div>
 
-                <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Due Date</Button>}>
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                    <SmartDueDate
-                      dueDate={cardData.dueDate}
-                      onDateChange={handleDueDateChange}
-                      priority={cardData.priority}
-                      animated
-                      editable
-                    />
-                  </motion.div>
-                </ErrorBoundary>
+                <div ref={assigneeWrapperRef}>
+                  <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Assign</Button>}>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                      <AssigneePicker
+                        cardId={cardData.id}
+                        orgId={organizationId}
+                        currentAssignee={cardData.assignee || null}
+                        availableUsers={orgMembers}
+                        onAssigneeChange={refreshCardData}
+                      />
+                    </motion.div>
+                  </ErrorBoundary>
+                </div>
+
+                <div ref={dueDateWrapperRef}>
+                  <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Due Date</Button>}>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                      <SmartDueDate
+                        dueDate={cardData.dueDate}
+                        onDateChange={handleDueDateChange}
+                        priority={cardData.priority}
+                        animated
+                        editable
+                      />
+                    </motion.div>
+                  </ErrorBoundary>
+                </div>
 
                 {/* Cover picker */}
                 <Popover>

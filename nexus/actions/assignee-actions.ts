@@ -6,6 +6,7 @@ import { getTenantContext, requireRole } from "@/lib/tenant-context";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { z } from "zod";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
+import { emitCardEvent } from "@/lib/event-bus";
 
 /** Minimal typed shape returned by any card operation that includes its list. */
 type CardWithList = {
@@ -55,6 +56,19 @@ async function assignUserHandler(data: z.infer<typeof AssignUserSchema>) {
   // DAL verifies Card->List->Board->orgId === ctx.orgId before assigning
   const card = await dal.assignees.assign(data.cardId, data.assigneeId);
   await logCardUpdateAndRevalidate(dal, card, data.cardId);
+
+  // Fire MEMBER_ASSIGNED event for automations + webhooks (TASK-019) — fire-and-forget
+  void emitCardEvent(
+    {
+      type: "MEMBER_ASSIGNED",
+      orgId: ctx.orgId,
+      boardId: card.list?.boardId ?? "",
+      cardId: data.cardId,
+      context: { assigneeId: data.assigneeId },
+    },
+    { cardId: data.cardId, cardTitle: card.title, assigneeId: data.assigneeId, orgId: ctx.orgId }
+  ).catch((err) => console.error("[assign-user] emitCardEvent failed", err));
+
   return { data: card };
 }
 

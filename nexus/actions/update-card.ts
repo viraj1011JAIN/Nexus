@@ -9,6 +9,7 @@ import { ActionState } from "@/lib/create-safe-action";
 import { z } from "zod";
 import { Card } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
+import { emitCardEvent } from "@/lib/event-bus";
 
 type InputType = z.infer<typeof UpdateCard>;
 type ReturnType = ActionState<InputType, Card>;
@@ -42,6 +43,15 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     });
 
     revalidatePath(`/board/${boardId}`);
+
+    // Fire CARD_TITLE_CONTAINS event if the title was updated (TASK-019) — fire-and-forget
+    if (values.title) {
+      void emitCardEvent(
+        { type: "CARD_TITLE_CONTAINS", orgId: ctx.orgId, boardId, cardId: card.id, context: { cardTitle: values.title } },
+        { cardId: card.id, cardTitle: card.title, boardId, orgId: ctx.orgId }
+      ).catch((err) => console.error("[update-card] emitCardEvent failed", err));
+    }
+
     return { data: card };
   } catch (error) {
     console.error("[UPDATE_CARD_ERROR]", error);

@@ -22,6 +22,7 @@ import { sendMentionEmail } from "@/lib/email";
 import { createNotification } from "@/actions/notification-actions";
 import { z } from "zod";
 import { differenceInHours } from "date-fns";
+import { emitCardEvent } from "@/lib/event-bus";
 
 /**
  * ============================================
@@ -94,6 +95,13 @@ export const updateCardPriority = createSafeAction(
     });
 
     revalidatePath(`/board/${boardId}`);
+
+    // Fire PRIORITY_CHANGED event for automations + webhooks (TASK-019) — fire-and-forget
+    void emitCardEvent(
+      { type: "PRIORITY_CHANGED", orgId, boardId, cardId: id, context: { priority } },
+      { cardId: id, cardTitle: updated.title, priority, boardId, orgId }
+    ).catch((err) => console.error("[update-priority] emitCardEvent failed", err));
+
     return { data: updated };
   }
 );

@@ -4,6 +4,7 @@ import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
+import { emitCardEvent } from "@/lib/event-bus";
 
 export async function deleteCard(id: string, boardId: string) {
   const ctx = await getTenantContext();
@@ -21,13 +22,23 @@ export async function deleteCard(id: string, boardId: string) {
     throw new Error("Cannot modify demo data");
   }
 
+  // Capture card title before deletion for the audit log fallback and event payload
+  const card = await dal.cards.findUnique(id);
+  const cardTitle = card.title;
+
   // dal.cards.delete verifies Card→List→Board→orgId === ctx.orgId before deleting
   await dal.cards.delete(id);
+
+  // Fire CARD_DELETED event for automations + webhooks (TASK-019) — fire-and-forget
+  void emitCardEvent(
+    { type: "CARD_DELETED", orgId: ctx.orgId, boardId, cardId: id },
+    { cardId: id, cardTitle, boardId, orgId: ctx.orgId }
+  ).catch((err) => console.error("[delete-card] emitCardEvent failed", err));
 
   await dal.auditLogs.create({
     entityId: id,
     entityType: "CARD",
-    entityTitle: id, // title already gone after delete — use id as fallback
+    entityTitle: cardTitle,
     action: "DELETE",
   });
 
