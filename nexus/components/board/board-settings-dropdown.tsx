@@ -329,7 +329,7 @@ export function BoardSettingsDropdown({
             position: "absolute",
             top: "calc(100% + 8px)",
             right: 0,
-            zIndex: 999,
+            zIndex: 9999,
             width: 248,
             borderRadius: 14,
             boxShadow: isDark
