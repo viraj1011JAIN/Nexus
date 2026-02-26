@@ -93,6 +93,7 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
         boardId={params.boardId}
         boardTitle={board.title}
         orgId={board.orgId}
+        currentImageId={board.imageId ?? null}
         lists={board.lists}
       />
     </div>

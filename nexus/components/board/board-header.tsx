@@ -5,17 +5,20 @@ import { OnlineUsers } from "./online-users";
 import { usePresence } from "@/hooks/use-presence";
 import { useTheme } from "@/components/theme-provider";
 import { useState } from "react";
-import { ChevronLeft, Share2, Settings } from "lucide-react";
+import { ChevronLeft, Share2 } from "lucide-react";
 import { ShareBoardDialog } from "./share-board-dialog";
+import { BoardSettingsDropdown } from "./board-settings-dropdown";
 
 interface BoardHeaderProps {
   boardId: string;
   boardTitle: string;
   /** orgId required for tenant-isolated presence channel */
   orgId: string;
+  currentImageId?: string | null;
+  onTitleChange?: (title: string) => void;
 }
 
-export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
+export function BoardHeader({ boardId, boardTitle, orgId, currentImageId, onTitleChange }: BoardHeaderProps) {
   const { onlineUsers, totalOnline, isTracking } = usePresence({ 
     boardId,
     orgId,
@@ -211,24 +214,12 @@ export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
         </button>
 
         {/* Settings */}
-        <button
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 9,
-            background: isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
-            border: isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(0,0,0,0.09)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: isDark ? "rgba(255,255,255,0.35)" : "#9A8F85",
-            cursor: "pointer",
-            boxShadow: isDark ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
-            transition: "all 0.18s ease",
-          }}
-        >
-          <Settings className="w-3.5 h-3.5" />
-        </button>
+        <BoardSettingsDropdown
+          boardId={boardId}
+          boardTitle={boardTitle}
+          currentImageId={currentImageId}
+          onTitleChange={onTitleChange}
+        />
       </div>
     </header>
 
