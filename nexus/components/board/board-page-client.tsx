@@ -38,8 +38,6 @@ export function BoardPageClient({
           boardId={boardId}
           boardTitle={boardTitle}
           orgId={orgId}
-          filterActive={filterBarOpen}
-          onFilterClick={() => setFilterBarOpen((v) => !v)}
         />
       </div>
 

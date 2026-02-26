@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { isPast } from "date-fns";
+import { startOfToday, startOfDay, endOfDay } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ListContainer } from "@/components/board/list-container";
@@ -179,17 +179,16 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
         const q = filters.search.toLowerCase();
         if (!card.title.toLowerCase().includes(q)) return false;
       }
-      // Overdue: dueDate exists and is in the past
+      // Overdue: dueDate exists and is strictly before today (cards due today are not overdue)
       if (filters.overdue) {
-        if (!card.dueDate || !isPast(new Date(card.dueDate))) return false;
+        if (!card.dueDate || new Date(card.dueDate) >= startOfToday()) return false;
       }
-      // Due date range: from
+      // Due date range — inclusive: card.dueDate must be within [startOfDay(from), endOfDay(to)]
       if (filters.dueDateFrom) {
-        if (!card.dueDate || new Date(card.dueDate) < new Date(filters.dueDateFrom)) return false;
+        if (!card.dueDate || new Date(card.dueDate) < startOfDay(new Date(filters.dueDateFrom))) return false;
       }
-      // Due date range: to
       if (filters.dueDateTo) {
-        if (!card.dueDate || new Date(card.dueDate) > new Date(filters.dueDateTo)) return false;
+        if (!card.dueDate || new Date(card.dueDate) > endOfDay(new Date(filters.dueDateTo))) return false;
       }
       return true;
     });
@@ -261,9 +260,11 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
       },
       ignoreInInput: false,
     },
-    // â”€â”€ Help â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Filter bar ────────────────────────────────────────────────────────────────
+    { key: "f", description: "Toggle filter bar", action: () => setFilterBarOpen(!isFilterBarOpen), ignoreInInput: true },
+    // ── Help ─────────────────────────────────────────────────────────────────────
     { key: "?", description: "Show keyboard shortcuts", action: () => setShortcutsOpen(true), ignoreInInput: true },
-  ], [switchToTab, bulk, selectAllVisible]);
+  ], [switchToTab, bulk, selectAllVisible, setFilterBarOpen, isFilterBarOpen]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -370,23 +371,24 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
                   display: "flex",
                   alignItems: "center",
                   gap: 5,
-                  padding: "5px 10px",
+                  padding: "5px 12px",
                   borderRadius: 8,
-                  border: isDark
-                    ? `1px solid ${isFilterBarOpen ? "rgba(167,139,250,0.4)" : "rgba(255,255,255,0.09)"}`
-                    : `1px solid ${isFilterBarOpen ? "rgba(123,47,247,0.3)" : "rgba(0,0,0,0.09)"}`,
+                  border: isFilterBarOpen
+                    ? "1px solid #00C8FF"
+                    : "1px solid rgba(0,200,255,0.45)",
                   background: isFilterBarOpen
-                    ? isDark ? "rgba(123,47,247,0.15)" : "rgba(123,47,247,0.07)"
-                    : isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
-                  color: isFilterBarOpen
-                    ? isDark ? "#A78BFA" : "#7B2FF7"
-                    : isDark ? "rgba(255,255,255,0.4)" : "#9A8F85",
+                    ? "#00C8FF"
+                    : "rgba(0,200,255,0.12)",
+                  color: isFilterBarOpen ? "#000" : "#00C8FF",
                   fontSize: 12,
-                  fontWeight: 500,
+                  fontWeight: 600,
                   cursor: "pointer",
                   fontFamily: "'DM Sans', sans-serif",
                   transition: "all 0.18s ease",
                   position: "relative",
+                  boxShadow: isFilterBarOpen
+                    ? "0 0 10px rgba(0,200,255,0.55), 0 0 20px rgba(0,200,255,0.25)"
+                    : "0 0 6px rgba(0,200,255,0.2)",
                 }}
               >
                 <Filter className="w-3 h-3" />
@@ -400,7 +402,8 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
                       width: 6,
                       height: 6,
                       borderRadius: "50%",
-                      background: "#7B2FF7",
+                      background: "#00C8FF",
+                      boxShadow: "0 0 4px #00C8FF",
                     }}
                   />
                 )}
