@@ -291,7 +291,7 @@ function SavedViewsPanel({
           className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/60 group cursor-pointer"
           onClick={() => onApply(view.filters)}
         >
-          <Bookmark className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0" />
+          <Bookmark className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
           <span className="text-sm flex-1 truncate font-medium">{view.name}</span>
           {view.isShared && (
             <Badge variant="secondary" className="text-[10px] px-1.5 h-4">Shared</Badge>
@@ -332,7 +332,7 @@ function FilterChip({
   return (
     <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-700">
       <span>{label}</span>
-      <button onClick={onRemove} className="hover:text-red-500 transition-colors">
+      <button onClick={onRemove} aria-label={`Remove ${label} filter`} title={`Remove ${label} filter`} className="hover:text-red-500 transition-colors">
         <X className="h-3 w-3" />
       </button>
     </div>
@@ -399,22 +399,13 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
 
   const activeCount = countActiveFilters(filters);
 
-  // ── Shared button styler ─────────────────────────────────────────────────
-  const btnBase = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    height: 30,
-    padding: "0 12px",
-    borderRadius: 8,
-    fontSize: 12,
-    fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: "pointer",
-    border: "none",
-    transition: "filter 0.15s ease, transform 0.1s ease",
-    whiteSpace: "nowrap" as const,
-  };
+  // ── Shared filter button base (Tailwind — theme-aware, keyboard-accessible) ─
+  const filterBtnBase =
+    "inline-flex items-center gap-1.5 h-[30px] px-3 rounded-lg " +
+    "text-xs font-semibold text-white cursor-pointer border-0 whitespace-nowrap select-none " +
+    "transition-all duration-150 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background " +
+    "hover:brightness-110 active:scale-[0.97]";
 
   return (
     <div className="w-full">
@@ -435,11 +426,11 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
         {/* ── Assignees ── violet */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button style={{ ...btnBase, background: "#7C3AED", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,0.45)" }}>
+            <button className={cn(filterBtnBase, "bg-violet-600 dark:bg-violet-700 shadow-[0_2px_8px_rgba(124,58,237,0.45)] focus-visible:ring-violet-400")}>
               <User className="h-3.5 w-3.5" />
               Assignees
               {filters.assigneeIds.length > 0 && (
-                <span style={{ background: "rgba(255,255,255,0.25)", borderRadius: 99, padding: "1px 7px", fontSize: 10 }}>
+                <span className="bg-white/25 rounded-full px-1.5 py-px text-[10px]">
                   {filters.assigneeIds.length}
                 </span>
               )}
@@ -448,27 +439,26 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-52 border-0 shadow-xl"
-            style={{ background: "#F5F0FF", color: "#2D1B69" }}
+            className="w-52 border-0 shadow-xl bg-violet-50 dark:bg-violet-950/95 text-violet-900 dark:text-violet-100"
           >
-            <DropdownMenuLabel style={{ color: "#5B21B6", borderBottom: "1px solid #DDD6FE", marginBottom: 4 }}>
+            <DropdownMenuLabel className="text-violet-700 dark:text-violet-300 border-b border-violet-200 dark:border-violet-800 mb-1">
               Filter by Assignee
             </DropdownMenuLabel>
             {members.length === 0 && (
-              <DropdownMenuItem disabled style={{ color: "#7C3AED" }}>No members found</DropdownMenuItem>
+              <DropdownMenuItem disabled className="text-violet-600 dark:text-violet-400">No members found</DropdownMenuItem>
             )}
             {members.map((m) => (
               <DropdownMenuCheckboxItem
                 key={m.id}
                 checked={filters.assigneeIds.includes(m.id)}
                 onCheckedChange={() => toggleAssignee(m.id)}
-                style={{ color: "#2D1B69" }}
+                className="text-violet-900 dark:text-violet-100"
               >
                 <span className="flex items-center gap-2">
                   {m.imageUrl ? (
                     <Image src={m.imageUrl} alt={m.name} width={20} height={20} className="rounded-full object-cover" />
                   ) : (
-                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#7C3AED", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>
+                    <div className="w-5 h-5 rounded-full bg-violet-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
                       {m.name[0]?.toUpperCase()}
                     </div>
                   )}
@@ -482,11 +472,11 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
         {/* ── Priority ── orange */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button style={{ ...btnBase, background: "#EA580C", color: "#fff", boxShadow: "0 2px 8px rgba(234,88,12,0.45)" }}>
+            <button className={cn(filterBtnBase, "bg-orange-600 dark:bg-orange-700 shadow-[0_2px_8px_rgba(234,88,12,0.45)] focus-visible:ring-orange-400")}>
               <Flag className="h-3.5 w-3.5" />
               Priority
               {filters.priorities.length > 0 && (
-                <span style={{ background: "rgba(255,255,255,0.25)", borderRadius: 99, padding: "1px 7px", fontSize: 10 }}>
+                <span className="bg-white/25 rounded-full px-1.5 py-px text-[10px]">
                   {filters.priorities.length}
                 </span>
               )}
@@ -495,10 +485,9 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-44 border-0 shadow-xl"
-            style={{ background: "#FFF7ED", color: "#431407" }}
+            className="w-44 border-0 shadow-xl bg-orange-50 dark:bg-orange-950/95 text-orange-900 dark:text-orange-100"
           >
-            <DropdownMenuLabel style={{ color: "#C2410C", borderBottom: "1px solid #FED7AA", marginBottom: 4 }}>
+            <DropdownMenuLabel className="text-orange-700 dark:text-orange-300 border-b border-orange-200 dark:border-orange-800 mb-1">
               Filter by Priority
             </DropdownMenuLabel>
             {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
@@ -506,10 +495,10 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
                 key={value}
                 checked={filters.priorities.includes(value)}
                 onCheckedChange={() => togglePriority(value)}
-                style={{ color: "#431407" }}
+                className="text-orange-900 dark:text-orange-100"
               >
                 <span className="flex items-center gap-2">
-                  <span className={cn("h-2 w-2 rounded-full flex-shrink-0", PRIORITY_COLORS[value])} />
+                  <span className={cn("h-2 w-2 rounded-full shrink-0", PRIORITY_COLORS[value])} />
                   {label}
                 </span>
               </DropdownMenuCheckboxItem>
@@ -521,11 +510,11 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
         {labels.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button style={{ ...btnBase, background: "#059669", color: "#fff", boxShadow: "0 2px 8px rgba(5,150,105,0.45)" }}>
+              <button className={cn(filterBtnBase, "bg-emerald-600 dark:bg-emerald-700 shadow-[0_2px_8px_rgba(5,150,105,0.45)] focus-visible:ring-emerald-400")}>
                 <Tag className="h-3.5 w-3.5" />
                 Labels
                 {filters.labelIds.length > 0 && (
-                  <span style={{ background: "rgba(255,255,255,0.25)", borderRadius: 99, padding: "1px 7px", fontSize: 10 }}>
+                  <span className="bg-white/25 rounded-full px-1.5 py-px text-[10px]">
                     {filters.labelIds.length}
                   </span>
                 )}
@@ -534,10 +523,9 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-48 border-0 shadow-xl"
-              style={{ background: "#ECFDF5", color: "#064E3B" }}
+              className="w-48 border-0 shadow-xl bg-emerald-50 dark:bg-emerald-950/95 text-emerald-900 dark:text-emerald-100"
             >
-              <DropdownMenuLabel style={{ color: "#047857", borderBottom: "1px solid #A7F3D0", marginBottom: 4 }}>
+              <DropdownMenuLabel className="text-emerald-700 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800 mb-1">
                 Filter by Label
               </DropdownMenuLabel>
               {labels.map((l) => (
@@ -545,10 +533,10 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
                   key={l.id}
                   checked={filters.labelIds.includes(l.id)}
                   onCheckedChange={() => toggleLabel(l.id)}
-                  style={{ color: "#064E3B" }}
+                  className="text-emerald-900 dark:text-emerald-100"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: l.color }} />
+                    <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
                     {l.name}
                   </span>
                 </DropdownMenuCheckboxItem>
@@ -560,52 +548,52 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
         {/* ── Due Date ── rose */}
         <Popover>
           <PopoverTrigger asChild>
-            <button style={{
-              ...btnBase,
-              background: (filters.dueDateFrom || filters.dueDateTo || filters.overdue) ? "#BE123C" : "#E11D48",
-              color: "#fff",
-              boxShadow: "0 2px 8px rgba(225,29,72,0.45)",
-            }}>
+            <button
+              className={cn(
+                filterBtnBase,
+                "shadow-[0_2px_8px_rgba(225,29,72,0.45)] focus-visible:ring-rose-400",
+                (filters.dueDateFrom || filters.dueDateTo || filters.overdue)
+                  ? "bg-rose-700 dark:bg-rose-800"
+                  : "bg-rose-600 dark:bg-rose-700",
+              )}
+            >
               <Calendar className="h-3.5 w-3.5" />
               Due Date
               {(filters.dueDateFrom || filters.dueDateTo || filters.overdue) && (
-                <span style={{ background: "rgba(255,255,255,0.25)", borderRadius: 99, padding: "1px 7px", fontSize: 10 }}>✓</span>
+                <span className="bg-white/25 rounded-full px-1.5 py-px text-[10px]">✓</span>
               )}
               <ChevronDown className="h-3 w-3 opacity-70" />
             </button>
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-72 border-0 shadow-xl"
-            style={{ background: "#FFF1F2", color: "#4C0519", padding: "16px" }}
+            className="w-72 border-0 shadow-xl bg-rose-50 dark:bg-rose-950/95 text-rose-900 dark:text-rose-100 p-4"
           >
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#BE123C", marginBottom: 12, borderBottom: "1px solid #FECDD3", paddingBottom: 8 }}>
+            <p className="text-sm font-bold text-rose-700 dark:text-rose-300 mb-3 border-b border-rose-200 dark:border-rose-800 pb-2">
               Due Date Range
             </p>
-            <div className="grid grid-cols-2 gap-2" style={{ marginBottom: 12 }}>
+            <div className="grid grid-cols-2 gap-2 mb-3">
               <div className="space-y-1">
-                <Label className="text-xs" style={{ color: "#9F1239" }}>From</Label>
+                <Label className="text-xs text-rose-800 dark:text-rose-200">From</Label>
                 <Input
                   type="date"
-                  className="h-8 text-sm"
-                  style={{ background: "#FFE4E6", border: "1px solid #FECDD3", color: "#4C0519" }}
+                  className="h-8 text-sm bg-rose-100 dark:bg-rose-900/50 border-rose-200 dark:border-rose-700 text-rose-900 dark:text-rose-100"
                   value={filters.dueDateFrom ?? ""}
                   onChange={(e) => applyFilters({ ...filters, dueDateFrom: e.target.value || undefined })}
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs" style={{ color: "#9F1239" }}>To</Label>
+                <Label className="text-xs text-rose-800 dark:text-rose-200">To</Label>
                 <Input
                   type="date"
-                  className="h-8 text-sm"
-                  style={{ background: "#FFE4E6", border: "1px solid #FECDD3", color: "#4C0519" }}
+                  className="h-8 text-sm bg-rose-100 dark:bg-rose-900/50 border-rose-200 dark:border-rose-700 text-rose-900 dark:text-rose-100"
                   value={filters.dueDateTo ?? ""}
                   onChange={(e) => applyFilters({ ...filters, dueDateTo: e.target.value || undefined })}
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-              <Label htmlFor="overdue-toggle" style={{ fontSize: 13, color: "#9F1239", fontWeight: 500 }}>Overdue only</Label>
+            <div className="flex items-center justify-between mb-2.5">
+              <Label htmlFor="overdue-toggle" className="text-sm text-rose-800 dark:text-rose-200 font-medium">Overdue only</Label>
               <Switch
                 id="overdue-toggle"
                 checked={!!filters.overdue}
@@ -614,7 +602,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
             </div>
             <button
               onClick={() => applyFilters({ ...filters, dueDateFrom: undefined, dueDateTo: undefined, overdue: false })}
-              style={{ width: "100%", padding: "6px", borderRadius: 7, background: "#FFE4E6", border: "1px solid #FECDD3", color: "#BE123C", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              className="w-full py-1.5 rounded-[7px] bg-rose-100 dark:bg-rose-900/40 border border-rose-200 dark:border-rose-700 text-rose-700 dark:text-rose-300 text-xs font-semibold cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
             >
               Clear dates
             </button>
@@ -625,10 +613,10 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
         {lists.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button style={{ ...btnBase, background: "#0284C7", color: "#fff", boxShadow: "0 2px 8px rgba(2,132,199,0.45)" }}>
+              <button className={cn(filterBtnBase, "bg-sky-600 dark:bg-sky-700 shadow-[0_2px_8px_rgba(2,132,199,0.45)] focus-visible:ring-sky-400")}>
                 List
                 {(filters.listIds ?? []).length > 0 && (
-                  <span style={{ background: "rgba(255,255,255,0.25)", borderRadius: 99, padding: "1px 7px", fontSize: 10 }}>
+                  <span className="bg-white/25 rounded-full px-1.5 py-px text-[10px]">
                     {filters.listIds!.length}
                   </span>
                 )}
@@ -637,10 +625,9 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-48 border-0 shadow-xl"
-              style={{ background: "#F0F9FF", color: "#0C4A6E" }}
+              className="w-48 border-0 shadow-xl bg-sky-50 dark:bg-sky-950/95 text-sky-900 dark:text-sky-100"
             >
-              <DropdownMenuLabel style={{ color: "#0369A1", borderBottom: "1px solid #BAE6FD", marginBottom: 4 }}>
+              <DropdownMenuLabel className="text-sky-700 dark:text-sky-300 border-b border-sky-200 dark:border-sky-800 mb-1">
                 Filter by List
               </DropdownMenuLabel>
               {lists.map((l) => (
@@ -648,7 +635,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
                   key={l.id}
                   checked={(filters.listIds ?? []).includes(l.id)}
                   onCheckedChange={() => toggleList(l.id)}
-                  style={{ color: "#0C4A6E" }}
+                  className="text-sky-900 dark:text-sky-100"
                 >
                   {l.title}
                 </DropdownMenuCheckboxItem>
@@ -661,7 +648,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
           {/* ── Views ── teal */}
           <Popover open={showViews} onOpenChange={setShowViews}>
             <PopoverTrigger asChild>
-              <button style={{ ...btnBase, background: "#0D9488", color: "#fff", boxShadow: "0 2px 8px rgba(13,148,136,0.45)" }}>
+              <button className={cn(filterBtnBase, "bg-teal-600 dark:bg-teal-700 shadow-[0_2px_8px_rgba(13,148,136,0.45)] focus-visible:ring-teal-400")}>
                 <Bookmark className="h-3.5 w-3.5" />
                 Views
                 <ChevronDown className="h-3 w-3 opacity-70" />
@@ -669,15 +656,14 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-72 p-0 border-0 shadow-xl"
+              className="w-72 p-0 border-0 shadow-xl bg-teal-50 dark:bg-teal-950/95 text-teal-900 dark:text-teal-100"
               sideOffset={4}
-              style={{ background: "#F0FDFA", color: "#134E4A" }}
             >
-              <div style={{ borderBottom: "1px solid #99F6E4", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#0F766E" }}>Saved Views</span>
+              <div className="border-b border-teal-200 dark:border-teal-800 px-3.5 py-2.5 flex items-center justify-between">
+                <span className="text-sm font-bold text-teal-700 dark:text-teal-300">Saved Views</span>
                 <button
                   onClick={() => { setShowViews(false); setShowSaveDialog(true); }}
-                  style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#0D9488", background: "#CCFBF1", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-800/60 border-0 rounded-md px-2.5 py-1 cursor-pointer hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
                 >
                   <BookmarkPlus className="h-3.5 w-3.5" />
                   Save current
@@ -698,7 +684,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
           {activeCount > 0 && (
             <button
               onClick={clearAll}
-              style={{ ...btnBase, background: "#F43F5E", color: "#fff", boxShadow: "0 2px 8px rgba(244,63,94,0.4)" }}
+              className={cn(filterBtnBase, "bg-rose-500 dark:bg-rose-600 shadow-[0_2px_8px_rgba(244,63,94,0.4)] focus-visible:ring-rose-400")}
             >
               <X className="h-3.5 w-3.5" />
               Clear ({activeCount})
