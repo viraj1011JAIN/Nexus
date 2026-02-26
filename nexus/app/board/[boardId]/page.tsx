@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { BoardHeader } from "@/components/board/board-header";
-import { BoardTabsClient } from "@/components/board/board-tabs-client";
+import { BoardPageClient } from "@/components/board/board-page-client";
 import { getTenantContext } from "@/lib/tenant-context";
 import { createDAL } from "@/lib/dal";
 
@@ -89,20 +88,13 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
         <div className="absolute inset-0 bg-black/40 pointer-events-none" />
       )}
       
-      {/* Header with Real-Time Indicators */}
-      <div className="relative z-10">
-        <BoardHeader boardId={params.boardId} boardTitle={board.title} orgId={board.orgId} />
-      </div>
-
-      {/* Tabs for Board / Analytics */}
-      <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
-        <BoardTabsClient
-          boardId={params.boardId}
-          boardTitle={board.title}
-          orgId={board.orgId}
-          lists={board.lists}
-        />
-      </div>
+      {/* Header + Tabs wired together with shared filter state */}
+      <BoardPageClient
+        boardId={params.boardId}
+        boardTitle={board.title}
+        orgId={board.orgId}
+        lists={board.lists}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { isPast } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ListContainer } from "@/components/board/list-container";
@@ -16,7 +17,7 @@ import { BulkSelectionProvider, useBulkSelection } from "@/lib/bulk-selection-co
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import {
-  BarChart3, LayoutDashboard, Table2, GitBranch, Calendar, Users, GanttChart,
+  BarChart3, LayoutDashboard, Table2, GitBranch, Calendar, Users, GanttChart, Filter,
 } from "lucide-react";
 import { GanttView } from "@/components/board/gantt-view";
 import { useTheme } from "@/components/theme-provider";
@@ -41,11 +42,18 @@ interface BoardTabsProps {
   orgId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   lists: any[];
+  /**
+   * Optional external control of the filter bar open state.
+   * When provided (e.g. from BoardPageClient), the header Filter button and the
+   * tab-internal filter state stay in sync.
+   */
+  filterBarOpen?: boolean;
+  onFilterBarChange?: (open: boolean) => void;
 }
 
 // â”€â”€â”€ Inner component (consumes BulkSelectionContext) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
+function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: externalFilterOpen, onFilterBarChange }: BoardTabsProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const [activeTab, setActiveTab] = useState<TabValue>("board");
@@ -55,14 +63,27 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
     labelIds: [],
   });
 
-  // Reset filters when leaving the calendar tab so selectAllVisible and filter logic
-  // always operate on the full card list on non-calendar views.
+  // ── Filter bar open state ──────────────────────────────────────────────────
+  // If an external controller is provided (BoardPageClient), use it; otherwise
+  // fall back to internal state so the component also works standalone.
+  const [internalFilterOpen, setInternalFilterOpen] = useState(false);
+  const isFilterBarOpen = externalFilterOpen ?? internalFilterOpen;
+  const setFilterBarOpen = useCallback(
+    (open: boolean) => {
+      if (onFilterBarChange) {
+        onFilterBarChange(open);
+      } else {
+        setInternalFilterOpen(open);
+      }
+    },
+    [onFilterBarChange]
+  );
+
+  // Tab switching — no longer resets filters so a user can switch views while
+  // keeping the same active filters (e.g. "my cards" on board, then on table).
   const handleTabChange = useCallback((tab: TabValue) => {
     setActiveTab(tab);
-    if (tab !== "calendar") {
-      setFilters({ assigneeIds: [], priorities: [], labelIds: [] });
-    }
-  }, [setActiveTab, setFilters]);
+  }, [setActiveTab]);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const tabListRef = useRef<HTMLDivElement>(null);
 
@@ -144,7 +165,10 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
       filters.priorities.length > 0 ||
       filters.labelIds.length > 0 ||
       (filters.listIds?.length ?? 0) > 0 ||
-      !!filters.search;
+      !!filters.search ||
+      !!filters.overdue ||
+      !!filters.dueDateFrom ||
+      !!filters.dueDateTo;
     if (!hasActiveFilter) return allCards;
     return allCards.filter((card) => {
       if (filters.assigneeIds.length > 0 && !filters.assigneeIds.includes(card.assigneeId ?? "")) return false;
@@ -155,31 +179,55 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
         const q = filters.search.toLowerCase();
         if (!card.title.toLowerCase().includes(q)) return false;
       }
+      // Overdue: dueDate exists and is in the past
+      if (filters.overdue) {
+        if (!card.dueDate || !isPast(new Date(card.dueDate))) return false;
+      }
+      // Due date range: from
+      if (filters.dueDateFrom) {
+        if (!card.dueDate || new Date(card.dueDate) < new Date(filters.dueDateFrom)) return false;
+      }
+      // Due date range: to
+      if (filters.dueDateTo) {
+        if (!card.dueDate || new Date(card.dueDate) > new Date(filters.dueDateTo)) return false;
+      }
       return true;
     });
   }, [allCards, filters]);
 
-  // Only calendar actually consumes filteredCards — board and table receive raw lists.
-  // Show the FilterBar only for views wired to filtered data, to avoid a filter bar
-  // that appears to work but has no effect on the rendered content.
-  const showFilterBar = activeTab === "calendar";
+  // Whether any filter is currently applied — used to decide when to narrow views
+  const filteredCardIds = useMemo(() => new Set(filteredCards.map((c) => c.id)), [filteredCards]);
+  const hasActiveFilter = filteredCards.length < allCards.length;
+
+  /**
+   * Apply the current filters to the raw lists structure so that all views
+   * (board, table, timeline, workload) receive only the matching cards.
+   * When no filter is active, returns the original lists reference unchanged.
+   */
+  const filteredListsForView = useMemo(() => {
+    if (!hasActiveFilter) return lists;
+    return (lists ?? []).map((list: { id: string; title: string; cards: unknown[] }) => ({
+      ...list,
+      cards: (list.cards ?? []).filter((card: unknown) => filteredCardIds.has((card as { id: string }).id)),
+    }));
+  }, [lists, filteredCardIds, hasActiveFilter]);
+
+  // FilterBar is shown for all content-oriented views when the filter bar is open.
+  // Analytics and Sprints manage their own data; no card filter applies there.
+  const showFilterBar = isFilterBarOpen && !["analytics", "sprints"].includes(activeTab);
 
   // â”€â”€ Keyboard shortcuts (TASK-016) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const switchToTab = useCallback((tab: TabValue) => {
-    // Delegate to handleTabChange so filter state is reset when switching away
-    // from calendar via keyboard shortcut, matching the Tabs onValueChange behaviour.
     handleTabChange(tab);
     // Brief visual focus to indicate the switch
     tabListRef.current?.querySelector<HTMLElement>(`[data-value="${tab}"]`)?.focus();
   }, [handleTabChange]);
 
   const selectAllVisible = useCallback(() => {
-    // filteredCards is only meaningful (calendar filters dates) on the calendar tab;
-    // on all other tabs use allCards so Ctrl+A truly selects every card.
-    const cards = activeTab === "calendar" ? filteredCards : allCards;
-    bulk.selectAll(cards.map((c) => c.id));
-  }, [bulk, filteredCards, allCards, activeTab]);
+    // Always select the currently visible (filtered) cards, regardless of tab.
+    bulk.selectAll(filteredCards.map((c) => c.id));
+  }, [bulk, filteredCards]);
 
   const shortcuts = useMemo(() => [
     // â”€â”€ View switch (1â€“6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -290,7 +338,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
             )}
           </div>
 
-          {/* Board stats — right side */}
+          {/* Board stats + filter toggle — right side */}
           <div className="flex items-center gap-4 flex-shrink-0">
             {[
               { label: "Lists",  val: (lists ?? []).length,  color: "#7B2FF7" },
@@ -312,18 +360,64 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
                 </span>
               </div>
             ))}
+
+            {/* Filter toggle — active indicator dot when filters are applied */}
+            {!["analytics", "sprints"].includes(activeTab) && (
+              <button
+                onClick={() => setFilterBarOpen(!isFilterBarOpen)}
+                title="Toggle filters (F)"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "5px 10px",
+                  borderRadius: 8,
+                  border: isDark
+                    ? `1px solid ${isFilterBarOpen ? "rgba(167,139,250,0.4)" : "rgba(255,255,255,0.09)"}`
+                    : `1px solid ${isFilterBarOpen ? "rgba(123,47,247,0.3)" : "rgba(0,0,0,0.09)"}`,
+                  background: isFilterBarOpen
+                    ? isDark ? "rgba(123,47,247,0.15)" : "rgba(123,47,247,0.07)"
+                    : isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
+                  color: isFilterBarOpen
+                    ? isDark ? "#A78BFA" : "#7B2FF7"
+                    : isDark ? "rgba(255,255,255,0.4)" : "#9A8F85",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.18s ease",
+                  position: "relative",
+                }}
+              >
+                <Filter className="w-3 h-3" />
+                Filters
+                {hasActiveFilter && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 2,
+                      right: 2,
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: "#7B2FF7",
+                    }}
+                  />
+                )}
+              </button>
+            )}
           </div>
         </div>
 
         <TabsContent value="board" className="mt-0 p-0 flex flex-col overflow-hidden">
           <ErrorBoundary>
-            <ListContainer boardId={boardId} orgId={orgId} data={lists} />
+            <ListContainer boardId={boardId} orgId={orgId} data={filteredListsForView} />
           </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="table" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
-            <TableView lists={lists} />
+            <TableView lists={filteredListsForView} />
           </ErrorBoundary>
         </TabsContent>
 
@@ -335,7 +429,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
 
         <TabsContent value="timeline" className="mt-0 p-4 pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
-            <GanttView lists={lists} />
+            <GanttView lists={filteredListsForView} />
           </ErrorBoundary>
         </TabsContent>
 
@@ -347,7 +441,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
 
         <TabsContent value="workload" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
-            <WorkloadView boardId={boardId} lists={lists} />
+            <WorkloadView boardId={boardId} lists={filteredListsForView} />
           </ErrorBoundary>
         </TabsContent>
 

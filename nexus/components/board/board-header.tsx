@@ -6,15 +6,22 @@ import { usePresence } from "@/hooks/use-presence";
 import { useTheme } from "@/components/theme-provider";
 import { useState } from "react";
 import { ChevronLeft, Filter, Share2, Settings } from "lucide-react";
+import { ShareBoardDialog } from "./share-board-dialog";
 
 interface BoardHeaderProps {
   boardId: string;
   boardTitle: string;
   /** orgId required for tenant-isolated presence channel */
   orgId: string;
+  /**
+   * When provided, the header Filter button is controlled externally
+   * (e.g. by BoardPageClient which shares state with BoardTabs).
+   */
+  onFilterClick?: () => void;
+  filterActive?: boolean;
 }
 
-export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
+export function BoardHeader({ boardId, boardTitle, orgId, onFilterClick, filterActive }: BoardHeaderProps) {
   const { onlineUsers, totalOnline, isTracking } = usePresence({ 
     boardId,
     orgId,
@@ -22,9 +29,15 @@ export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
   });
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const [filterOpen, setFilterOpen] = useState(false);
+  // Internal fallback state — only used when no external onFilterClick is provided
+  const [_filterOpen, _setFilterOpen] = useState(false);
+  const isFilterActive = filterActive ?? _filterOpen;
+  const handleFilterClick = onFilterClick ?? (() => _setFilterOpen((v) => !v));
+
+  const [shareOpen, setShareOpen] = useState(false);
 
   return (
+    <>
     <header
       style={{
         flexShrink: 0,
@@ -195,7 +208,7 @@ export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
 
         {/* Filter */}
         <button
-          onClick={() => setFilterOpen(!filterOpen)}
+          onClick={handleFilterClick}
           style={{
             display: "flex",
             alignItems: "center",
@@ -203,10 +216,10 @@ export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
             padding: "6px 12px",
             borderRadius: 9,
             border: isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(0,0,0,0.09)",
-            background: filterOpen
+            background: isFilterActive
               ? isDark ? "rgba(123,47,247,0.15)" : "rgba(123,47,247,0.08)"
               : isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
-            color: filterOpen
+            color: isFilterActive
               ? isDark ? "#A78BFA" : "#7B2FF7"
               : isDark ? "rgba(255,255,255,0.45)" : "#6B6560",
             fontSize: 12.5,
@@ -223,6 +236,7 @@ export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
 
         {/* Share */}
         <button
+          onClick={() => setShareOpen(true)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -265,5 +279,13 @@ export function BoardHeader({ boardId, boardTitle, orgId }: BoardHeaderProps) {
         </button>
       </div>
     </header>
+
+    <ShareBoardDialog
+      boardId={boardId}
+      boardTitle={boardTitle}
+      open={shareOpen}
+      onClose={() => setShareOpen(false)}
+    />
+    </>
   );
 }
