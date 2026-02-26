@@ -3,22 +3,32 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
-import { MoreHorizontal, Trash2, Clock, Lock, CheckSquare, Check } from "lucide-react";
+import { Clock, Lock, CheckSquare, Check } from "lucide-react";
 import { useBulkSelection } from "@/lib/bulk-selection-context";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { deleteCard } from "@/actions/delete-card"; 
-import { useParams } from "next/navigation"; 
+import { deleteCard } from "@/actions/delete-card";
+import { useParams } from "next/navigation";
 import { useCardModal } from "@/hooks/use-card-modal";
 import { PriorityBadge } from "@/components/priority-badge";
 import { format, isPast, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+// Priority dot colors for the left accent bar
+const PRIORITY_DOTS: Record<string, { dark: string; light: string }> = {
+  URGENT: { dark: "#FF4365", light: "#EF4444" },
+  HIGH:   { dark: "#FF8C42", light: "#F59E0B" },
+  MEDIUM: { dark: "#F5C518", light: "#06B6D4" },
+  LOW:    { dark: "#4FFFB0", light: "#10B981" },
+}
 
 interface CardItemProps {
   data: Card & {
@@ -26,16 +36,25 @@ interface CardItemProps {
     _count?: { dependencies?: number };
   };
   index: number;
+  listColor?: string;
 }
 
 export const CardItem = ({
   data,
   index,
+  listColor = "#7C3AED",
 }: CardItemProps) => {
   const params = useParams();
   const cardModal = useCardModal();
   const { isBulkMode, selectedIds, toggleCard } = useBulkSelection();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const isSelected = selectedIds.includes(data.id);
+
+  // Priority dot color for accent bar
+  const priorityDot = data.priority
+    ? (isDark ? PRIORITY_DOTS[data.priority]?.dark : PRIORITY_DOTS[data.priority]?.light) ?? null
+    : null;
 
   const {
     attributes,
@@ -71,16 +90,28 @@ export const CardItem = ({
   return (
     <motion.div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        background: isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
+        border: `1px solid ${isSelected
+          ? "rgb(123,47,247)"
+          : isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"
+        }`,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)",
+        animationDelay: `${index * 0.07}s`,
+      }}
       {...attributes}
       {...listeners}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ scale: 1.018, boxShadow: isDark
+        ? "0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(123,47,247,0.2)"
+        : "0 16px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.07)"
+      }}
       whileTap={{ scale: 0.98 }}
-      transition={{ 
-        duration: 0.2, 
+      transition={{
+        duration: 0.2,
         ease: [0.4, 0, 0.2, 1],
         delay: index * 0.05
       }}
@@ -89,10 +120,22 @@ export const CardItem = ({
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative text-sm bg-muted hover:bg-accent rounded-lg hover:shadow-md cursor-pointer transition-all duration-200 touch-manipulation min-h-20 overflow-hidden",
-        isSelected && "ring-2 ring-primary ring-offset-1"
+        "group relative text-sm rounded-[14px] cursor-pointer animate-card-enter touch-manipulation min-h-[72px] overflow-hidden",
+        isSelected && "ring-2 ring-primary"
       )}
     >
+      {/* Priority left accent bar */}
+      {priorityDot && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0, top: 0, bottom: 0,
+            width: 3,
+            background: `linear-gradient(to bottom, ${priorityDot}, ${priorityDot}88)`,
+            borderRadius: "14px 0 0 14px",
+          }}
+        />
+      )}
       {/* Bulk selection checkbox (top-left overlay — visible only in bulk mode) */}
       {isBulkMode && (
         <div
@@ -133,7 +176,10 @@ export const CardItem = ({
       )}
 
       {/* Card Content */}
-      <div className="p-3 space-y-2">
+      <div
+        className="p-3 space-y-2"
+        style={{ paddingLeft: priorityDot ? 18 : 12 }}
+      >
         {/* Title */}
         <div className="pr-8">
           <span className="block font-semibold text-card-foreground group-hover:text-primary transition-colors line-clamp-2">

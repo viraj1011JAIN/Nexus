@@ -19,6 +19,7 @@ import {
   BarChart3, LayoutDashboard, Table2, GitBranch, Calendar, Users, GanttChart,
 } from "lucide-react";
 import { GanttView } from "@/components/board/gantt-view";
+import { useTheme } from "@/components/theme-provider";
 
 // â”€â”€â”€ Tab definitions (order matters â€” keys 1â€“6 map to tabs by index) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -45,6 +46,8 @@ interface BoardTabsProps {
 // â”€â”€â”€ Inner component (consumes BulkSelectionContext) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [activeTab, setActiveTab] = useState<TabValue>("board");
   const [filters, setFilters] = useState<BoardFilterState>({
     assigneeIds: [],
@@ -216,6 +219,8 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
 
   useKeyboardShortcuts(shortcuts);
 
+  const doneCount = (lists ?? []).find((l: { title: string }) => l.title === "Done")?.cards?.length ?? 0;
+
   return (
     <>
       {/* Keyboard shortcuts modal */}
@@ -225,72 +230,128 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists }: BoardTabsProps) {
         shortcuts={shortcuts}
       />
 
+      {/* Shimmer brand stripe */}
+      <div className="h-[2px] flex-shrink-0 shimmer-stripe" />
+
       <Tabs
         id="board-tabs"
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as TabValue)}
-        className="w-full relative z-10"
+        className="w-full relative z-10 flex-1 flex flex-col overflow-hidden"
       >
-        <div className="px-6 pt-4 space-y-3" ref={tabListRef as React.RefObject<HTMLDivElement>}>
-          <TabsList className="bg-white/80 backdrop-blur-sm shadow-sm">
-            {TABS.map(({ value, label, Icon }, i) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                data-value={value}
-                className="gap-2"
-                title={`${label} (${i + 1})`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <div
+          className="px-6 py-2 flex items-center justify-between gap-4"
+          ref={tabListRef as React.RefObject<HTMLDivElement>}
+          style={{
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.07)",
+            background: isDark ? "rgba(13,12,20,0.75)" : "rgba(255,253,249,0.9)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <TabsList
+              className="h-auto p-1 gap-0.5"
+              style={{
+                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+                border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.07)",
+                borderRadius: 10,
+              }}
+            >
+              {TABS.map(({ value, label, Icon }, i) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  data-value={value}
+                  className="gap-1.5 text-[12.5px] rounded-[7px] px-3 py-1.5 data-[state=active]:shadow-none"
+                  style={{
+                    color: activeTab === value
+                      ? isDark ? "#C084FC" : "#7B2FF7"
+                      : isDark ? "rgba(255,255,255,0.38)" : "#9A8F85",
+                    background: activeTab === value
+                      ? isDark ? "rgba(123,47,247,0.15)" : "rgba(123,47,247,0.08)"
+                      : "transparent",
+                    fontWeight: activeTab === value ? 600 : 400,
+                    fontFamily: "'DM Sans', sans-serif",
+                    transition: "all 0.18s ease",
+                  }}
+                  title={`${label} (${i + 1})`}
+                >
+                  <Icon className="h-3.5 w-3.5" style={{ opacity: activeTab === value ? 1 : 0.6 }} />
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          {showFilterBar && (
-            <ErrorBoundary fallback={null}>
-              <FilterBar boardId={boardId} members={members} lists={listOptions} labels={labels} onChange={setFilters} />
-            </ErrorBoundary>
-          )}
+            {showFilterBar && (
+              <ErrorBoundary fallback={null}>
+                <FilterBar boardId={boardId} members={members} lists={listOptions} labels={labels} onChange={setFilters} />
+              </ErrorBoundary>
+            )}
+          </div>
+
+          {/* Board stats — right side */}
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {[
+              { label: "Lists",  val: (lists ?? []).length,  color: "#7B2FF7" },
+              { label: "Cards",  val: allCards.length,       color: "#1A73E8" },
+              { label: "Done",   val: doneCount,             color: "#059669" },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-1.5">
+                <span
+                  className="text-[14px] font-bold leading-none font-display"
+                  style={{ color: s.color }}
+                >
+                  {s.val}
+                </span>
+                <span
+                  className="text-[11px] font-normal"
+                  style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#BFB9B3" }}
+                >
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <TabsContent value="board" className="mt-0 p-6 pt-4">
+        <TabsContent value="board" className="mt-0 p-0 flex flex-col overflow-hidden">
           <ErrorBoundary>
             <ListContainer boardId={boardId} orgId={orgId} data={lists} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="table" className="mt-0 p-6 pt-4">
+        <TabsContent value="table" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <TableView lists={lists} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="calendar" className="mt-0 p-6 pt-4">
+        <TabsContent value="calendar" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <CalendarView cards={filteredCards} boardId={boardId} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="timeline" className="mt-0 p-4 pt-4">
+        <TabsContent value="timeline" className="mt-0 p-4 pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <GanttView lists={lists} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="sprints" className="mt-0 p-6 pt-4 max-w-3xl">
+        <TabsContent value="sprints" className="mt-0 p-6 pt-4 max-w-3xl flex-1 overflow-y-auto">
           <ErrorBoundary>
             <SprintPanel boardId={boardId} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="workload" className="mt-0 p-6 pt-4">
+        <TabsContent value="workload" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <WorkloadView boardId={boardId} lists={lists} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="analytics" className="mt-0">
+        <TabsContent value="analytics" className="mt-0 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <AnalyticsDashboard boardId={boardId} boardName={boardTitle} orgId={orgId} />
           </ErrorBoundary>

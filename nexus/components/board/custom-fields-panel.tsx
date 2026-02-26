@@ -15,12 +15,11 @@ import {
   Phone,
   ChevronDown,
   Loader2,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -35,11 +34,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -119,6 +113,19 @@ const FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
   URL: "URL",
   EMAIL: "Email",
   PHONE: "Phone",
+};
+
+/** Accent colour per field type — bg / text / border */
+const FIELD_TYPE_COLORS: Record<CustomFieldType, { bg: string; text: string; border: string }> = {
+  TEXT:         { bg: "#EEF2FF", text: "#4F46E5", border: "#C7D2FE" },
+  NUMBER:       { bg: "#F0FDF4", text: "#16A34A", border: "#BBF7D0" },
+  DATE:         { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
+  CHECKBOX:     { bg: "#F0F9FF", text: "#0369A1", border: "#BAE6FD" },
+  SELECT:       { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF" },
+  MULTI_SELECT: { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF" },
+  URL:          { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
+  EMAIL:        { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3" },
+  PHONE:        { bg: "#FEF9C3", text: "#A16207", border: "#FDE047" },
 };
 
 // ─── Field Value Input ────────────────────────────────────────────────────────
@@ -349,59 +356,101 @@ function CreateFieldDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5 text-indigo-500" />
+            <div className="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <Settings2 className="h-4 w-4 text-indigo-600" />
+            </div>
             Create Custom Field
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+
+        <div className="space-y-5 py-2">
+          {/* Field name */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Field name *</label>
+            <label className="text-sm font-semibold text-foreground">Field name <span className="text-red-500">*</span></label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Story Points, Campaign, Bug ID"
+              autoFocus
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Field type</label>
-            <Select value={type} onValueChange={(v) => setType(v as CustomFieldType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(FIELD_TYPE_LABELS) as CustomFieldType[]).map((t) => (
-                  <SelectItem key={t} value={t}>
-                    <span className="flex items-center gap-2">
+
+          {/* Field type — visual grid */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-foreground">Field type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(Object.keys(FIELD_TYPE_LABELS) as CustomFieldType[]).map((t) => {
+                const colors = FIELD_TYPE_COLORS[t];
+                const isSelected = type === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    style={isSelected ? {
+                      background: colors.bg,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    } : undefined}
+                    className={cn(
+                      "relative flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all text-left",
+                      isSelected
+                        ? "shadow-sm ring-1 ring-offset-0"
+                        : "border-border text-muted-foreground hover:border-muted-foreground/40 hover:bg-muted/50",
+                    )}
+                  >
+                    <span style={isSelected ? { color: colors.text } : undefined}>
                       {FIELD_ICONS[t]}
-                      {FIELD_TYPE_LABELS[t]}
                     </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    {FIELD_TYPE_LABELS[t]}
+                    {isSelected && (
+                      <Check className="h-3 w-3 absolute top-1.5 right-1.5" style={{ color: colors.text }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Options (for SELECT / MULTI_SELECT) */}
           {needsOptions && (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Options (comma-separated)</label>
+              <label className="text-sm font-semibold text-foreground">Options <span className="text-xs font-normal text-muted-foreground">(comma-separated)</span></label>
               <Input
                 value={optionsRaw}
                 onChange={(e) => setOptionsRaw(e.target.value)}
                 placeholder="Option 1, Option 2, Option 3"
               />
+              {optionsRaw && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {optionsRaw.split(",").map((o) => o.trim()).filter(Boolean).map((o) => (
+                    <span key={o} className="px-2 py-0.5 bg-muted text-xs rounded-full text-muted-foreground border">{o}</span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          <div className="flex items-center gap-2">
+
+          {/* Required */}
+          <div className="flex items-center gap-2 pt-1">
             <Checkbox
               id="required"
               checked={isRequired}
               onCheckedChange={(v) => setIsRequired(!!v)}
             />
-            <label htmlFor="required" className="text-sm">Required field</label>
+            <label htmlFor="required" className="text-sm cursor-pointer select-none">
+              Required field
+              <span className="ml-1 text-xs text-muted-foreground">(users must fill this in)</span>
+            </label>
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={!name.trim() || saving}>
+          <Button
+            onClick={handleCreate}
+            disabled={!name.trim() || saving || (needsOptions && !optionsRaw.trim())}
+          >
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Create Field
           </Button>
@@ -418,7 +467,6 @@ export function CustomFieldsPanel({ boardId, cardId, isAdmin = false }: CustomFi
   const [values, setValues] = useState<FieldValue[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [open, setOpen] = useState(true);
 
   const load = async () => {
     setLoading(true);
@@ -491,100 +539,111 @@ export function CustomFieldsPanel({ boardId, cardId, isAdmin = false }: CustomFi
 
   if (loading && fields.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-center justify-center py-10">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger asChild>
-          <div className="flex items-center justify-between cursor-pointer py-1 group">
-            <div className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Custom Fields</span>
-              {fields.length > 0 && (
-                <Badge variant="outline" className="text-xs h-5 px-1.5">
-                  {fields.length}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              {isAdmin && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => { e.stopPropagation(); setShowCreate(true); }}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add field
-                </Button>
-              )}
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-            </div>
+    <div className="space-y-0">
+      {/* Panel header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-md bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center">
+            <Settings2 className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
           </div>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent>
-          {fields.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <Settings2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-xs">No custom fields yet</p>
-              {isAdmin && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 text-xs h-7"
-                  onClick={() => setShowCreate(true)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add first field
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3 mt-2">
-              {fields
-                .sort((a, b) => a.order - b.order)
-                .map((field) => (
-                  <div key={field.id} className="group flex items-start gap-2">
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-muted-foreground">
-                          {FIELD_ICONS[field.type]}
-                        </span>
-                        <label className="text-xs font-medium text-muted-foreground flex-1">
-                          {field.name}
-                          {field.isRequired && <span className="text-red-500 ml-0.5">*</span>}
-                        </label>
-                        {isAdmin && (
-                          <button
-                            onClick={() => handleDelete(field.id)}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-red-500 transition-all"
-                            title="Delete field"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                      <FieldValueInput
-                        field={field}
-                        value={getValueFor(field.id)}
-                        onSave={handleSave}
-                        onClear={handleClear}
-                      />
-                    </div>
-                  </div>
-                ))}
-            </div>
+          <span className="text-sm font-semibold text-foreground">Custom Fields</span>
+          {fields.length > 0 && (
+            <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+              {fields.length}
+            </span>
           )}
-        </CollapsibleContent>
-      </Collapsible>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800 transition-colors"
+          >
+            <Plus className="h-3 w-3" />
+            Add field
+          </button>
+        )}
+      </div>
 
-      <Separator className="my-1" />
+      {/* Field list */}
+      {fields.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 rounded-xl border-2 border-dashed border-border text-center">
+          <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center mb-3">
+            <Settings2 className="h-5 w-5 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">No custom fields yet</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">Fields are shared across all cards on this board</p>
+          {isAdmin && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              Add first field
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+          {fields
+            .sort((a, b) => a.order - b.order)
+            .map((field) => {
+              const colors = FIELD_TYPE_COLORS[field.type];
+              const valueNode = (
+                <FieldValueInput
+                  field={field}
+                  value={getValueFor(field.id)}
+                  onSave={handleSave}
+                  onClear={handleClear}
+                />
+              );
+
+              return (
+                <div
+                  key={field.id}
+                  className="group flex items-center gap-3 px-3.5 py-3 bg-background hover:bg-muted/30 transition-colors"
+                >
+                  {/* Type pill */}
+                  <div
+                    className="flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap"
+                    style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
+                  >
+                    {FIELD_ICONS[field.type]}
+                    {FIELD_TYPE_LABELS[field.type]}
+                  </div>
+
+                  {/* Field name */}
+                  <label className="flex-shrink-0 text-xs font-medium text-foreground w-[90px] truncate">
+                    {field.name}
+                    {field.isRequired && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+
+                  {/* Spacer */}
+                  <div className="flex-1 min-w-0">
+                    {valueNode}
+                  </div>
+
+                  {/* Delete (admin, hover) */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleDelete(field.id)}
+                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
+                      title="Delete field"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      )}
 
       {showCreate && (
         <CreateFieldDialog

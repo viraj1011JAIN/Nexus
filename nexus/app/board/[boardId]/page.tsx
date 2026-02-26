@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { BoardHeader } from "@/components/board/board-header";
-import { BoardTabs } from "@/components/board/board-tabs";
+import { BoardTabsClient } from "@/components/board/board-tabs-client";
 import { getTenantContext } from "@/lib/tenant-context";
 import { createDAL } from "@/lib/dal";
 
@@ -60,35 +60,49 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
 
   return (
     <div
-      className="h-full min-h-screen overflow-x-auto relative"
+      className="h-dvh relative flex flex-col overflow-hidden"
       style={board.imageFullUrl ? {
         backgroundImage: `url(${board.imageFullUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       } : undefined}
     >
-      {/* Page background — gradient + blobs when no image, dark overlay when image set */}
+      {/* Page background — theme-aware blobs when no image, dark overlay when image set */}
       {!board.imageFullUrl ? (
-        <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-indigo-50 to-purple-50 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-          <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
+        <div className="absolute inset-0 overflow-hidden pointer-events-none dark:bg-[#0D0C14] bg-[#F4F1ED]">
+          <div
+            className="absolute top-[-120px] left-[10%] w-[600px] h-[600px] rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(123,47,247,0.07) 0%, transparent 70%)",
+              filter: "blur(40px)",
+            }}
+          />
+          <div
+            className="absolute bottom-[-100px] right-[5%] w-[500px] h-[500px] rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%)",
+              filter: "blur(40px)",
+            }}
+          />
         </div>
       ) : (
         <div className="absolute inset-0 bg-black/40 pointer-events-none" />
       )}
       
       {/* Header with Real-Time Indicators */}
-      <div className="relative z-10 p-6 pb-0">
+      <div className="relative z-10">
         <BoardHeader boardId={params.boardId} boardTitle={board.title} orgId={board.orgId} />
       </div>
 
       {/* Tabs for Board / Analytics */}
-      <BoardTabs
-        boardId={params.boardId}
-        boardTitle={board.title}
-        orgId={board.orgId}
-        lists={board.lists}
-      />
+      <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
+        <BoardTabsClient
+          boardId={params.boardId}
+          boardTitle={board.title}
+          orgId={board.orgId}
+          lists={board.lists}
+        />
+      </div>
     </div>
   );
 }

@@ -46,10 +46,13 @@ export const MobileNav = () => {
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-md border-b border-border z-50 flex items-center justify-between px-4 transition-all duration-200">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-violet-700 to-purple-800 flex items-center justify-center shadow-md">
-            <span className="text-white font-bold text-[15px] leading-none select-none">N</span>
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
+            style={{ background: "linear-gradient(135deg, #7B2FF7, #F107A3)", boxShadow: "0 6px 20px rgba(123,47,247,0.35)" }}
+          >
+            <span className="text-white font-bold text-[17px] leading-none select-none font-display">N</span>
           </div>
-          <span className="text-[15px] font-semibold text-foreground tracking-tight">
+          <span className="text-[15px] font-display font-bold text-foreground tracking-tight">
             Nexus
           </span>
         </Link>
@@ -130,12 +133,18 @@ export const MobileNav = () => {
                           href={route.href}
                           onClick={closeMenu}
                           className={cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 touch-manipulation min-h-[48px]",
+                            "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 touch-manipulation min-h-[48px]",
                             route.active
-                              ? "gradient-brand text-white shadow-md"
+                              ? "bg-accent text-accent-foreground font-semibold"
                               : "text-muted-foreground hover:bg-muted hover:text-foreground"
                           )}
                         >
+                          {route.active && (
+                            <span
+                              className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full"
+                              style={{ background: "linear-gradient(to bottom, #7B2FF7, #C01CC4)" }}
+                            />
+                          )}
                           <Icon className="h-5 w-5 shrink-0" />
                           <span className="text-[15px] font-medium">{route.label}</span>
                         </Link>

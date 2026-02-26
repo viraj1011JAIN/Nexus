@@ -38,7 +38,8 @@ interface BoardMetrics {
 }
 
 export async function getBoardAnalytics(
-  boardId: string
+  boardId: string,
+  days: number = 14,
 ): Promise<{ data?: BoardMetrics; error?: string }> {
   try {
     const { userId, orgId } = await auth();
@@ -192,10 +193,11 @@ export async function getBoardAnalytics(
       (a, b) => b.cardsCompleted - a.cardsCompleted
     );
 
-    // Timeline data (last 14 days)
+    // Timeline data (last N days based on `days` param; 0 = all time, capped at 90)
+    const effectiveDays = days === 0 ? 90 : days;
     const timeline: { date: string; created: number; completed: number }[] = [];
     
-    for (let i = 13; i >= 0; i--) {
+    for (let i = effectiveDays - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split("T")[0];

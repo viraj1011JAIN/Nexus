@@ -332,14 +332,16 @@ function OverviewTab({ d }: { d: AdvancedBoardAnalytics }) {
 
 // ─── Tab: Burndown & Throughput ───────────────────────────────────────────────
 
-function BurndownTab({ d }: { d: AdvancedBoardAnalytics }) {
+function BurndownTab({ d, days }: { d: AdvancedBoardAnalytics; days: DaysBack }) {
+  const rangeLabel = days === 0 ? "All Time" : `${days} Days`;
+  const weekLabel = days === 0 ? "All Time" : `Last ${Math.ceil(days / 7)} Weeks`;
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-indigo-500" />
-            Burndown Chart (30 Days)
+            Burndown Chart ({rangeLabel})
           </CardTitle>
           <CardDescription>
             Remaining open cards vs ideal linear reduction
@@ -386,7 +388,7 @@ function BurndownTab({ d }: { d: AdvancedBoardAnalytics }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" />
-            Weekly Throughput (Last 8 Weeks)
+            Weekly Throughput ({weekLabel})
           </CardTitle>
           <CardDescription>Cards created vs completed per week</CardDescription>
         </CardHeader>
@@ -554,8 +556,9 @@ function CycleTimeTab({ d }: { d: AdvancedBoardAnalytics }) {
 
 // ─── Tab: Flow ────────────────────────────────────────────────────────────────
 
-function FlowTab({ d }: { d: AdvancedBoardAnalytics }) {
+function FlowTab({ d, days }: { d: AdvancedBoardAnalytics; days: DaysBack }) {
   const maxCardCount = d.listStats.reduce((m, s) => Math.max(m, s.cardCount), 0);
+  const rangeLabel = days === 0 ? "All Time" : `Last ${days} Days`;
 
   return (
     <div className="space-y-6">
@@ -564,7 +567,7 @@ function FlowTab({ d }: { d: AdvancedBoardAnalytics }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-indigo-500" />
-            Cumulative Flow (Last 14 Days)
+            Cumulative Flow ({rangeLabel})
           </CardTitle>
           <CardDescription>
             Total card count per list over time · widening bands indicate backlog growth
@@ -986,7 +989,7 @@ function applyDateFilter(data: AdvancedBoardAnalytics, days: DaysBack): Advanced
     burndown:       data.burndown.slice(-days),
     throughput:     data.throughput.slice(-Math.ceil(days / 7)),
     leadTimeTrend:  data.leadTimeTrend.slice(-Math.ceil(days / 7)),
-    cumulativeFlow: data.cumulativeFlow.slice(-Math.min(14, days)),
+    cumulativeFlow: data.cumulativeFlow.slice(-days),
   };
 }
 
@@ -1150,9 +1153,9 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
               </TabsList>
 
               <TabsContent value="overview"  className="mt-4"><OverviewTab  d={data} /></TabsContent>
-              <TabsContent value="burndown"  className="mt-4"><BurndownTab  d={fd} /></TabsContent>
+              <TabsContent value="burndown"  className="mt-4"><BurndownTab  d={fd} days={daysBack} /></TabsContent>
               <TabsContent value="cycletime" className="mt-4"><CycleTimeTab d={fd} /></TabsContent>
-              <TabsContent value="flow"      className="mt-4"><FlowTab      d={fd} /></TabsContent>
+              <TabsContent value="flow"      className="mt-4"><FlowTab      d={fd} days={daysBack} /></TabsContent>
               <TabsContent value="patterns"  className="mt-4"><PatternsTab  d={data} /></TabsContent>
               <TabsContent value="members"   className="mt-4"><MembersTab   d={data} /></TabsContent>
             </Tabs>

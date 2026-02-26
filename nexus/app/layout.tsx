@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, DM_Sans, Playfair_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Script from "next/script";
 
@@ -18,6 +18,20 @@ const inter = Inter({
   display: "swap",
   variable: "--font-inter",
   weight: ["400", "500", "600", "700"],
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-dm-sans",
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-playfair",
+  weight: ["600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -65,7 +79,7 @@ export default function RootLayout({
           {/* Viewport optimization for better mobile performance */}
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         </head>
-        <body className={`${inter.variable} ${inter.className} antialiased`} suppressHydrationWarning>
+        <body className={`${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${dmSans.className} antialiased`} suppressHydrationWarning>
           {/* Skip navigation link — keyboard / screen-reader UX (TASK-036) */}
           <a
             href="#main-content"

@@ -83,6 +83,8 @@ interface RichCommentsProps {
   onRemoveReaction: (reactionId: string) => Promise<void>;
   typingUsers?: Array<{ userId: string; userName: string }>; // Real-time typing indicators
   editable?: boolean;
+  /** When set, the comment list gets this max-height and scrolls; the input stays below */
+  listMaxHeight?: string;
 }
 
 export function RichComments({
@@ -98,6 +100,7 @@ export function RichComments({
   onRemoveReaction,
   typingUsers = [],
   editable = true,
+  listMaxHeight,
 }: RichCommentsProps) {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
@@ -115,8 +118,16 @@ export function RichComments({
         </h3>
       </div>
 
-      {/* Comment List */}
-      <div className="space-y-4">
+      {/* Comment List — scrollable when listMaxHeight is set */}
+      <div
+        className="space-y-4"
+        style={listMaxHeight ? {
+          maxHeight: listMaxHeight,
+          overflowY: "auto",
+          paddingRight: 4,
+          scrollbarWidth: "thin",
+        } : undefined}
+      >
         <AnimatePresence mode="popLayout">
           {threadedComments.map((comment) => (
             <motion.div

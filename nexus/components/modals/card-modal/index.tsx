@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Card, AuditLog, List, Label, Priority } from "@prisma/client";
-import { 
-  ChevronRight, 
+import {
   X,
   MoreHorizontal,
   Copy,
@@ -16,7 +15,6 @@ import {
   Paperclip,
   Image as ImageIcon,
   CheckSquare,
-  GitBranch,
   Timer,
   Link2,
   Settings2,
@@ -25,13 +23,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser, useOrganization } from "@clerk/nextjs";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { format, isPast, differenceInHours } from "date-fns";
 
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,13 +39,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useCardModal } from "@/hooks/use-card-modal";
-import { getCard } from "@/actions/get-card"; 
-import { updateCard } from "@/actions/update-card"; 
+import { getCard } from "@/actions/get-card";
+import { updateCard } from "@/actions/update-card";
 import { Activity } from "./activity";
 import { getAuditLogs } from "@/actions/get-audit-logs";
 import { RichTextEditor } from "@/components/rich-text-editor";
-import { LabelManager, CardLabels } from "@/components/label-manager";
-import { AssigneePicker, CardAssignee } from "@/components/assignee-picker";
+import { LabelManager } from "@/components/label-manager";
+import { AssigneePicker } from "@/components/assignee-picker";
 import { SmartDueDate } from "@/components/smart-due-date";
 import { RichComments, type Comment } from "@/components/rich-comments";
 import { CardCoverPicker } from "@/components/board/card-cover-picker";
@@ -64,6 +58,7 @@ import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";
 import { getOrganizationMembers } from "@/actions/assignee-actions";
+import { useTheme } from "@/components/theme-provider";
 
 import { 
   updateCardPriority, 
@@ -79,25 +74,18 @@ import { generateCardDescription } from "@/actions/ai-actions";
 import { ErrorBoundary } from "@/components/error-boundary-realtime";
 import type { CardLabel } from "@/hooks/use-optimistic-card";
 
-type CardWithRelations = Card & { 
+type CardWithRelations = Card & {
   list: List;
   assignee?: {
     id: string;
     name: string;
     imageUrl: string | null;
   } | null;
-};
-
-const priorityConfig = {
-  URGENT: { label: "Urgent", color: "bg-gradient-to-r from-red-500 to-red-600", text: "text-white", icon: "⚠" },
-  HIGH: { label: "High", color: "bg-gradient-to-r from-orange-400 to-orange-500", text: "text-white", icon: "↑" },
-  MEDIUM: { label: "Medium", color: "bg-amber-50 dark:bg-amber-900/20", text: "text-amber-700 dark:text-amber-400", icon: "—" },
-  LOW: { label: "Low", color: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-400", icon: "↓" },
+  checklists?: Array<{ items: Array<{ id: string; isComplete: boolean }> }>;
 };
 
 export const CardModal = () => {
   const params = useParams();
-  const router = useRouter();
   
   const organizationId = params.organizationId as string;
   const boardId = params.boardId as string;
@@ -446,614 +434,743 @@ export const CardModal = () => {
   }, [isOpen, cardData]);
   useKeyboardShortcuts(cardModalShortcuts);
 
+  // ── theme tokens ─────────────────────────────────────────────────────────
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const priorityMeta: Record<string, {
+    label: string; dotDark: string; dotLight: string;
+    bgDark: string; bgLight: string; borderDark: string; borderLight: string;
+  }> = {
+    URGENT: { label:"Urgent",  dotDark:"#FF4365", dotLight:"#EF4444", bgDark:"rgba(255,67,101,0.12)",   bgLight:"rgba(239,68,68,0.08)",   borderDark:"rgba(255,67,101,0.3)",  borderLight:"rgba(239,68,68,0.25)" },
+    HIGH:   { label:"High",    dotDark:"#FF8C42", dotLight:"#F59E0B", bgDark:"rgba(255,140,66,0.12)",   bgLight:"rgba(245,158,11,0.08)",   borderDark:"rgba(255,140,66,0.3)",  borderLight:"rgba(245,158,11,0.25)" },
+    MEDIUM: { label:"Medium",  dotDark:"#F5C518", dotLight:"#06B6D4", bgDark:"rgba(245,197,24,0.12)",   bgLight:"rgba(6,182,212,0.08)",    borderDark:"rgba(245,197,24,0.3)",  borderLight:"rgba(6,182,212,0.25)" },
+    LOW:    { label:"Low",     dotDark:"#4FFFB0", dotLight:"#10B981", bgDark:"rgba(79,255,176,0.12)",   bgLight:"rgba(16,185,129,0.08)",   borderDark:"rgba(79,255,176,0.3)",  borderLight:"rgba(16,185,129,0.25)" },
+  };
+
+  const T = isDark ? {
+    modal:        "#13121C",
+    surface:      "rgba(255,255,255,0.04)",
+    surfaceHover: "rgba(255,255,255,0.07)",
+    border:       "rgba(255,255,255,0.08)",
+    borderMed:    "rgba(255,255,255,0.13)",
+    text:         "#F1EEF8",
+    textMid:      "rgba(255,255,255,0.62)",
+    textMuted:    "rgba(255,255,255,0.32)",
+    tabActive:    "rgba(123,47,247,0.15)",
+    tabActiveTxt: "#C084FC",
+    inputBg:      "rgba(255,255,255,0.05)",
+    divider:      "rgba(255,255,255,0.07)",
+    sidebarBg:    "rgba(255,255,255,0.02)",
+    metaLabel:    "rgba(255,255,255,0.35)",
+    badgeBg:      "rgba(255,255,255,0.08)",
+    scrollbar:    "rgba(255,255,255,0.1)",
+    coverOverlay: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(13,12,20,0.82) 100%)",
+  } : {
+    modal:        "#FFFDF9",
+    surface:      "rgba(0,0,0,0.03)",
+    surfaceHover: "rgba(0,0,0,0.055)",
+    border:       "rgba(0,0,0,0.07)",
+    borderMed:    "rgba(0,0,0,0.13)",
+    text:         "#0F0D0B",
+    textMid:      "#5A5550",
+    textMuted:    "#9A8F85",
+    tabActive:    "rgba(123,47,247,0.08)",
+    tabActiveTxt: "#7B2FF7",
+    inputBg:      "rgba(0,0,0,0.03)",
+    divider:      "rgba(0,0,0,0.07)",
+    sidebarBg:    "rgba(0,0,0,0.014)",
+    metaLabel:    "#9A8F85",
+    badgeBg:      "rgba(0,0,0,0.05)",
+    scrollbar:    "rgba(0,0,0,0.1)",
+    coverOverlay: "linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(255,253,249,0.75) 100%)",
+  };
+
+  const TABS = [
+    { id:"description", label:"Description", icon:<FileText className="h-3.5 w-3.5" /> },
+    { id:"activity",    label:"Activity",    icon:<MessageSquare className="h-3.5 w-3.5" />, badge: auditLogs.length || null },
+    { id:"comments",    label:"Comments",    icon:<MessageSquare className="h-3.5 w-3.5" />, badge: comments.length || null },
+    { id:"attachments", label:"Files",       icon:<Paperclip className="h-3.5 w-3.5" />,     badge: attachmentCount || null },
+    { id:"checklists",  label:"Checklist",   icon:<CheckSquare className="h-3.5 w-3.5" /> },
+    { id:"time",        label:"Time",        icon:<Timer className="h-3.5 w-3.5" /> },
+    { id:"dependencies",label:"Links",       icon:<Link2 className="h-3.5 w-3.5" /> },
+    { id:"fields",      label:"Fields",      icon:<Settings2 className="h-3.5 w-3.5" /> },
+  ];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:max-w-[95vw] lg:max-w-4xl h-[90vh] max-h-[90vh] p-0 gap-0 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-none flex flex-col">
+      <DialogContent
+        className="p-0 gap-0 border-none overflow-hidden"
+        style={{
+          width: "min(1080px, 95vw)",
+          maxHeight: "90vh",
+          background: T.modal,
+          borderRadius: 20,
+          boxShadow: isDark
+            ? "0 32px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05)"
+            : "0 32px 80px rgba(0,0,0,0.14), 0 8px 32px rgba(0,0,0,0.07)",
+          display: "flex",
+          flexDirection: "column",
+          fontFamily: "'DM Sans', system-ui, sans-serif",
+        }}
+      >
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
+          .cm-scrollbar::-webkit-scrollbar { width:4px; height:4px; }
+          .cm-scrollbar::-webkit-scrollbar-thumb { background:${T.scrollbar}; border-radius:4px; }
+          .cm-scrollbar::-webkit-scrollbar-track { background:transparent; }
+          .cm-tab-scroll::-webkit-scrollbar { height:0; }
+          .cm-meta-row { transition:background 0.13s ease; border-radius:9px; }
+          .cm-meta-row:hover { background:${T.surfaceHover}; }
+          .cm-action-btn { transition:background 0.15s ease,border-color 0.15s ease; }
+          .cm-action-btn:hover { background:${T.surfaceHover} !important; }
+          @keyframes cmModalIn {
+            from { opacity:0; transform:scale(0.97) translateY(10px); }
+            to   { opacity:1; transform:scale(1) translateY(0); }
+          }
+          @keyframes cmFadeUp {
+            from { opacity:0; transform:translateY(7px); }
+            to   { opacity:1; transform:translateY(0); }
+          }
+          .cm-anim-modal { animation: cmModalIn 0.28s cubic-bezier(0.34,1.15,0.64,1) both; }
+          .cm-anim-fade  { animation: cmFadeUp 0.22s ease both; }
+        `}</style>
+
         <DialogTitle className="sr-only">Card Details</DialogTitle>
 
+        {/* ── LOADING ── */}
         {!cardData ? (
-          <div className="flex items-center justify-center h-full">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center gap-3"
-            >
-              <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-slate-500 dark:text-slate-400">Loading card...</p>
-            </motion.div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", minHeight:360 }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+              <div style={{ width:34, height:34, borderRadius:"50%", border:"3px solid #7B2FF7", borderTopColor:"transparent", animation:"spin 0.8s linear infinite" }} />
+              <p style={{ fontSize:13, color:T.textMuted }}>Loading card…</p>
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col h-full">
-            
-            {/* HEADER SECTION */}
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="border-b border-slate-200 dark:border-slate-700"
-            >
-              {/* Cover Image / Color Banner */}
-              {(cardData.coverImageUrl || cardData.coverColor) && (
-                <div
-                  className="h-32 w-full rounded-t-2xl"
-                  style={
-                    cardData.coverImageUrl
-                      ? { backgroundImage: `url(${cardData.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-                      : { backgroundColor: cardData.coverColor ?? undefined }
+          <div className="cm-anim-modal" style={{ display:"flex", flexDirection:"column", height:"100%", maxHeight:"90vh", overflow:"hidden" }}>
+
+            {/* ══ COVER ══ */}
+            <div style={{ position:"relative", height:148, flexShrink:0, overflow:"hidden" }}>
+              {(cardData.coverImageUrl || cardData.coverColor) ? (
+                <>
+                  {cardData.coverImageUrl
+                    ? <img src={cardData.coverImageUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                    : <div style={{ width:"100%", height:"100%", background: cardData.coverColor ?? "#7B2FF7" }} />
                   }
-                />
+                  <div style={{ position:"absolute", inset:0, background: T.coverOverlay }} />
+                </>
+              ) : (
+                <div style={{
+                  width:"100%", height:"100%",
+                  background: isDark
+                    ? "linear-gradient(135deg,#1a0533 0%,#0D0C14 60%,#071422 100%)"
+                    : "linear-gradient(135deg,#f4f1fd 0%,#fffdf9 60%,#f0f7ff 100%)",
+                  borderBottom:`1px solid ${T.divider}`,
+                }}/>
               )}
 
-              <div className="px-8 pt-6 pb-6 space-y-4">
-                {/* Close Button */}
-                <DialogClose asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-6 right-6 h-10 w-10 p-0 rounded-lg opacity-70 hover:opacity-100 hover:bg-muted hover:scale-110 transition-all duration-200 ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <X className="h-5 w-5" />
-                    <span className="sr-only">Close</span>
-                  </Button>
-                </DialogClose>
+              {/* Breadcrumb */}
+              <div style={{ position:"absolute", bottom:12, left:18, display:"flex", alignItems:"center", gap:5 }}>
+                <span style={{ fontSize:11, color: cardData.coverImageUrl ? "rgba(255,255,255,0.55)" : T.textMuted }}>{cardData.list?.title ?? "Board"}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke={cardData.coverImageUrl ? "rgba(255,255,255,0.4)" : T.textMuted} strokeWidth="2" width="10" height="10"><polyline points="9 18 15 12 9 6"/></svg>
+                <span style={{
+                  fontSize:10.5, fontWeight:600,
+                  color: cardData.coverImageUrl ? "rgba(255,255,255,0.8)" : T.textMid,
+                  background: cardData.coverImageUrl ? "rgba(0,0,0,0.28)" : T.surface,
+                  backdropFilter:"blur(8px)", padding:"2px 8px", borderRadius:20,
+                  border:`1px solid ${cardData.coverImageUrl ? "rgba(255,255,255,0.15)" : T.border}`,
+                }}>#{cardData.id.slice(-8)}</span>
+              </div>
 
-                {/* Breadcrumb */}
-                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <button 
-                    onClick={() => router.push(`/board/${boardId}`)}
-                    className="hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 hover:underline"
-                  >
-                    {cardData.list.title}
-                  </button>
-                  <ChevronRight className="h-3 w-3" />
-                  <span className="text-slate-700 dark:text-slate-300">Card #{cardData.id.slice(-8)}</span>
-                </div>
+              {/* Priority pill */}
+              {cardData.priority && (() => {
+                const pm = priorityMeta[cardData.priority];
+                const dot = isDark ? pm.dotDark : pm.dotLight;
+                return (
+                  <div style={{
+                    position:"absolute", top:12, left:18,
+                    display:"flex", alignItems:"center", gap:5,
+                    padding:"4px 10px", borderRadius:20,
+                    background: cardData.coverImageUrl ? "rgba(0,0,0,0.32)" : isDark ? pm.bgDark : pm.bgLight,
+                    backdropFilter:"blur(10px)",
+                    border:`1px solid ${cardData.coverImageUrl ? "rgba(255,255,255,0.15)" : isDark ? pm.borderDark : pm.borderLight}`,
+                  }}>
+                    <div style={{ width:6, height:6, borderRadius:"50%", background:dot, boxShadow:`0 0 6px ${dot}55` }}/>
+                    <span style={{ fontSize:10.5, fontWeight:700, color: cardData.coverImageUrl ? "rgba(255,255,255,0.9)" : dot, letterSpacing:"0.04em", textTransform:"uppercase" }}>
+                      {pm.label}
+                    </span>
+                  </div>
+                );
+              })()}
 
-                {/* Title + Priority */}
-                <div className="flex items-start gap-4">
+              {/* Close */}
+              <DialogClose asChild>
+                <button style={{
+                  position:"absolute", top:10, right:12,
+                  width:30, height:30, borderRadius:9,
+                  background: cardData.coverImageUrl ? "rgba(0,0,0,0.38)" : T.surface,
+                  backdropFilter:"blur(8px)",
+                  border:`1px solid ${cardData.coverImageUrl ? "rgba(255,255,255,0.15)" : T.border}`,
+                  color: cardData.coverImageUrl ? "rgba(255,255,255,0.75)" : T.textMid,
+                  display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
+                  transition:"background 0.15s ease",
+                }}>
+                  <X className="h-3.5 w-3.5"/>
+                </button>
+              </DialogClose>
+            </div>
+
+            {/* ══ TWO-COLUMN BODY ══ */}
+            <div style={{ display:"flex", flex:1, minHeight:0, overflow:"hidden" }}>
+
+              {/* ── LEFT PANEL ── */}
+              <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", borderRight:`1px solid ${T.divider}`, overflow:"hidden" }}>
+
+                {/* Title + meta + action bar + tabs — static header */}
+                <div style={{ padding:"18px 22px 0", flexShrink:0 }}>
+
+                  {/* Title */}
                   {isEditingTitle ? (
-                    <motion.div
-                      initial={{ scale: 0.98 }}
-                      animate={{ scale: 1 }}
-                      className="flex-1"
-                    >
-                      <textarea
-                        ref={titleInputRef}
-                        aria-label="Card title"
-                        value={title}
-                        onChange={(e) => {
-                          setTitle(e.target.value);
-                          e.currentTarget.style.height = 'auto';
-                          e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                        }}
-                        onBlur={onSaveTitle}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            onSaveTitle();
-                          }
-                          if (e.key === 'Escape') {
-                            setTitle(cardData.title);
-                            setIsEditingTitle(false);
-                          }
-                        }}
-                        rows={1}
-                        className="w-full text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 outline-none resize-none border-2 border-purple-500 shadow-lg shadow-purple-500/20 ring-4 ring-purple-100 dark:ring-purple-900/30"
-                      />
-                    </motion.div>
+                    <textarea
+                      ref={titleInputRef}
+                      aria-label="Card title"
+                      value={title}
+                      onChange={e => { setTitle(e.target.value); e.currentTarget.style.height="auto"; e.currentTarget.style.height=e.currentTarget.scrollHeight+"px"; }}
+                      onBlur={onSaveTitle}
+                      onKeyDown={e => {
+                        if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); onSaveTitle(); }
+                        if (e.key==="Escape") { setTitle(cardData.title); setIsEditingTitle(false); }
+                      }}
+                      rows={1}
+                      style={{
+                        width:"100%", background:"transparent",
+                        border:`1px solid rgba(123,47,247,0.45)`, borderRadius:9,
+                        padding:"4px 8px", color:T.text, fontSize:21, fontWeight:700,
+                        fontFamily:"'Playfair Display', serif",
+                        letterSpacing:"-0.02em", lineHeight:1.3, resize:"none", minHeight:48,
+                        boxShadow:"0 0 0 3px rgba(123,47,247,0.1)", outline:"none",
+                      }}
+                    />
                   ) : (
-                    <motion.button
+                    <h1
                       onClick={() => setIsEditingTitle(true)}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      className="flex-1 text-left text-3xl font-semibold text-slate-900 dark:text-slate-100 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-4 py-3 transition-all duration-200 group cursor-text"
-                    >
-                      {title}
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-slate-400">✎</span>
-                    </motion.button>
+                      style={{
+                        fontSize:21, fontWeight:700,
+                        fontFamily:"'Playfair Display', serif",
+                        letterSpacing:"-0.02em", lineHeight:1.3,
+                        color:T.text, cursor:"text",
+                        padding:"4px 8px 4px 0", borderRadius:9,
+                        transition:"background 0.13s ease",
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background=T.surfaceHover}
+                      onMouseLeave={e => e.currentTarget.style.background="transparent"}
+                    >{title}</h1>
                   )}
 
-                  {cardData.priority && (
-                    <DropdownMenu open={priorityOpen} onOpenChange={setPriorityOpen}>
+                  {/* Dates */}
+                  <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6, paddingLeft:1 }}>
+                    <Clock className="h-3 w-3" style={{ color:T.textMuted }} />
+                    <span style={{ fontSize:11, color:T.textMuted }}>
+                      Created {new Date(cardData.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                    </span>
+                    <span style={{ color:T.textMuted, fontSize:10 }}>·</span>
+                    <span style={{ fontSize:11, color:T.textMuted }}>
+                      Updated {new Date(cardData.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                    </span>
+                  </div>
+
+                  {/* Action bar */}
+                  <div style={{
+                    display:"flex", alignItems:"center", gap:6, marginTop:12,
+                    paddingBottom:12, borderBottom:`1px solid ${T.divider}`,
+                    flexWrap:"wrap",
+                  }}>
+                    {/* Labels */}
+                    <div ref={labelWrapperRef} style={{ display:"contents" }}>
+                      <ErrorBoundary fallback={
+                        <button style={{ padding:"5px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, color:T.textMid, fontSize:12, cursor:"not-allowed", fontFamily:"inherit" }}>Labels</button>
+                      }>
+                        <LabelManager cardId={cardData.id} orgId={organizationId} availableLabels={orgLabels} cardLabels={cardLabels} onLabelsChange={refreshCardData} />
+                      </ErrorBoundary>
+                    </div>
+
+                    {/* Assignee */}
+                    <div ref={assigneeWrapperRef} style={{ display:"contents" }}>
+                      <ErrorBoundary fallback={
+                        <button style={{ padding:"5px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, color:T.textMid, fontSize:12, cursor:"not-allowed", fontFamily:"inherit" }}>Assign</button>
+                      }>
+                        <AssigneePicker cardId={cardData.id} orgId={organizationId} currentAssignee={cardData.assignee || null} availableUsers={orgMembers} onAssigneeChange={refreshCardData} />
+                      </ErrorBoundary>
+                    </div>
+
+                    {/* Due date */}
+                    <div ref={dueDateWrapperRef} style={{ display:"contents" }}>
+                      <ErrorBoundary fallback={
+                        <button style={{ padding:"5px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, color:T.textMid, fontSize:12, cursor:"not-allowed", fontFamily:"inherit" }}>Due date</button>
+                      }>
+                        <SmartDueDate dueDate={cardData.dueDate} onDateChange={handleDueDateChange} priority={cardData.priority} animated editable />
+                      </ErrorBoundary>
+                    </div>
+
+                    {/* Cover picker */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="cm-action-btn" style={{
+                          display:"flex", alignItems:"center", gap:5,
+                          padding:"5px 11px", borderRadius:8,
+                          border:`1px solid ${(cardData.coverColor || cardData.coverImageUrl) ? "rgba(123,47,247,0.35)" : T.border}`,
+                          background: (cardData.coverColor || cardData.coverImageUrl) ? "rgba(123,47,247,0.1)" : T.surface,
+                          color: (cardData.coverColor || cardData.coverImageUrl) ? "#A78BFA" : T.textMid,
+                          fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"inherit",
+                        }}>
+                          <ImageIcon className="h-3 w-3" />
+                          Cover
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-4" align="start">
+                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-3">Card Cover</p>
+                        <CardCoverPicker currentColor={cardData.coverColor} currentImage={cardData.coverImageUrl} onSelect={handleCoverChange} />
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* More */}
+                    <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm",
-                            priorityConfig[cardData.priority].color,
-                            priorityConfig[cardData.priority].text
-                          )}
-                        >
-                          <span className="text-lg">{priorityConfig[cardData.priority].icon}</span>
-                          {priorityConfig[cardData.priority].label}
-                        </motion.button>
+                        <button className="cm-action-btn" style={{
+                          display:"flex", alignItems:"center", justifyContent:"center",
+                          width:30, height:30, borderRadius:8,
+                          border:`1px solid ${T.border}`, background:T.surface,
+                          color:T.textMid, cursor:"pointer",
+                        }}>
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem onClick={() => handlePriorityChange("URGENT")} className="cursor-pointer">
-                          <span className="mr-2">⚠</span> Urgent
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Link copied"); }} className="cursor-pointer">
+                          <Copy className="h-4 w-4 mr-2" /> Copy link
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePriorityChange("HIGH")} className="cursor-pointer">
-                          <span className="mr-2">↑</span> High
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePriorityChange("MEDIUM")} className="cursor-pointer">
-                          <span className="mr-2">—</span> Medium
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePriorityChange("LOW")} className="cursor-pointer">
-                          <span className="mr-2">↓</span> Low
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-600 cursor-pointer">
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete card
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  )}
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="cm-tab-scroll" style={{ display:"flex", gap:1, marginTop:2, overflowX:"auto", paddingBottom:0 }}>
+                    {TABS.map(tab => {
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          style={{
+                            display:"flex", alignItems:"center", gap:5,
+                            padding:"9px 11px", borderRadius:"9px 9px 0 0",
+                            border:"none", cursor:"pointer", fontFamily:"inherit",
+                            background: isActive ? T.tabActive : "transparent",
+                            color: isActive ? T.tabActiveTxt : T.textMuted,
+                            fontSize:12, fontWeight: isActive ? 600 : 400,
+                            whiteSpace:"nowrap", position:"relative",
+                            transition:"color 0.13s ease, background 0.13s ease",
+                          }}
+                        >
+                          {tab.icon}
+                          {tab.label}
+                          {(tab.badge ?? 0) > 0 && (
+                            <span style={{
+                              fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:20,
+                              background: isActive ? "rgba(123,47,247,0.25)" : T.badgeBg,
+                              color: isActive ? T.tabActiveTxt : T.textMuted,
+                            }}>{tab.badge}</span>
+                          )}
+                          {isActive && (
+                            <div style={{
+                              position:"absolute", bottom:0, left:"50%", transform:"translateX(-50%)",
+                              width:"55%", height:2,
+                              background:"linear-gradient(90deg,#7B2FF7,#C01CC4)", borderRadius:4,
+                            }}/>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ height:1, background:T.divider }} />
                 </div>
 
-                {/* Metadata */}
-                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                  <Clock className="h-4 w-4" />
-                  <span>Created {new Date(cardData.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  <span>•</span>
-                  <span>Updated {new Date(cardData.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-              </div>
-            </motion.div>
+                {/* ── SCROLLABLE TAB CONTENT ── */}
+                <div className="cm-scrollbar" style={{ flex:1, overflowY:"auto", padding:"18px 22px 24px" }}>
 
-            {/* ACTION BAR */}
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="px-8 py-5 border-b border-slate-200 dark:border-slate-700"
-            >
-              <div className="flex items-center gap-2 flex-wrap">
-                <div ref={labelWrapperRef}>
-                  <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Labels</Button>}>
-                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                      <LabelManager
-                        cardId={cardData.id}
-                        orgId={organizationId}
-                        availableLabels={orgLabels}
-                        cardLabels={cardLabels}
-                        onLabelsChange={refreshCardData}
-                      />
-                    </motion.div>
-                  </ErrorBoundary>
-                </div>
-
-                <div ref={assigneeWrapperRef}>
-                  <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Assign</Button>}>
-                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                      <AssigneePicker
-                        cardId={cardData.id}
-                        orgId={organizationId}
-                        currentAssignee={cardData.assignee || null}
-                        availableUsers={orgMembers}
-                        onAssigneeChange={refreshCardData}
-                      />
-                    </motion.div>
-                  </ErrorBoundary>
-                </div>
-
-                <div ref={dueDateWrapperRef}>
-                  <ErrorBoundary fallback={<Button variant="outline" size="sm" disabled>Due Date</Button>}>
-                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                      <SmartDueDate
-                        dueDate={cardData.dueDate}
-                        onDateChange={handleDueDateChange}
-                        priority={cardData.priority}
-                        animated
-                        editable
-                      />
-                    </motion.div>
-                  </ErrorBoundary>
-                </div>
-
-                {/* Cover picker */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "h-9 gap-2 text-xs font-medium transition-all",
-                          (cardData.coverColor || cardData.coverImageUrl)
-                            ? "border-purple-300 text-purple-700 dark:border-purple-600 dark:text-purple-300"
-                            : ""
-                        )}
-                      >
-                        <ImageIcon className="h-3.5 w-3.5" />
-                        Cover
-                      </Button>
-                    </motion.div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-4" align="start">
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-3">Card Cover</p>
-                    <CardCoverPicker
-                      currentColor={cardData.coverColor}
-                      currentImage={cardData.coverImageUrl}
-                      onSelect={handleCoverChange}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button variant="outline" size="sm" className="h-9 w-9 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </motion.div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      toast.success("Link copied");
-                    }} className="cursor-pointer">
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy link
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600 cursor-pointer">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete card
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </motion.div>
-
-            {/* TAB NAVIGATION */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.15 }}
-                className="border-b border-slate-200 dark:border-slate-700 px-8"
-              >
-                <TabsList className="h-14 bg-transparent p-0 gap-2 w-full justify-start">
-                  <TabsTrigger 
-                    value="description" 
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Description
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="activity"
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Activity
-                    {auditLogs.length > 0 && (
-                      <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                        {auditLogs.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="comments"
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Comments
-                    {comments.length > 0 && (
-                      <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                        {comments.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="attachments"
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <Paperclip className="h-4 w-4 mr-2" />
-                    Files
-                    {attachmentCount > 0 && (
-                      <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                        {attachmentCount}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="checklists"
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-purple-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <CheckSquare className="h-4 w-4 mr-2" />
-                    Checklist
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="time"
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-violet-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <Timer className="h-4 w-4 mr-2" />
-                    Time
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="dependencies"
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <Link2 className="h-4 w-4 mr-2" />
-                    Links
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="fields"
-                    className="relative h-14 rounded-none border-b-[3px] border-transparent data-[state=active]:border-teal-500 data-[state=active]:text-slate-900 dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium px-4"
-                  >
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    Fields
-                  </TabsTrigger>
-                </TabsList>
-              </motion.div>
-
-              <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50">
-                <TabsContent value="description" className="mt-0 p-8 space-y-6">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="description-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {(cardLabels.length > 0 || cardData.assignee) && (
-                        <div className="flex items-center gap-4 mb-6">
-                          <CardLabels labels={cardLabels} />
-                          <CardAssignee assignee={cardData.assignee || null} />
+                  {/* DESCRIPTION */}
+                  {activeTab === "description" && (
+                    <div className="cm-anim-fade">
+                      <ErrorBoundary fallback={
+                        <div style={{ padding:20, textAlign:"center", background:"rgba(239,68,68,0.05)", borderRadius:12, border:"1px solid rgba(239,68,68,0.15)" }}>
+                          <AlertCircle className="h-7 w-7 mx-auto mb-2" style={{ color:"#EF4444" }} />
+                          <p style={{ fontSize:12, color:"#EF4444" }}>Editor unavailable. Refresh to try again.</p>
                         </div>
-                      )}
-                      
-                      <ErrorBoundary
-                        fallback={
-                          <div className="p-6 text-center bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl">
-                            <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-                            <p className="text-sm text-red-800 dark:text-red-200">Editor unavailable. Refresh to try again.</p>
-                          </div>
-                        }
-                      >
-                        {/* AI Generate button (TASK-022) */}
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Description</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
+                      }>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                          <span style={{ fontSize:12, fontWeight:600, color:T.textMid }}>Description</span>
+                          <button
                             onClick={handleGenerateDescription}
                             disabled={aiDescLoading}
-                            className="h-7 gap-1.5 text-xs text-purple-600 border-purple-200 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-800 dark:hover:bg-purple-950/30"
+                            style={{
+                              display:"flex", alignItems:"center", gap:5,
+                              padding:"4px 10px", borderRadius:20,
+                              background:"rgba(123,47,247,0.1)", border:"1px solid rgba(123,47,247,0.2)",
+                              color:"#A78BFA", fontSize:11.5, fontWeight:600, cursor:"pointer", fontFamily:"inherit",
+                              opacity: aiDescLoading ? 0.6 : 1,
+                            }}
                           >
-                            {aiDescLoading
-                              ? <Loader2 className="h-3 w-3 animate-spin" />
-                              : <Sparkles className="h-3 w-3" />}
-                            {aiDescLoading ? "Generating..." : "Generate"}
-                          </Button>
+                            {aiDescLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            {aiDescLoading ? "Generating…" : "AI Generate"}
+                          </button>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div style={{ background: isDark ? "rgba(255,255,255,0.03)" : "#fff", borderRadius:12, border:`1px solid ${T.border}`, overflow:"hidden" }}>
                           <RichTextEditor
                             content={cardData.description || ""}
                             onSave={handleSaveDescription}
-                            placeholder="Add a detailed description..."
+                            placeholder="Add a detailed description…"
                             editable
-                            minHeight="200px"
+                            minHeight="180px"
                             showToolbar
                             enableAutoSave
                             characterLimit={10000}
                           />
                         </div>
                         {!cardData.description && (
-                          <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-3 px-1">
-                            <span className="opacity-70">💡 Type</span>
-                            <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs border border-slate-200 dark:border-slate-700">/</kbd>
-                            <span className="opacity-70">for commands</span>
+                          <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, paddingLeft:2 }}>
+                            <span style={{ fontSize:11, color:T.textMuted }}>💡 Tip: Type</span>
+                            <kbd style={{ padding:"1px 6px", background:T.surface, border:`1px solid ${T.border}`, borderRadius:5, fontSize:11, color:T.textMid, fontFamily:"monospace" }}>/</kbd>
+                            <span style={{ fontSize:11, color:T.textMuted }}>for commands</span>
                           </div>
                         )}
                       </ErrorBoundary>
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
+                    </div>
+                  )}
 
-                <TabsContent value="activity" className="mt-0 p-8">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="activity-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
+                  {/* ACTIVITY */}
+                  {activeTab === "activity" && (
+                    <div className="cm-anim-fade">
+                      {/* Section header */}
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+                        <MessageSquare className="h-3.5 w-3.5" style={{ color:T.textMuted }} />
+                        <span style={{ fontSize:12.5, fontWeight:600, color:T.text }}>Audit Log</span>
+                        <span style={{ fontSize:9.5, fontWeight:700, padding:"1px 6px", borderRadius:20, background:T.badgeBg, color:T.textMuted }}>{auditLogs.length}</span>
+                      </div>
                       <Activity items={auditLogs} />
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
+                    </div>
+                  )}
 
-                <TabsContent value="comments" className="mt-0 p-8">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="comments-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <ErrorBoundary
-                        fallback={
-                          <div className="p-6 text-center bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl">
-                            <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-                            <p className="text-sm text-red-800 dark:text-red-200">Comments unavailable. Refresh to try again.</p>
-                          </div>
-                        }
-                      >
-                        {user && (
-                          <RichComments
-                            cardId={cardData.id}
-                            comments={comments}
-                            currentUserId={user.id}
-                            currentUserName={user.fullName || user.username || "Unknown"}
-                            currentUserImage={user.imageUrl || null}
-                            onCreateComment={handleCreateComment}
-                            onUpdateComment={handleUpdateComment}
-                            onDeleteComment={handleDeleteComment}
-                            onAddReaction={handleAddReaction}
-                            onRemoveReaction={handleRemoveReaction}
-                            typingUsers={[]}
-                            editable
-                          />
+                  {/* COMMENTS */}
+                  {activeTab === "comments" && (
+                    <div className="cm-anim-fade">
+                      {/* Section header */}
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+                        <MessageSquare className="h-3.5 w-3.5" style={{ color:T.textMuted }} />
+                        <span style={{ fontSize:12.5, fontWeight:600, color:T.text }}>Comments</span>
+                        {comments.length > 0 && (
+                          <span style={{ fontSize:9.5, fontWeight:700, padding:"1px 6px", borderRadius:20, background:T.badgeBg, color:T.textMuted }}>{comments.length}</span>
                         )}
+                      </div>
+
+                      <ErrorBoundary fallback={
+                        <div style={{ padding:20, textAlign:"center", background:"rgba(239,68,68,0.05)", borderRadius:12, border:"1px solid rgba(239,68,68,0.15)" }}>
+                          <AlertCircle className="h-7 w-7 mx-auto mb-2" style={{ color:"#EF4444" }} />
+                          <p style={{ fontSize:12, color:"#EF4444" }}>Comments unavailable. Refresh to try again.</p>
+                        </div>
+                      }>
+                        {/* Wrapper applies the card-modal surface + scroll */}
+                        <div style={{
+                          background: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
+                          border:`1px solid ${T.border}`, borderRadius:14,
+                          overflow:"hidden",
+                          display:"flex", flexDirection:"column",
+                        }}>
+                          {user ? (
+                            <RichComments
+                              cardId={cardData.id}
+                              comments={comments}
+                              currentUserId={user.id}
+                              currentUserName={user.fullName || user.username || "Unknown"}
+                              currentUserImage={user.imageUrl || null}
+                              onCreateComment={handleCreateComment}
+                              onUpdateComment={handleUpdateComment}
+                              onDeleteComment={handleDeleteComment}
+                              onAddReaction={handleAddReaction}
+                              onRemoveReaction={handleRemoveReaction}
+                              typingUsers={[]}
+                              editable
+                              listMaxHeight="340px"
+                            />
+                          ) : (
+                            <div style={{ padding:24, textAlign:"center" }}>
+                              <p style={{ fontSize:12, color:T.textMuted }}>Sign in to view comments.</p>
+                            </div>
+                          )}
+                        </div>
                       </ErrorBoundary>
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
+                    </div>
+                  )}
 
-                {/* ATTACHMENTS TAB */}
-                <TabsContent value="attachments" className="mt-0 p-8">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="attachments-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {cardData && (
-                        <AttachmentsTab
-                          cardId={cardData.id}
-                          boardId={boardId}
-                          onCountChange={setAttachmentCount}
-                        />
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
+                  {/* ATTACHMENTS */}
+                  {activeTab === "attachments" && (
+                    <div className="cm-anim-fade">
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+                        <Paperclip className="h-3.5 w-3.5" style={{ color:T.textMuted }} />
+                        <span style={{ fontSize:12.5, fontWeight:600, color:T.text }}>Files</span>
+                        {attachmentCount > 0 && <span style={{ fontSize:9.5, fontWeight:700, padding:"1px 6px", borderRadius:20, background:T.badgeBg, color:T.textMuted }}>{attachmentCount}</span>}
+                      </div>
+                      <AttachmentsTab cardId={cardData.id} boardId={boardId} onCountChange={setAttachmentCount} />
+                    </div>
+                  )}
 
-                {/* CHECKLISTS TAB */}
-                <TabsContent value="checklists" className="mt-0 p-8">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="checklists-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {cardData && (
-                        <ChecklistsTab
-                          cardId={cardData.id}
-                          boardId={boardId}
-                          cardTitle={cardData.title}
-                        />
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
+                  {/* CHECKLISTS */}
+                  {activeTab === "checklists" && (
+                    <div className="cm-anim-fade">
+                      <ChecklistsTab cardId={cardData.id} boardId={boardId} cardTitle={cardData.title} />
+                    </div>
+                  )}
 
-                {/* TIME TRACKING TAB */}
-                <TabsContent value="time" className="mt-0 p-8">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="time-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {cardData && (
-                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load time tracking.</p>}>
-                          <TimeTrackingPanel
-                            cardId={cardData.id}
-                            currentUserId={user?.id}
-                          />
-                        </ErrorBoundary>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
+                  {/* TIME */}
+                  {activeTab === "time" && (
+                    <div className="cm-anim-fade">
+                      <ErrorBoundary fallback={<p style={{ fontSize:12, color:T.textMuted }}>Unable to load time tracking.</p>}>
+                        <TimeTrackingPanel cardId={cardData.id} currentUserId={user?.id} />
+                      </ErrorBoundary>
+                    </div>
+                  )}
 
-                {/* DEPENDENCIES TAB */}
-                <TabsContent value="dependencies" className="mt-0 p-8">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="dependencies-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {cardData && (
-                        <DependenciesTab
-                          cardId={cardData.id}
-                          boardId={boardId}
-                        />
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
+                  {/* DEPENDENCIES / LINKS */}
+                  {activeTab === "dependencies" && (
+                    <div className="cm-anim-fade">
+                      <DependenciesTab cardId={cardData.id} boardId={boardId} />
+                    </div>
+                  )}
 
-                {/* CUSTOM FIELDS TAB */}
-                <TabsContent value="fields" className="mt-0 p-6 pt-4">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="fields-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {cardData && boardId && (
-                        <ErrorBoundary fallback={<p className="text-sm text-muted-foreground">Unable to load custom fields.</p>}>
-                          <CustomFieldsPanel
-                            boardId={boardId}
-                            cardId={cardData.id}
-                            isAdmin={membership?.role === "org:admin"}
-                          />
-                        </ErrorBoundary>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </TabsContent>
-              </div>
-            </Tabs>
-
-            {/* FOOTER */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="border-t border-slate-200 dark:border-slate-700 px-8 py-4 bg-white dark:bg-slate-900"
-            >
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-6">
-                  <span className="text-slate-500 dark:text-slate-400">
-                    {charCount.toLocaleString()} / 10,000 characters
-                  </span>
-                  <KeyboardShortcutsModal />
+                  {/* CUSTOM FIELDS */}
+                  {activeTab === "fields" && (
+                    <div className="cm-anim-fade">
+                      <ErrorBoundary fallback={<p style={{ fontSize:12, color:T.textMuted }}>Unable to load custom fields.</p>}>
+                        <CustomFieldsPanel boardId={boardId} cardId={cardData.id} isAdmin={membership?.role === "org:admin"} />
+                      </ErrorBoundary>
+                    </div>
+                  )}
                 </div>
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-2"
-                >
-                  {saveStatus === "saving" && (
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      <span>Saving...</span>
-                    </div>
-                  )}
-                  {saveStatus === "saved" && (
-                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span>All changes saved</span>
-                    </div>
-                  )}
-                  {saveStatus === "error" && (
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium">
-                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                      <span>Failed to save</span>
-                    </div>
-                  )}
-                </motion.div>
-              </div>
-            </motion.div>
 
+                {/* ── MODAL FOOTER ── */}
+                <div style={{
+                  flexShrink:0, borderTop:`1px solid ${T.divider}`,
+                  padding:"9px 22px", display:"flex", alignItems:"center", justifyContent:"space-between",
+                }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <span style={{ fontSize:11, color:T.textMuted }}>{charCount.toLocaleString()} / 10,000 chars</span>
+                    <KeyboardShortcutsModal />
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    {saveStatus === "saving" && (
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:T.textMid }}>
+                        <div style={{ width:6, height:6, borderRadius:"50%", background:"#60A5FA", animation:"cmPulse 1s ease-in-out infinite" }}/>
+                        Saving…
+                      </div>
+                    )}
+                    {saveStatus === "saved" && (
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:"#10B981" }}>
+                        <div style={{ width:6, height:6, borderRadius:"50%", background:"#10B981" }}/>
+                        All changes saved
+                      </div>
+                    )}
+                    {saveStatus === "error" && (
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:"#EF4444" }}>
+                        <div style={{ width:6, height:6, borderRadius:"50%", background:"#EF4444" }}/>
+                        Failed to save
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── RIGHT SIDEBAR ── */}
+              <div
+                className="cm-scrollbar"
+                style={{
+                  width:228, flexShrink:0,
+                  background:T.sidebarBg, borderLeft:`1px solid ${T.divider}`,
+                  overflowY:"auto", display:"flex", flexDirection:"column",
+                }}
+              >
+                <div style={{ padding:"18px 14px", display:"flex", flexDirection:"column", gap:0 }}>
+
+                  {/* ─ DETAILS ─ */}
+                  <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.metaLabel, marginBottom:8, paddingLeft:8 }}>Details</p>
+
+                  {/* Priority */}
+                  {cardData.priority && (() => {
+                    const pm = priorityMeta[cardData.priority];
+                    const dot = isDark ? pm.dotDark : pm.dotLight;
+                    const bg  = isDark ? pm.bgDark  : pm.bgLight;
+                    const bdr = isDark ? pm.borderDark : pm.borderLight;
+                    return (
+                      <DropdownMenu open={priorityOpen} onOpenChange={setPriorityOpen}>
+                        <DropdownMenuTrigger asChild>
+                          <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2, cursor:"pointer" }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                              <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Priority</span>
+                            </div>
+                            <div style={{ display:"inline-flex", alignItems:"center", gap:5, marginLeft:18, padding:"3px 9px", borderRadius:20, background:bg, border:`1px solid ${bdr}` }}>
+                              <div style={{ width:5, height:5, borderRadius:"50%", background:dot }}/>
+                              <span style={{ fontSize:11, fontWeight:600, color:dot }}>{pm.label}</span>
+                            </div>
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-44">
+                          {(["URGENT","HIGH","MEDIUM","LOW"] as const).map(p => (
+                            <DropdownMenuItem key={p} onClick={() => handlePriorityChange(p)} className="cursor-pointer text-sm">
+                              <div style={{ width:7, height:7, borderRadius:"50%", background: isDark ? priorityMeta[p].dotDark : priorityMeta[p].dotLight, marginRight:8 }}/>
+                              {priorityMeta[p].label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    );
+                  })()}
+
+                  {/* Assignee */}
+                  {cardData.assignee && (
+                    <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Assignee</span>
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:7, marginLeft:18 }}>
+                        {cardData.assignee.imageUrl ? (
+                          <img src={cardData.assignee.imageUrl} alt={cardData.assignee.name} style={{ width:20, height:20, borderRadius:"50%", objectFit:"cover" }} />
+                        ) : (
+                          <div style={{
+                            width:20, height:20, borderRadius:"50%",
+                            background:"linear-gradient(135deg,#7B2FF7,#F107A3)",
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                            fontSize:8, fontWeight:700, color:"#fff",
+                          }}>{cardData.assignee.name.charAt(0).toUpperCase()}</div>
+                        )}
+                        <span style={{ fontSize:11.5, fontWeight:500, color:T.text }}>{cardData.assignee.name}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Due Date */}
+                  {cardData.dueDate && (() => {
+                    const due = new Date(cardData.dueDate);
+                    const overdue = isPast(due);
+                    const soon = !overdue && differenceInHours(due, new Date()) < 48;
+                    const col = overdue ? "#EF4444" : soon ? "#F59E0B" : "#10B981";
+                    return (
+                      <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Due Date</span>
+                        </div>
+                        <div style={{ marginLeft:18 }}>
+                          <span style={{
+                            display:"inline-flex", alignItems:"center", gap:4,
+                            fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:20,
+                            background:`${col}18`, color:col, border:`1px solid ${col}33`,
+                          }}>
+                            <Clock className="h-2.5 w-2.5" />
+                            {format(due,"MMM d, yyyy")}
+                            {overdue ? " · Overdue" : soon ? " · Soon" : ""}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Labels */}
+                  {cardLabels.length > 0 && (
+                    <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                        <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Labels</span>
+                      </div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginLeft:18 }}>
+                        {cardLabels.map((lbl: CardLabel) => (
+                          <span key={lbl.id} style={{
+                            fontSize:9.5, fontWeight:700, padding:"2px 7px", borderRadius:20,
+                            background: lbl.color ? `${lbl.color}18` : T.surface,
+                            color: lbl.color ?? T.textMid,
+                            border:`1px solid ${lbl.color ? `${lbl.color}30` : T.border}`,
+                            letterSpacing:"0.03em", textTransform:"uppercase",
+                          }}>{lbl.name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ height:1, background:T.divider, margin:"10px 0" }}/>
+
+                  {/* ─ PROGRESS ─ */}
+                  <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.metaLabel, marginBottom:8, paddingLeft:8 }}>Progress</p>
+
+                  {/* Checklist mini */}
+                  {cardData.checklists && cardData.checklists.length > 0 && (() => {
+                    const allItems = cardData.checklists.flatMap((cl: { items: Array<{ id: string; isComplete: boolean }> }) => cl.items);
+                    const done = allItems.filter((i: { id: string; isComplete: boolean }) => i.isComplete).length;
+                    const total = allItems.length;
+                    const pct = total > 0 ? Math.round((done/total)*100) : 0;
+                    return (
+                      <div style={{ padding:"8px" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                          <CheckSquare className="h-2.5 w-2.5" style={{ color:T.metaLabel }} />
+                          <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Checklist</span>
+                          <span style={{ fontSize:10, fontWeight:700, color: pct===100 ? "#10B981" : "#A78BFA", marginLeft:"auto" }}>{pct}%</span>
+                        </div>
+                        <div style={{ height:3, background:T.surface, borderRadius:3, overflow:"hidden", border:`1px solid ${T.border}` }}>
+                          <div style={{ height:"100%", width:`${pct}%`, background: pct===100 ? "#10B981" : "linear-gradient(90deg,#7B2FF7,#C01CC4)", borderRadius:3, transition:"width 0.5s ease" }}/>
+                        </div>
+                        <p style={{ fontSize:10, color:T.textMuted, marginTop:3 }}>{done} of {total} tasks</p>
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ height:1, background:T.divider, margin:"10px 0" }}/>
+
+                  {/* ─ ACTIONS ─ */}
+                  <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.metaLabel, marginBottom:8, paddingLeft:8 }}>Actions</p>
+
+                  <button
+                    className="cm-action-btn"
+                    onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Link copied"); }}
+                    style={{
+                      width:"100%", padding:"7px 10px", borderRadius:9, marginBottom:4,
+                      border:`1px solid ${T.border}`, background:T.surface,
+                      color:T.textMid, fontSize:11.5, fontWeight:500, cursor:"pointer",
+                      fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
+                    }}
+                  >
+                    <Copy className="h-3 w-3" /> Copy link
+                  </button>
+
+                  <button
+                    className="cm-action-btn"
+                    style={{
+                      width:"100%", padding:"7px 10px", borderRadius:9,
+                      border:"1px solid rgba(239,68,68,0.22)", background:"rgba(239,68,68,0.06)",
+                      color:"#EF4444", fontSize:11.5, fontWeight:500, cursor:"pointer",
+                      fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
+                      transition:"background 0.15s ease",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.12)"}
+                    onMouseLeave={e => e.currentTarget.style.background="rgba(239,68,68,0.06)"}
+                  >
+                    <Trash2 className="h-3 w-3" /> Delete card
+                  </button>
+
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </DialogContent>

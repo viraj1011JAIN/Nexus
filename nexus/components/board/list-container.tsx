@@ -21,8 +21,8 @@ import {
 } from "@dnd-kit/sortable";
 
 import { ListItem } from "./list-item";
-import { Button } from "@/components/ui/button";
 import { createList } from "@/actions/create-list";
+import { useTheme } from "@/components/theme-provider";
 import { updateListOrder } from "@/actions/update-list-order"; 
 import { updateCardOrder } from "@/actions/update-card-order"; 
 import { generateNextOrder } from "@/lib/lexorank";
@@ -306,55 +306,187 @@ export const ListContainer = ({
     }
   };
 
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   if (!isMounted) return null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-    >
-      <div className="flex gap-4 h-full">
-        <SortableContext 
+    <div style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
+      {/* Shared horizontal scroller — canvas + footer scroll together */}
+      <div
+        className="board-scrollbar"
+        style={{
+          flex: 1,
+          overflowX: "auto",
+          overflowY: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          paddingBottom: 36,
+        }}
+      >
+      {/* Board canvas */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragEnd={onDragEnd}
+        onDragOver={onDragOver}
+      >
+        <div
+          className="flex gap-3.5 items-start"
+          style={{
+            padding: "18px 24px 8px",
+          }}
+        >
+          <SortableContext
             items={orderedData.map(item => item.id)}
             strategy={horizontalListSortingStrategy}
-        >
-          {orderedData.map((list, index) => (
-            <ListItem 
-                key={list.id} 
-                index={index} 
-                data={list} 
+          >
+            {orderedData.map((list, index) => (
+              <ListItem
+                key={list.id}
+                index={index}
+                data={list}
                 boardId={boardId}
-            />
-          ))}
-        </SortableContext>
+              />
+            ))}
+          </SortableContext>
 
-        <div className="w-72 shrink-0 animate-fadeInUp">
-            <form 
-                action={async (formData) => {
-                    const title = formData.get("title") as string;
-                    const boardIdValue = formData.get("boardId") as string;
-                    const result = await createList({ title, boardId: boardIdValue });
-                    if (result.error) {
-                        logger.error("Failed to create list", { error: result.error, boardId: boardIdValue });
-                    }
-                }} 
-                className="glass-effect p-4 rounded-xl flex flex-col gap-3 hover:shadow-lg transition-all duration-300 border border-white/20"
+          {/* Add new list column */}
+          <div
+            className="animate-list-enter"
+            style={{
+              width: 265,
+              flexShrink: 0,
+              animationDelay: `${orderedData.length * 0.08}s`,
+            }}
+          >
+            <form
+              action={async (formData) => {
+                const title = formData.get("title") as string;
+                const boardIdValue = formData.get("boardId") as string;
+                const result = await createList({ title, boardId: boardIdValue });
+                if (result.error) {
+                  logger.error("Failed to create list", { error: result.error, boardId: boardIdValue });
+                }
+              }}
             >
-            <input hidden name="boardId" value={boardId} readOnly />
-            <input 
-                name="title" 
-                placeholder="Enter list title..." 
-                className="px-3 py-2 text-sm border-2 border-transparent focus:border-indigo-400 rounded-lg outline-none font-semibold bg-white/80 focus:bg-white shadow-sm transition-all placeholder:text-slate-400"
-                required
-            />
-            <Button size="sm" className="w-full justify-center bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-95 font-semibold rounded-lg">
+              <input hidden name="boardId" value={boardId} readOnly />
+              {/* Title input */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "11px 14px",
+                  marginBottom: 8,
+                  background: isDark ? "rgba(255,255,255,0.025)" : "#FFFDF9",
+                  border: isDark ? "1.5px dashed rgba(255,255,255,0.1)" : "1.5px dashed rgba(0,0,0,0.1)",
+                  borderRadius: 12,
+                  boxShadow: isDark ? "none" : "0 1px 6px rgba(0,0,0,0.04)",
+                }}
+              >
+                <input
+                  name="title"
+                  placeholder="Name this list…"
+                  required
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: isDark ? "#E8E4F0" : "#1A1714",
+                    fontSize: 13,
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontWeight: 500,
+                  }}
+                />
+              </div>
+              {/* Add List button */}
+              <button
+                type="submit"
+                style={{
+                  width: "100%",
+                  padding: "10px 0",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "linear-gradient(135deg,#7B2FF7,#C01CC4)",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 16px rgba(123,47,247,0.28)",
+                  transition: "box-shadow 0.2s ease",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 24px rgba(123,47,247,0.42)")}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(123,47,247,0.28)")}
+              >
                 + Add List
-            </Button>
+              </button>
             </form>
+          </div>
+        </div>
+      </DndContext>
+
+      </div>{/* end shared scroll wrapper */}
+
+      {/* Footer status bar — fixed to the bottom of the viewport */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          height: 36,
+          padding: "0 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 32,
+          background: isDark ? "rgba(13,12,20,0.92)" : "rgba(255,253,249,0.96)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          borderTop: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.07)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {orderedData.map((list, i) => {
+            const LIST_COLORS = ["#7C3AED","#D97706","#8B5CF6","#059669","#1A73E8","#E0284A"];
+            const col = LIST_COLORS[i % LIST_COLORS.length];
+            return (
+              <div key={list.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{
+                  width: 5, height: 5, borderRadius: "50%", background: col,
+                  boxShadow: isDark ? `0 0 4px ${col}66` : "none",
+                }}/>
+                <span style={{ fontSize: 10.5, color: isDark ? "rgba(255,255,255,0.28)" : "#BFB9B3" }}>
+                  {list.title} ·{" "}
+                  <span style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#6B6560", fontWeight: 500 }}>
+                    {list.cards.length}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10.5, color: isDark ? "rgba(255,255,255,0.2)" : "#BFB9B3" }}>Auto-save</span>
+          <div
+            className="animate-pulse-dot"
+            style={{
+              width: 5, height: 5, borderRadius: "50%",
+              background: isDark ? "#4FFFB0" : "#059669",
+              boxShadow: isDark ? "0 0 4px rgba(79,255,176,0.5)" : "0 0 4px rgba(5,150,105,0.4)",
+            }}
+          />
         </div>
       </div>
-    </DndContext>
+    </div>
   );
 };

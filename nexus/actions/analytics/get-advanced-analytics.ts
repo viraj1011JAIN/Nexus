@@ -6,10 +6,10 @@ import { db } from "@/lib/db";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AdvancedBoardAnalytics {
-  /** Burndown: remaining open cards per day over the last 30 days */
+  /** Burndown: remaining open cards per day over the last 60 days */
   burndown: { date: string; remaining: number; ideal: number }[];
 
-  /** Weekly throughput (last 8 weeks) */
+  /** Weekly throughput (last 9 weeks) */
   throughput: { week: string; completed: number; created: number }[];
 
   /** Cycle time (hours) distribution histogram + percentile stats */
@@ -22,7 +22,7 @@ export interface AdvancedBoardAnalytics {
     sampleCount: number;
   };
 
-  /** Cumulative flow – cards per list per day (last 14 days) */
+  /** Cumulative flow – cards per list per day (last 60 days) */
   cumulativeFlow: { date: string; [list: string]: number | string }[];
   listNames: string[];
 
@@ -145,8 +145,8 @@ export async function getAdvancedBoardAnalytics(
     const completedCards = allCards.filter((c) => doneListIds.has(c.listId));
     const openCards = allCards.filter((c) => !doneListIds.has(c.listId));
 
-    // ─── 1. Burndown (last 30 days) ─────────────────────────────────────────
-    const DAYS = 30;
+    // ─── 1. Burndown (last 60 days) ─────────────────────────────────────────
+    const DAYS = 60;
     const totalStart = allCards.length; // approximation: current total as "scope"
     const burndown: { date: string; remaining: number; ideal: number }[] = [];
 
@@ -175,9 +175,9 @@ export async function getAdvancedBoardAnalytics(
       burndown.push({ date: dayStr, remaining, ideal });
     }
 
-    // ─── 2. Throughput (last 8 weeks) ────────────────────────────────────────
+    // ─── 2. Throughput (last 9 weeks) ────────────────────────────────────────
     const throughput: { week: string; completed: number; created: number }[] = [];
-    for (let w = 7; w >= 0; w--) {
+    for (let w = 8; w >= 0; w--) {
       const weekEnd = addDays(now, -w * 7);
       const weekStart = addDays(weekEnd, -6);
       const weekLabel = `${dateKey(weekStart).slice(5)}`;
@@ -196,9 +196,9 @@ export async function getAdvancedBoardAnalytics(
       throughput.push({ week: weekLabel, completed, created });
     }
 
-    // ─── 2b. Lead time trend (last 8 weeks, same buckets as throughput) ──────
+    // ─── 2b. Lead time trend (last 9 weeks, same buckets as throughput) ──────
     const leadTimeTrend: { week: string; avgHours: number; p50: number; count: number }[] = [];
-    for (let w = 7; w >= 0; w--) {
+    for (let w = 8; w >= 0; w--) {
       const weekEnd = addDays(now, -w * 7);
       const weekStart = addDays(weekEnd, -6);
       const weekLabel2 = dateKey(weekStart).slice(5);
@@ -269,8 +269,8 @@ export async function getAdvancedBoardAnalytics(
       sampleCount: cycleTimes.length,
     };
 
-    // ─── 4. Cumulative flow (last 14 days) ───────────────────────────────────
-    const CF_DAYS = 14;
+    // ─── 4. Cumulative flow (last 60 days) ───────────────────────────────────
+    const CF_DAYS = 60;
     const listNames = board.lists.map((l) => l.title);
 
     const cumulativeFlow: { date: string; [list: string]: number | string }[] = [];

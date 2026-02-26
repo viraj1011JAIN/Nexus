@@ -1,10 +1,10 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================================
-   BASE RESETS — all base styles live in @layer base (further below)
+   BASE RESETS â€” all base styles live in @layer base (further below)
    so they are properly ordered relative to Tailwind's generated utilities.
    ============================================================================ */
 
@@ -15,7 +15,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-body: var(--font-dm-sans), system-ui, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", monospace;
   
   /* Border & Ring */
@@ -79,80 +81,81 @@
 }
 
 /* ============================================================================
-   LIGHT THEME - Professional SaaS Design
-   Clean white with subtle gray surfaces - No harsh borders
+   LIGHT THEME - Warm Cream Design System
+   #F4F1ED canvas, #FFFDF9 cards, violet primary
    ============================================================================ */
 
 :root {
   /* Border Radius */
   --radius: 0.625rem;
 
-  /* ── LIGHT MODE — Premium SaaS Palette ──────────────────────────────────── */
-  /* Philosophy: white cards float on a faint gray canvas. Violet accent pops. */
+  /* Base */
+  --background: 244 241 237;      /* #F4F1ED warm cream */
+  --foreground: 15 13 11;         /* #0F0D0B ink black  */
 
-  /* Base canvas — barely-there warm white, not pure gray */
-  --background: 250 249 255;      /* #FAF9FF  near-white with a whisper of violet */
-  --foreground: 9 9 11;           /* #09090B  Zinc-950 — deep, crisp reading ink  */
+  /* Card / Surface */
+  --card: 255 253 249;            /* #FFFDF9 warm white */
+  --card-foreground: 15 13 11;
 
-  /* Card / Surface — pure white so they float above the canvas */
-  --card: 255 255 255;            /* #FFFFFF             */
-  --card-foreground: 9 9 11;
+  /* Popover */
+  --popover: 255 253 249;
+  --popover-foreground: 15 13 11;
 
-  /* Popover & Dropdown */
-  --popover: 255 255 255;
-  --popover-foreground: 9 9 11;
-
-  /* Primary — Violet-700 */
-  --primary: 124 58 237;          /* #7C3AED */
+  /* Primary - Violet */
+  --primary: 123 47 247;          /* #7B2FF7 */
   --primary-foreground: 255 255 255;
 
-  /* Secondary — subtle filled button */
-  --secondary: 244 244 245;       /* #F4F4F5  Zinc-100 */
-  --secondary-foreground: 39 39 42; /* #27272A  Zinc-800 */
+  /* Secondary */
+  --secondary: 234 230 224;       /* #EAE6E0 */
+  --secondary-foreground: 90 85 80;
 
-  /* Success — Emerald-600 */
-  --success: 5 150 105;           /* #059669 */
+  /* Success */
+  --success: 5 150 105;
   --success-foreground: 255 255 255;
 
-  /* Warning — Amber-500 */
-  --warning: 245 158 11;          /* #F59E0B */
+  /* Warning */
+  --warning: 217 119 6;
   --warning-foreground: 255 255 255;
 
-  /* Destructive — Red-600 */
-  --destructive: 220 38 38;       /* #DC2626 */
+  /* Destructive */
+  --destructive: 224 40 74;
   --destructive-foreground: 255 255 255;
 
-  /* Muted — Zinc-100. MUST be darker than --background, used for inputs/hover */
-  --muted: 244 244 245;           /* #F4F4F5  Zinc-100  */
-  --muted-foreground: 113 113 122; /* #71717A  Zinc-500  */
+  /* Muted */
+  --muted: 236 232 226;           /* #ECE8E2 */
+  --muted-foreground: 154 143 133; /* #9A8F85 warm gray */
 
-  /* Accent — Violet-50 for selected element backgrounds */
-  --accent: 245 243 255;          /* #F5F3FF  Violet-50 */
-  --accent-foreground: 109 40 217; /* #6D28D9  Violet-700 */
+  /* Accent - light violet tint */
+  --accent: 240 233 255;          /* #F0E9FF */
+  --accent-foreground: 90 6 195;  /* deep violet */
 
-  /* Border / Input — Zinc-200 for defined but not heavy borders */
-  --border: 228 228 231;          /* #E4E4E7  Zinc-200  */
-  --input: 255 255 255;           /* white inputs — border provides the outline */
-  --ring: 124 58 237;             /* Violet-700 focus rings */
+  /* Border / Input */
+  --border: 226 221 215;          /* #E2DDD7 warm border */
+  --input: 234 230 224;
+  --ring: 123 47 247;
 
   /* Charts */
-  --chart-1: 124 58 237;          /* Violet   */
-  --chart-2: 79 70 229;           /* Indigo   */
-  --chart-3: 5 150 105;           /* Emerald  */
-  --chart-4: 234 88 12;           /* Orange   */
-  --chart-5: 219 39 119;          /* Pink     */
+  --chart-1: 123 47 247;
+  --chart-2: 26 115 232;
+  --chart-3: 5 150 105;
+  --chart-4: 192 57 43;
+  --chart-5: 0 145 196;
 
-  /* Sidebar — white panel with visible border */
-  --sidebar: 255 255 255;
-  --sidebar-foreground: 9 9 11;
-  --sidebar-primary: 124 58 237;
+  /* Sidebar */
+  --sidebar: 255 253 249;         /* #FFFDF9 */
+  --sidebar-foreground: 107 101 96;
+  --sidebar-primary: 123 47 247;
   --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 245 243 255;         /* Violet-50 for active nav bg */
-  --sidebar-accent-foreground: 109 40 217; /* Violet-700 for active nav text */
-  --sidebar-border: 228 228 231;
-  --sidebar-ring: 124 58 237;
+  --sidebar-accent: 240 233 255;  /* #F0E9FF */
+  --sidebar-accent-foreground: 90 6 195;
+  --sidebar-border: 226 221 215;
+  --sidebar-ring: 123 47 247;
 
-  /* Elevation shadows — very subtle in light, let borders do the work */
+  /* Brand gradient helpers */
+  --gradient-brand: linear-gradient(135deg, #7B2FF7 0%, #C01CC4 100%);
+  --gradient-shimmer: linear-gradient(90deg, #7B2FF7, #F107A3, #1A73E8, #7B2FF7);
+
+  /* Elevation shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.04);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.04);
@@ -160,78 +163,74 @@
 }
 
 /* ============================================================================
-   DARK THEME - "Deep Zinc" Professional System
-   Surfaces create hierarchy, not borders - Like Linear, Vercel, Notion
+   DARK THEME - Near-Black System
+   #0A0A0F background, #111118 cards, same violet primary
    ============================================================================ */
 
 .dark {
-  /* ── DARK MODE — "Obsidian" Premium System ──────────────────────────────── */
-  /* Philosophy: deep near-black base, blue-shifted dark surfaces, violet accent */
-  /* Inspired by: Linear, Vercel, Raycast                                       */
+  /* Base */
+  --background: 10 10 15;         /* #0A0A0F near-black */
+  --foreground: 242 242 242;
 
-  /* Base canvas — near-black with a deep blue-navy undertone */
-  --background: 8 8 12;           /* #08080C  deepest surface                  */
-  --foreground: 250 250 250;      /* #FAFAFA  warm white text                  */
+  /* Card */
+  --card: 17 17 24;               /* #111118 elevated surface */
+  --card-foreground: 242 242 242;
 
-  /* Card — first-level surface, clearly distinct from background */
-  --card: 17 20 35;               /* #111423  elevated dark-navy card          */
-  --card-foreground: 250 250 250;
+  /* Popover */
+  --popover: 17 17 24;
+  --popover-foreground: 242 242 242;
 
-  /* Popover & Dropdown */
-  --popover: 22 26 44;            /* #161A2C  floating panels, extra elevation */
-  --popover-foreground: 250 250 250;
-
-  /* Primary — Violet-500 (lighter for dark-bg contrast, WCAG AA ready) */
-  --primary: 139 92 246;          /* #8B5CF6  Violet-500                       */
+  /* Primary - same violet */
+  --primary: 123 47 247;
   --primary-foreground: 255 255 255;
 
   /* Secondary */
-  --secondary: 39 39 42;          /* Zinc-800 */
-  --secondary-foreground: 161 161 170; /* Zinc-400 */
+  --secondary: 34 34 37;
+  --secondary-foreground: 166 166 166;
 
   /* Success */
-  --success: 52 211 153;          /* Emerald-400 */
+  --success: 52 211 153;
   --success-foreground: 8 8 12;
 
   /* Warning */
-  --warning: 251 191 36;          /* Amber-400 */
+  --warning: 251 191 36;
   --warning-foreground: 8 8 12;
 
   /* Destructive */
-  --destructive: 248 113 113;     /* Red-400 */
-  --destructive-foreground: 8 8 12;
+  --destructive: 223 32 57;
+  --destructive-foreground: 255 255 255;
 
-  /* Muted — second elevation surface, for inputs/hover (clearly > background) */
-  --muted: 26 30 50;              /* #1A1E32  surface level 2                  */
-  --muted-foreground: 161 161 170; /* #A1A1AA  Zinc-400                        */
+  /* Muted */
+  --muted: 34 34 37;
+  --muted-foreground: 136 136 140;
 
-  /* Accent — deep violet wash for selected navigation, active UI states */
-  --accent: 46 28 72;             /* #2E1C48  rich violet tint                 */
-  --accent-foreground: 196 181 253; /* #C4B5FD  Violet-300 — soft & readable   */
+  /* Accent - deep violet */
+  --accent: 33 12 74;
+  --accent-foreground: 193 143 249;
 
   /* Border / Input */
-  --border: 35 40 62;             /* #23283E  soft boundary, not harsh         */
-  --input: 26 30 50;              /* same as muted for input bg                */
-  --ring: 139 92 246;             /* Violet-500 focus ring                     */
+  --border: 34 34 37;             /* #1C1C24 */
+  --input: 34 34 37;
+  --ring: 123 47 247;
 
   /* Charts */
-  --chart-1: 139 92 246;          /* Violet-500 */
-  --chart-2: 167 139 250;         /* Violet-400 */
-  --chart-3: 52 211 153;          /* Emerald-400 */
-  --chart-4: 251 146 60;          /* Orange-400 */
-  --chart-5: 244 114 182;         /* Pink-400   */
+  --chart-1: 123 47 247;
+  --chart-2: 193 143 249;
+  --chart-3: 52 211 153;
+  --chart-4: 251 146 60;
+  --chart-5: 244 114 182;
 
-  /* Sidebar — slightly different tone from card for panel/page contrast */
-  --sidebar: 12 14 24;            /* #0C0E18  darker base, premium panel look */
-  --sidebar-foreground: 250 250 250;
-  --sidebar-primary: 139 92 246;
+  /* Sidebar */
+  --sidebar: 14 14 16;
+  --sidebar-foreground: 140 140 140;
+  --sidebar-primary: 185 135 247;
   --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 46 28 72;           /* violet tint for active nav */
-  --sidebar-accent-foreground: 196 181 253; /* Violet-300 */
-  --sidebar-border: 26 30 50;           /* subtle divider */
-  --sidebar-ring: 139 92 246;
+  --sidebar-accent: 26 9 57;
+  --sidebar-accent-foreground: 193 143 249;
+  --sidebar-border: 27 27 29;
+  --sidebar-ring: 123 47 247;
 
-  /* Elevation shadows — more prominent on dark */
+  /* Elevation shadows */
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.5);
   --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 10px 20px -3px rgb(0 0 0 / 0.55), 0 4px 8px -4px rgb(0 0 0 / 0.3);
@@ -730,6 +729,7 @@ html:not(.theme-mounted) * {
   
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: none;
@@ -737,7 +737,7 @@ html:not(.theme-mounted) * {
     min-height: 100dvh;
   }
 
-  /* Targeted transitions — only on interactive elements */
+  /* Targeted transitions â€” only on interactive elements */
   button, a, [role="button"], input, textarea, select,
   [data-radix-collection-item] {
     transition-property: color, background-color, border-color, opacity, box-shadow;
@@ -864,6 +864,94 @@ html:not(.theme-mounted) * {
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
+}
+
+/* ============================================================================
+   NEXUS DESIGN SYSTEM UTILITIES
+   ============================================================================ */
+
+/* Shimmer animation for sidebar top stripe */
+@keyframes shimmer-brand {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.shimmer-stripe {
+  background: linear-gradient(90deg, #7B2FF7, #F107A3, #1A73E8, #7B2FF7);
+  background-size: 200% 100%;
+  animation: shimmer-brand 4s linear infinite;
+}
+
+/* Stagger fade-up for board cards */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up 0.5s ease both; }
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+/* Pulse for active status dots */
+@keyframes pulse-dot {
+  0%,100% { opacity:1; transform: scale(1); }
+  50%      { opacity:0.4; transform: scale(0.6); }
+}
+.animate-pulse-dot { animation: pulse-dot 2s ease infinite; }
+
+/* Board card hover lift */
+.board-card-hover {
+  transition: transform 0.32s cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 0.25s ease;
+}
+.board-card-hover:hover {
+  transform: translateY(-5px) scale(1.008);
+}
+
+/* === Kanban Board Animations === */
+
+@keyframes card-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-card-enter { animation: card-fade-up 0.4s ease both; }
+
+@keyframes list-slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-list-enter { animation: list-slide-in 0.45s ease both; }
+
+@keyframes live-pulse {
+  0%,100% { opacity: 1;   box-shadow: 0 0 0 0 currentColor; }
+  50%      { opacity: 0.5; box-shadow: 0 0 6px 2px currentColor; }
+}
+.animate-live { animation: live-pulse 2s ease infinite; }
+
+/* Kanban card hover lift */
+.kanban-card-hover {
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 0.22s ease,
+              border-color 0.2s ease;
+}
+.kanban-card-hover:hover {
+  transform: translateY(-4px) scale(1.008);
+}
+
+/* Custom thin scrollbar for board canvas */
+.board-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.board-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.board-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.dark .board-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+.board-scrollbar:not(.dark)::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); }
+
+/* Font assignments */
+.font-display { font-family: var(--font-playfair), 'Playfair Display', Georgia, serif; }
+.font-body    { font-family: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif; }
+
+/* Gradient brand button */
+.gradient-brand {
+  background: linear-gradient(135deg, #7B2FF7 0%, #C01CC4 100%);
 }
 
 /* ============================================================================

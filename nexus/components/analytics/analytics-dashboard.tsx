@@ -83,16 +83,25 @@ interface AnalyticsDashboardProps {
   orgId: string;
 }
 
+const DATE_RANGES = [
+  { label: "7d",  days: 7  },
+  { label: "14d", days: 14 },
+  { label: "30d", days: 30 },
+  { label: "60d", days: 60 },
+  { label: "All", days: 0  },
+] as const;
+
 export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashboardProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"basic" | "advanced">("basic");
+  const [timeRange, setTimeRange] = useState<number>(14);
   const { isConnected } = useRealtimeAnalytics(boardId, orgId);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = async (days = timeRange) => {
     setLoading(true);
-    const { data, error } = await getBoardAnalytics(boardId);
+    const { data, error } = await getBoardAnalytics(boardId, days);
     if (data) {
       setMetrics(data);
     } else if (error) {
@@ -102,17 +111,17 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
   };
 
   useEffect(() => {
-    fetchMetrics();
+    fetchMetrics(timeRange);
 
     // Listen for real-time updates
-    const handleRefresh = () => fetchMetrics();
+    const handleRefresh = () => fetchMetrics(timeRange);
     window.addEventListener("refresh-analytics", handleRefresh);
 
     return () => {
       window.removeEventListener("refresh-analytics", handleRefresh);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardId]);
+  }, [boardId, timeRange]);
 
   if (loading) {
     return (
@@ -156,7 +165,31 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
           <h2 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h2>
           <p className="text-muted-foreground mt-1">{boardName}</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Date range selector (basic view only) */}
+          {view === "basic" && (
+            <div
+              className="flex items-center rounded-lg border bg-muted/50 p-0.5 gap-0.5"
+              role="group"
+              aria-label="Date range"
+            >
+              {DATE_RANGES.map(({ label, days }) => (
+                <button
+                  key={label}
+                  onClick={() => {
+                    setTimeRange(days);
+                  }}
+                  className={`px-2.5 py-1 text-xs rounded-md font-medium transition-colors ${
+                    timeRange === days
+                      ? "bg-background shadow text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {/* View toggle */}
           <div className="flex items-center rounded-lg border p-0.5 gap-0.5">
             <Button
@@ -258,7 +291,7 @@ export function AnalyticsDashboard({ boardId, boardName, orgId }: AnalyticsDashb
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            Velocity Trend (Last 14 Days)
+            Velocity Trend ({timeRange === 0 ? "All Time" : `Last ${timeRange} Days`})
             {metrics.velocity.trend === "up" && (
               <TrendingUp className="h-4 w-4 text-green-500" />
             )}
