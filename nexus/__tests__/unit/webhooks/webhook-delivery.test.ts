@@ -81,7 +81,24 @@ function makeWebhook(url: string, overrides: Record<string, unknown> = {}) {
 // ─── Reset ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  // resetAllMocks (not clearAllMocks) is required here.
+  //
+  // clearAllMocks only resets call history — it does NOT clear
+  // _mockImplementationStack (the Once-queue from mockResolvedValueOnce).
+  //
+  // Tests 13.1 call mockResolve4.mockResolvedValueOnce([privateIP]) but the URL
+  // hostnames are raw private IPs that are blocked BEFORE the DNS lookup step in
+  // validateWebhookUrl.  Those Once items therefore accumulate in the stack and
+  // bleed into later tests (e.g. test 13.10), causing api.example.com to resolve
+  // to a stale private IP, which triggers SSRF protection and blocks the delivery,
+  // resulting in statusCode: null instead of 503.
+  //
+  // resetAllMocks clears both the call history AND the implementation stacks,
+  // preventing this cross-test contamination.
+  jest.resetAllMocks();
+  // Re-establish implementations cleared by resetAllMocks:
+  (jest.requireMock("node:http") as { Agent: jest.Mock }).Agent.mockImplementation(() => ({}));
+  (jest.requireMock("node:https") as { Agent: jest.Mock }).Agent.mockImplementation(() => ({}));
   // Default: DNS resolves to public IP
   mockResolve4.mockResolvedValue(["93.184.216.34"]);
   mockResolve6.mockResolvedValue([]);
@@ -133,7 +150,7 @@ describe("Section 13 — Webhook Outbound", () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe("13.2 SSRF — DNS resolving to private IP", () => {
-    it("13.2 should block when hostname resolves to 192.168.1.1", async () => {
+    it("13.2.1 should block when hostname resolves to 192.168.1.1", async () => {
       mockWebhookFindMany.mockResolvedValueOnce([
         makeWebhook("http://evil.example.com/hook"),
       ]);
@@ -150,7 +167,7 @@ describe("Section 13 — Webhook Outbound", () => {
       expect(mockHttpRequest).not.toHaveBeenCalled();
     });
 
-    it("13.3 should block when hostname resolves to 10.0.0.1", async () => {
+    it("13.2.2 should block when hostname resolves to 10.0.0.1", async () => {
       mockWebhookFindMany.mockResolvedValueOnce([
         makeWebhook("http://internal.example.com/hook"),
       ]);
@@ -166,7 +183,7 @@ describe("Section 13 — Webhook Outbound", () => {
       );
     });
 
-    it("13.4 should block when hostname resolves to 127.0.0.1", async () => {
+    it("13.2.3 should block when hostname resolves to 127.0.0.1", async () => {
       mockWebhookFindMany.mockResolvedValueOnce([
         makeWebhook("http://localhost-alias.example.com/hook"),
       ]);
@@ -200,6 +217,13 @@ describe("Section 13 — Webhook Outbound", () => {
         // Should NOT make actual http request
         expect(mockHttpRequest).not.toHaveBeenCalled();
         expect(mockHttpsRequest).not.toHaveBeenCalled();
+        // The SSRF guard records a failed delivery even for blocked hostnames
+        // so that operators can observe rejected attempts in the audit log.
+        expect(mockDeliveryCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ success: false }),
+          })
+        );
       }
     );
   });

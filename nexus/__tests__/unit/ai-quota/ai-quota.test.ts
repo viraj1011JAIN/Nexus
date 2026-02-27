@@ -495,18 +495,27 @@ describe("Section 8 — AI Quota", () => {
       jest.isolateModules(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         ({ suggestPriority: suggestWithOverride } = require("@/actions/ai-actions") as typeof import("@/actions/ai-actions"));
+
+        // After jest.resetModules() (called in the preceding test's afterEach) the
+        // module registry is cleared, so jest.isolateModules creates a *fresh*
+        // @/lib/db mock instance that is different from the top-level `db` import.
+        // We must configure the isolated instance directly.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { db: isolatedDb } = jest.requireMock("@/lib/db") as { db: typeof import("@/lib/db").db };
+
+        // Org has only used 2 calls — should still be under the limit of 3
+        (isolatedDb.organization.findUnique as jest.Mock).mockResolvedValueOnce({
+          id: ORG_ID,
+          aiCallsToday: 2,
+          aiCallsLimit: DEFAULT_LIMIT,
+          aiCallsResetAt: new Date(Date.now() + 60 * 60 * 1000),
+        });
+        (isolatedDb.organization.update as jest.Mock).mockResolvedValueOnce({});
       });
 
-      // Org has only used 2 calls — should still be under the limit of 3
-      (db.organization.findUnique as jest.Mock).mockResolvedValueOnce({
-        id: ORG_ID,
-        aiCallsToday: 2,
-        aiCallsLimit: DEFAULT_LIMIT,
-        aiCallsResetAt: new Date(Date.now() + 60 * 60 * 1000),
-      });
-      (db.organization.update as jest.Mock).mockResolvedValueOnce({});
+      // OpenAI must return valid JSON (the production code calls JSON.parse on the content)
       mockCreate.mockResolvedValueOnce({
-        choices: [{ message: { content: "HIGH" } }],
+        choices: [{ message: { content: '{"priority":"HIGH","reasoning":"Under limit"}' } }],
       });
 
       const result = await suggestWithOverride({ title: "Under override limit", description: "" });

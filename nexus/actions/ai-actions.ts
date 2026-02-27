@@ -44,7 +44,10 @@ const AI_MODEL       = process.env.AI_MODEL ?? "gpt-4o-mini";
 // process.env overrides (e.g. in tests) are picked up without requiring
 // a module reload.
 function getAiDailyLimit(): number {
-  return Number(process.env.AI_DAILY_LIMIT ?? 50);
+  const parsed = parseInt(process.env.AI_DAILY_LIMIT ?? "", 10);
+  // Guard against NaN, Infinity, and negative values so a misconfigured env
+  // var cannot silently disable rate limiting.
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 50;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

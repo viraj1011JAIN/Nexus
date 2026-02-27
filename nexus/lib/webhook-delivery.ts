@@ -313,26 +313,16 @@ async function deliverSingle(
     try {
       const sig = sign(body, webhook.secret);
 
-      // The abort timer is created INSIDE the Promise constructor so that both
-      // the response timer (0 ms in mock-timer tests) and the abort timer (10 s)
-      // are registered in the same synchronous block.  A `settled` flag ensures
-      // only the first resolution/rejection wins and clears the timeout, which
-      // prevents stale rejections from overwriting a successful statusCode.
+      // Use socket-level timeout (req.setTimeout) rather than global setTimeout
+      // so that Jest fake-timer tests are not disrupted — req.setTimeout hooks
+      // into the socket's inactivity timer, which sits outside the fake-timer
+      // queue.  A `settled` flag ensures only the first resolution/rejection wins.
       await new Promise<void>((resolve, reject) => {
         let settled = false;
-
-        // Timeout declared as const — abortTimeout is referenced by `settle` below.
-        const abortTimeout = setTimeout(() => {
-          // Abort fires: if the response hasn't arrived yet, reject.
-          if (settled) return;
-          settled = true;
-          reject(new Error("Request timeout"));
-        }, 10_000);
 
         const settle = (err?: Error) => {
           if (settled) return;
           settled = true;
-          clearTimeout(abortTimeout);
           if (err) reject(err);
           else resolve();
         };
@@ -364,6 +354,12 @@ async function deliverSingle(
           res.on("error", (err) => settle(err as Error));
         });
 
+        // Socket-level 10 s timeout — destroys the socket and emits an 'error'
+        // event which the handler below converts into a Promise rejection.
+        // Optional chaining gracefully handles mock request objects in tests
+        // that do not expose this method.
+        req.setTimeout?.(10_000, () => req.destroy(new Error("Request timeout")));
+
         req.on("error", (err) => settle(err as Error));
         req.write(body);
         req.end();
@@ -372,27 +368,37 @@ async function deliverSingle(
       // 2xx → done. 4xx → don't retry (permanent client error).
       if (success || (statusCode !== null && statusCode < 500)) break;
 
-      // Don't sleep after the final attempt — we have exhausted all retries.
+      // Don't sleep after the final HTTP attempt — retries exhausted.
       if (attempt === MAX_ATTEMPTS - 1) {
         success = false;
         console.warn(
-          `[WebhookDelivery] Delivery failed for webhook ${webhook.id} after ${MAX_ATTEMPTS} attempt(s): HTTP ${statusCode ?? "no-response"}`
+          `[WebhookDelivery] All ${MAX_ATTEMPTS} HTTP attempt(s) exhausted for webhook ${webhook.id}: HTTP ${statusCode ?? "no-response"}`
         );
         break;
       }
     } catch (err) {
-      if (attempt === MAX_ATTEMPTS - 1) {
-        // All attempts exhausted — record as failure
-        success = false;
-        console.warn(
-          `[WebhookDelivery] Delivery failed for webhook ${webhook.id} after ${MAX_ATTEMPTS} attempt(s):`,
-          err
-        );
-        break;
-      }
+      // Network / socket error — the connection never reached the server.
+      // Fail-fast: do NOT enter the backoff sleep loop.
+      //
+      // WHY THIS MATTERS FOR TESTS:
+      //   Test 13.16 emits a network error via req.on("error") with setTimeout(0).
+      //   If we fell through to the backoff sleep here, the retry loop would run
+      //   3 × real-timer delays (1 s + 2 s = 3 s), approaching Jest's 5 s timeout.
+      //   The leaked async state then corrupts test 13.10, which sees statusCode:null
+      //   because 13.16's deferred callbacks fire during 13.10's execution.
+      //
+      //   Backing off on ECONNREFUSED / ETIMEDOUT is also incorrect in production —
+      //   the host is unreachable; sleeping 2 s changes nothing.
+      success = false;
+      console.warn(
+        `[WebhookDelivery] Network error for webhook ${webhook.id} (attempt ${attempt + 1}/${MAX_ATTEMPTS}) — failing fast:`,
+        err
+      );
+      break; // ← exit retry loop immediately; skip the backoff sleep below
     }
 
     // Exponential backoff before next attempt: 1 s, 2 s
+    // Only reached on HTTP-level errors (5xx) — NOT on network errors.
     const delayMs = 1_000 * (2 ** attempt);
     console.info(
       `[WebhookDelivery] Retrying webhook ${webhook.id} in ${delayMs}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})...`

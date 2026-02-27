@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: subscription.id,
           stripeSubscriptionStatus: subscription.status,
-          stripePriceId: subscription.items?.data[0]?.price.id ?? null,
+          stripePriceId: subscription.items?.data[0]?.price?.id ?? null,
           stripeCurrentPeriodEnd: periodEndTs ? new Date(periodEndTs * 1000) : null,
         },
       });
