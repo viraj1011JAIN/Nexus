@@ -9,7 +9,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createDAL } from "@/lib/dal";
-import { getTenantContext, requireRole } from "@/lib/tenant-context";
+import { getTenantContext, requireRole, TenantError } from "@/lib/tenant-context";
 import { z } from "zod";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
@@ -41,21 +41,22 @@ export async function updateBoard(
 
   const { boardId, ...updates } = parsed.data;
 
-  // 2. Auth + role check
-  const ctx = await getTenantContext();
-  await requireRole("ADMIN", ctx);
-
-  // 3. Rate limit (reuse "update-card" bucket — 120 req/min, generous for settings)
-  const rl = checkRateLimit(ctx.userId, "update-card", RATE_LIMITS["update-card"]);
-  if (!rl.allowed) {
-    return {
-      error: `Rate limit reached. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`,
-    };
-  }
-
-  const dal = await createDAL(ctx);
-
   try {
+    // 2. Auth + role check — inside try so TenantError is caught and returned
+    //    as { error } rather than propagating as an unhandled exception.
+    const ctx = await getTenantContext();
+    await requireRole("ADMIN", ctx);
+
+    // 3. Rate limit (reuse "update-card" bucket — 120 req/min, generous for settings)
+    const rl = checkRateLimit(ctx.userId, "update-card", RATE_LIMITS["update-card"]);
+    if (!rl.allowed) {
+      return {
+        error: `Rate limit reached. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`,
+      };
+    }
+
+    const dal = await createDAL(ctx);
+
     // 4. Build only the keys the caller explicitly provided
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: Record<string, any> = {};
@@ -86,7 +87,10 @@ export async function updateBoard(
     revalidatePath("/");
 
     return { data: { id: board.id, title: board.title } };
-  } catch {
+  } catch (err) {
+    if (err instanceof TenantError) {
+      return { error: err.message };
+    }
     return { error: "Failed to update board. Please try again." };
   }
 }
