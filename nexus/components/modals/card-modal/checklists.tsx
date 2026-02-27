@@ -5,7 +5,7 @@ import { CheckSquare, Loader2, Sparkles, Plus } from "lucide-react";
 import { ChecklistPanel } from "@/components/board/checklist-panel";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { getChecklists, addChecklist, addChecklistItem } from "@/actions/checklist-actions";
-import { suggestChecklists } from "@/actions/ai-actions";
+import { suggestChecklists } from "@/actions/ai-checklist-actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
