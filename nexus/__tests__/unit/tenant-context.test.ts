@@ -47,7 +47,7 @@ describe("getTenantContext", () => {
   });
 
   it("throws UNAUTHENTICATED when there is no session (userId and orgId both null)", async () => {
-    (auth as jest.Mock).mockResolvedValue({ userId: null, orgId: null, orgRole: null });
+    (auth as unknown as jest.Mock).mockResolvedValue({ userId: null, orgId: null, orgRole: null });
 
     await expect(getTenantContext()).rejects.toMatchObject({
       code: "UNAUTHENTICATED",
@@ -55,7 +55,7 @@ describe("getTenantContext", () => {
   });
 
   it("throws UNAUTHENTICATED when userId exists but no org is selected (orgId null)", async () => {
-    (auth as jest.Mock).mockResolvedValue({ userId: "user_123", orgId: null, orgRole: null });
+    (auth as unknown as jest.Mock).mockResolvedValue({ userId: "user_123", orgId: null, orgRole: null });
 
     await expect(getTenantContext()).rejects.toMatchObject({
       code: "UNAUTHENTICATED",
@@ -63,7 +63,7 @@ describe("getTenantContext", () => {
   });
 
   it("throws FORBIDDEN when membership row has isActive=false", async () => {
-    (auth as jest.Mock).mockResolvedValue({
+    (auth as unknown as jest.Mock).mockResolvedValue({
       userId: "user_123",
       orgId: "org_abc",
       orgRole: "org:member",
@@ -80,7 +80,7 @@ describe("getTenantContext", () => {
   });
 
   it("returns TenantContext for a valid, active member", async () => {
-    (auth as jest.Mock).mockResolvedValue({
+    (auth as unknown as jest.Mock).mockResolvedValue({
       userId: "user_123",
       orgId: "org_abc",
       orgRole: "org:member",
@@ -100,7 +100,7 @@ describe("getTenantContext", () => {
   });
 
   it("throws instance of TenantError with correct name", async () => {
-    (auth as jest.Mock).mockResolvedValue({ userId: null, orgId: null });
+    (auth as unknown as jest.Mock).mockResolvedValue({ userId: null, orgId: null });
 
     try {
       await getTenantContext();
@@ -111,3 +111,4 @@ describe("getTenantContext", () => {
     }
   });
 });
+

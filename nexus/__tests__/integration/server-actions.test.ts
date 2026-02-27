@@ -18,7 +18,7 @@ describe('Server Actions - Demo Mode Integration', () => {
   describe('Create Card Action', () => {
     it('should block card creation in demo mode', async () => {
       // Simulate demo org user
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -31,7 +31,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should allow card creation in regular org', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'real-org-123',
         userId: 'user-456',
       });
@@ -45,7 +45,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Update Card Action', () => {
     it('should block card updates in demo mode', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -58,7 +58,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should allow card updates in regular org', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'real-org-789',
         userId: 'user-abc',
       });
@@ -72,7 +72,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Delete Card Action', () => {
     it('should block card deletion in demo mode', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -85,7 +85,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should allow card deletion in regular org', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'real-org-xyz',
         userId: 'user-def',
       });
@@ -99,7 +99,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Create List Action', () => {
     it('should block list creation in demo mode', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -111,7 +111,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should allow list creation in regular org', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'regular-org',
         userId: 'regular-user',
       });
@@ -125,7 +125,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Delete List Action', () => {
     it('should block list deletion in demo mode', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -138,7 +138,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should allow list deletion in regular org', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'prod-org',
         userId: 'prod-user',
       });
@@ -152,7 +152,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Create Board Action', () => {
     it('should block board creation in demo mode', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -164,7 +164,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should allow board creation in regular org', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'real-company',
         userId: 'employee-123',
       });
@@ -178,7 +178,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Server Action Error Handling', () => {
     it('should return proper error shape for demo mode', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -189,11 +189,13 @@ describe('Server Actions - Demo Mode Integration', () => {
       expect(protection).toMatchObject({
         error: expect.any(String),
       });
-      expect(protection?.error.length).toBeGreaterThan(0);
+      if (protection?.error) {
+        expect(protection.error.length).toBeGreaterThan(0);
+      }
     });
 
     it('should handle missing orgId gracefully', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: null,
         userId: 'user-123',
       });
@@ -206,7 +208,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should handle undefined orgId gracefully', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         userId: 'user-456',
       });
 
@@ -219,7 +221,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Multiple Action Calls', () => {
     it('should consistently block all demo mode actions', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -241,7 +243,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should consistently allow all regular org actions', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'prod-org-456',
         userId: 'user-789',
       });
@@ -260,7 +262,7 @@ describe('Server Actions - Demo Mode Integration', () => {
 
   describe('Concurrent Action Protection', () => {
     it('should handle concurrent demo mode checks', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'demo-org-id',
         userId: 'demo-user-id',
       });
@@ -284,7 +286,7 @@ describe('Server Actions - Demo Mode Integration', () => {
     });
 
     it('should handle concurrent regular org checks', async () => {
-      (auth as jest.Mock).mockResolvedValue({
+      (auth as unknown as jest.Mock).mockResolvedValue({
         orgId: 'real-org-concurrent',
         userId: 'user-concurrent',
       });

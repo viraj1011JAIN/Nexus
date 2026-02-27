@@ -356,7 +356,7 @@ export function BoardList() {
         )}
 
         {/* ── Create Board Form ────────────────────────────────────────── */}
-        <form onSubmit={handleCreateBoard} className="mb-6">
+        <form onSubmit={handleCreateBoard} className="mb-6 mt-4">
 
           {/* Photo preview banner */}
           {selectedPhoto && (

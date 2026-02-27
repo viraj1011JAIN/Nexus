@@ -102,25 +102,30 @@ ${parsed.data.description ? `Description: ${parsed.data.description}` : ""}
 
 Respond with ONLY valid JSON: { "priority": "URGENT"|"HIGH"|"MEDIUM"|"LOW", "reasoning": "<1-2 sentences>" }`;
 
-  const completion = await getOpenAI().chat.completions.create({
-    model: AI_MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_tokens: 150,
-    temperature: 0.3,
-  });
+  try {
+    const completion = await getOpenAI().chat.completions.create({
+      model: AI_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      max_tokens: 150,
+      temperature: 0.3,
+    });
 
-  await incrementUsage(orgId);
+    await incrementUsage(orgId);
 
-  const content = completion.choices[0]?.message?.content ?? "{}";
-  const result  = JSON.parse(content) as { priority: string; reasoning: string };
+    const content = completion.choices[0]?.message?.content ?? "{}";
+    const result  = JSON.parse(content) as { priority: string; reasoning: string };
 
-  const validPriorities = ["URGENT", "HIGH", "MEDIUM", "LOW"] as const;
-  const priority = validPriorities.includes(result.priority as (typeof validPriorities)[number])
-    ? (result.priority as "URGENT" | "HIGH" | "MEDIUM" | "LOW")
-    : "MEDIUM";
+    const validPriorities = ["URGENT", "HIGH", "MEDIUM", "LOW"] as const;
+    const priority = validPriorities.includes(result.priority as (typeof validPriorities)[number])
+      ? (result.priority as "URGENT" | "HIGH" | "MEDIUM" | "LOW")
+      : "MEDIUM";
 
-  return { data: { priority, reasoning: result.reasoning ?? "" } };
+    return { data: { priority, reasoning: result.reasoning ?? "" } };
+  } catch (e) {
+    console.error("[SUGGEST_PRIORITY]", e);
+    return { error: "AI request failed. Please try again." };
+  }
 }
 
 // ─── generateCardDescription ──────────────────────────────────────────────────
@@ -150,17 +155,22 @@ ${parsed.data.context ? `Context: ${parsed.data.context}` : ""}
 Write 2-4 sentences describing what needs to be done, acceptance criteria, and any relevant technical notes.
 Keep the tone professional and action-oriented. Do NOT use markdown headers — plain prose only.`;
 
-  const completion = await getOpenAI().chat.completions.create({
-    model: AI_MODEL,
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 300,
-    temperature: 0.5,
-  });
+  try {
+    const completion = await getOpenAI().chat.completions.create({
+      model: AI_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300,
+      temperature: 0.5,
+    });
 
-  await incrementUsage(orgId);
+    await incrementUsage(orgId);
 
-  const description = completion.choices[0]?.message?.content?.trim() ?? "";
-  return { data: { description } };
+    const description = completion.choices[0]?.message?.content?.trim() ?? "";
+    return { data: { description } };
+  } catch (e) {
+    console.error("[GENERATE_DESCRIPTION]", e);
+    return { error: "AI request failed. Please try again." };
+  }
 }
 
 // ─── suggestChecklists ────────────────────────────────────────────────────────
@@ -190,21 +200,26 @@ ${parsed.data.description ? `Description: ${parsed.data.description}` : ""}
 Respond with ONLY valid JSON: { "items": ["<checklist item>", ...] }
 Provide 4-8 actionable items. Each item should be a short imperative sentence (e.g., "Write unit tests for the auth module").`;
 
-  const completion = await getOpenAI().chat.completions.create({
-    model: AI_MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_tokens: 400,
-    temperature: 0.4,
-  });
+  try {
+    const completion = await getOpenAI().chat.completions.create({
+      model: AI_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      max_tokens: 400,
+      temperature: 0.4,
+    });
 
-  await incrementUsage(orgId);
+    await incrementUsage(orgId);
 
-  const content = completion.choices[0]?.message?.content ?? "{}";
-  const result  = JSON.parse(content) as { items?: unknown };
-  const items   = Array.isArray(result.items)
-    ? (result.items as unknown[]).filter((i): i is string => typeof i === "string").slice(0, 8)
-    : [];
+    const content = completion.choices[0]?.message?.content ?? "{}";
+    const result  = JSON.parse(content) as { items?: unknown };
+    const items   = Array.isArray(result.items)
+      ? (result.items as unknown[]).filter((i): i is string => typeof i === "string").slice(0, 8)
+      : [];
 
-  return { data: { items } };
+    return { data: { items } };
+  } catch (e) {
+    console.error("[SUGGEST_CHECKLISTS]", e);
+    return { error: "AI request failed. Please try again." };
+  }
 }

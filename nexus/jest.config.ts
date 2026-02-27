@@ -32,14 +32,15 @@ const config: Config = {
   ],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react-jsx',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
+      tsconfig: 'tsconfig.test.json',
     }],
   },
   moduleDirectories: ['node_modules', '<rootDir>'],
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.test.json',
+    },
+  },
 };
 
 export default config;

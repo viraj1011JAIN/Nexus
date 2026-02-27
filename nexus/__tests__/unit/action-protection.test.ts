@@ -111,7 +111,9 @@ describe('Demo Mode Protection', () => {
       
       expect(result?.error).toContain('read-only');
       expect(result?.error).toContain('Sign up');
-      expect(result?.error.length).toBeGreaterThan(20); // Meaningful message
+      if (result?.error) {
+        expect(result.error.length).toBeGreaterThan(20); // Meaningful message
+      }
     });
 
     it('should not expose internal implementation details', async () => {

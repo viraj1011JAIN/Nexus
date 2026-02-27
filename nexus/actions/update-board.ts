@@ -74,13 +74,17 @@ export async function updateBoard(
     // 5. Persist via DAL (verifies board.orgId === ctx.orgId)
     const board = await dal.boards.update(boardId, data);
 
-    // 6. Audit log
-    await dal.auditLogs.create({
-      entityId:    board.id,
-      entityType:  "BOARD",
-      entityTitle: board.title,
-      action:      "UPDATE",
-    });
+    // 6. Audit log — non-blocking; a failure here must not roll back a successful update
+    try {
+      await dal.auditLogs.create({
+        entityId:    board.id,
+        entityType:  "BOARD",
+        entityTitle: board.title,
+        action:      "UPDATE",
+      });
+    } catch (auditErr) {
+      console.error("[UPDATE_BOARD] Audit log failed:", auditErr);
+    }
 
     // 7. Bust caches
     revalidatePath(`/board/${boardId}`);

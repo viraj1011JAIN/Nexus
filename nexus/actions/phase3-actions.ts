@@ -12,7 +12,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { getTenantContext } from "@/lib/tenant-context";
+import { getTenantContext, TenantError } from "@/lib/tenant-context";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/create-audit-log";
@@ -300,7 +300,22 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
   }
 
   if (card.list.board.orgId !== orgId) {
-    throw new Error("Unauthorized");
+    throw new TenantError("FORBIDDEN", "Card does not belong to this organisation.");
+  }
+
+  // Validate parentId — if provided, the parent comment MUST belong to the same card.
+  // Rejecting cross-card parents prevents orphaned thread structures in the data model.
+  if (parentId) {
+    const parentComment = await db.comment.findUnique({
+      where: { id: parentId },
+      select: { cardId: true },
+    });
+    if (!parentComment) {
+      return { error: "Parent comment not found." };
+    }
+    if (parentComment.cardId !== cardId) {
+      return { error: "Nested replies must belong to the same card." };
+    }
   }
 
   // Create comment
@@ -537,16 +552,19 @@ export const addReaction = createSafeAction(AddReactionSchema, async (data) => {
   }
 
   if (comment.card.list.board.orgId !== orgId) {
-    throw new Error("Unauthorized");
+    throw new TenantError("FORBIDDEN", "Comment does not belong to this organisation.");
   }
 
-  // Check if user already reacted with this emoji (enforce unique constraint)
+  // Enforce unique constraint at application level for a clear, non-generic error message.
+  // The DB @@unique([commentId, userId, emoji]) is the final safety net.
   const existing = await db.commentReaction.findFirst({
     where: { commentId, userId, emoji },
   });
 
   if (existing) {
-    throw new Error("You already reacted with this emoji");
+    // Return a graceful error instead of throwing — duplicate reactions are expected
+    // user behaviour (e.g. double-click), not a programming fault.
+    return { error: "Already reacted" };
   }
 
   // Add reaction

@@ -245,12 +245,12 @@ import { SmartDueDate } from "@/components/smart-due-date";
 
 describe("SmartDueDate accessibility", () => {
   it("renders past-due date without axe violations", async () => {
-    const past = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    await checkA11y(<SmartDueDate dueDate={past} />);
+    const past = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await checkA11y(<SmartDueDate dueDate={past} onDateChange={() => {}} />);
   });
 
   it("renders upcoming date without axe violations", async () => {
-    const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
-    await checkA11y(<SmartDueDate dueDate={soon} />);
+    const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    await checkA11y(<SmartDueDate dueDate={soon} onDateChange={() => {}} />);
   });
 });

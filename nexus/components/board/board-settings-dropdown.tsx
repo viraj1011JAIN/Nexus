@@ -28,6 +28,19 @@ import { exportBoardAsJSON, exportBoardAsCSV } from "@/actions/import-export-act
 import { UnsplashPicker, type UnsplashPhoto } from "./unsplash-picker";
 import { useTheme } from "@/components/theme-provider";
 
+/**
+ * Sanitize a board title for use as a download filename.
+ * Replaces any character outside [A-Za-z0-9._-] with a hyphen,
+ * collapses consecutive hyphens, and trims leading/trailing hyphens.
+ */
+function sanitizeFilename(title: string): string {
+  return title
+    .replace(/[^A-Za-z0-9._-]/g, "-")  // replace unsafe chars
+    .replace(/-{2,}/g, "-")             // collapse consecutive hyphens
+    .replace(/^-+|-+$/g, "")            // trim leading/trailing hyphens
+    .toLowerCase();
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface BoardSettingsDropdownProps {
@@ -215,7 +228,7 @@ export function BoardSettingsDropdown({
         toast.error(res.error ?? "Export failed.");
         return;
       }
-      const filename = `${boardTitle.replace(/\s+/g, "-").toLowerCase()}-export.json`;
+      const filename = `${sanitizeFilename(boardTitle)}-export.json`;
       downloadBlob(JSON.stringify(res.data, null, 2), filename, "application/json");
       toast.success("Board exported as JSON.");
       closeDropdown();
@@ -234,7 +247,7 @@ export function BoardSettingsDropdown({
         toast.error(res.error ?? "Export failed.");
         return;
       }
-      const filename = `${boardTitle.replace(/\s+/g, "-").toLowerCase()}-export.csv`;
+      const filename = `${sanitizeFilename(boardTitle)}-export.csv`;
       downloadBlob(res.data as string, filename, "text/csv");
       toast.success("Board exported as CSV.");
       closeDropdown();

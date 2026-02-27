@@ -57,7 +57,12 @@ function resetMocks() {
 }
 
 describe("webhook-actions", () => {
-  beforeEach(() => { jest.clearAllMocks(); resetMocks(); });
+  // resetAllMocks (not clearAllMocks) is required here: clearAllMocks only clears
+  // call records but does NOT drain mockResolvedValueOnce queues. If a test sets
+  // a mockResolvedValueOnce but the mock is never called (e.g. demo-mode early
+  // return), the queued value leaks into the next test. resetAllMocks fully
+  // resets every mock's state including implementation queues.
+  beforeEach(() => { jest.resetAllMocks(); resetMocks(); });
 
   // ─── getWebhooks ─────────────────────────────────────────────────────────
 
@@ -109,7 +114,11 @@ describe("webhook-actions", () => {
 
       const result = await createWebhook("https://example.com/hook", ["card.created", "card.moved"]);
       expect(result.error).toBeUndefined();
-      expect(result.data?.rawKey ?? (result.data as { secret?: string })?.secret).toBeUndefined(); // secret not in data.rawKey
+      // The signing secret IS returned on creation so callers can configure their endpoint.
+      // It is stored hashed in the DB; this is the only time the plaintext is exposed.
+      expect(result.data?.secret).toMatch(/^whsec_/);
+      // No 'rawKey' field — that's the API-key naming convention, not webhooks.
+      expect((result.data as Record<string, unknown>)?.rawKey).toBeUndefined();
       expect(db.webhook.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({

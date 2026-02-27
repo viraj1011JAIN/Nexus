@@ -225,7 +225,7 @@ describe("Section 2.1 — ROLE_HIERARCHY constants", () => {
     for (const [role, weight] of Object.entries(ROLE_HIERARCHY)) {
       expect(typeof weight).toBe("number");
       // Guard against accidental string coercion
-      expect(weight === String(weight)).toBe(false);
+      expect(weight as unknown === String(weight)).toBe(false);
       // Make TypeScript happy
       void role;
     }
@@ -689,31 +689,31 @@ describe("Section 2.8 — Error message hygiene across all action types", () => 
 
   // createSafeAction-wrapped ──────────────────────────────────────────────────
 
-  it.each<[string, () => Promise<{ error?: string; data?: unknown }>]>([
+  it.each([
     ["createCard (GUEST)",  () => { mockGetTenantContext.mockResolvedValue(makeCtx("GUEST"));   return createCard(VALID_CREATE_CARD);  }],
     ["createList (GUEST)",  () => { mockGetTenantContext.mockResolvedValue(makeCtx("GUEST"));   return createList(VALID_CREATE_LIST);  }],
     ["updateCard (GUEST)",  () => { mockGetTenantContext.mockResolvedValue(makeCtx("GUEST"));   return updateCard(VALID_UPDATE_CARD);  }],
     ["deleteBoard (ADMIN)", () => { mockGetTenantContext.mockResolvedValue(makeCtx("ADMIN"));   return deleteBoard(VALID_DELETE_BOARD); }],
     ["updateBoard (MEMBER)",() => { mockGetTenantContext.mockResolvedValue(makeCtx("MEMBER")); return updateBoard(VALID_UPDATE_BOARD); }],
-  ])("%s error should not contain 'TenantError'", async (_, action) => {
+  ] as const)("%s error should not contain 'TenantError'", async (_, action) => {
     const { error } = await action();
     expect(error).not.toContain("TenantError");
   });
 
-  it.each<[string, () => Promise<{ error?: string; data?: unknown }>]>([
+  it.each([
     ["createCard (GUEST)",  () => { mockGetTenantContext.mockResolvedValue(makeCtx("GUEST"));   return createCard(VALID_CREATE_CARD);  }],
     ["createList (GUEST)",  () => { mockGetTenantContext.mockResolvedValue(makeCtx("GUEST"));   return createList(VALID_CREATE_LIST);  }],
     ["deleteBoard (ADMIN)", () => { mockGetTenantContext.mockResolvedValue(makeCtx("ADMIN"));   return deleteBoard(VALID_DELETE_BOARD); }],
-  ])("%s error should not contain the org ID", async (_, action) => {
+  ] as const)("%s error should not contain the org ID", async (_, action) => {
     const { error } = await action();
     expect(error).not.toContain(ORG_ID);
   });
 
-  it.each<[string, () => Promise<{ error?: string; data?: unknown }>]>([
+  it.each([
     ["createApiKey (MEMBER)",   () => { mockGetTenantContext.mockResolvedValue(makeCtx("MEMBER")); return createApiKey("k", ["read:boards"]); }],
     ["getApiKeys (MEMBER)",     () => { mockGetTenantContext.mockResolvedValue(makeCtx("MEMBER")); return getApiKeys();                        }],
     ["createAutomation (GUEST)",() => { mockGetTenantContext.mockResolvedValue(makeCtx("GUEST")); return createAutomation(VALID_AUTOMATION);   }],
-  ])("%s error should not contain 'Prisma' or 'database'", async (_, action) => {
+  ] as const)("%s error should not contain 'Prisma' or 'database'", async (_, action) => {
     const { error } = await action();
     expect(error).not.toMatch(/prisma|database/i);
   });

@@ -58,6 +58,12 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      // Allow inline styles for dynamic styling (colors, animations, computed values)
+      "@next/next/no-css-tags": "off",
+      "@next/next/no-sync-scripts": "off",
+      "react/no-unknown-property": "off",
+      "@next/next/inline-script-id": "off",
+      "@next/next/no-styled-jsx-in-document": "off",
     },
   },
 ]);

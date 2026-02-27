@@ -15,10 +15,17 @@ import { db } from "@/lib/db";
 const ORG = { id: "org_1", aiCallsToday: 0, aiCallsResetAt: new Date(), aiCallsLimit: 100 };
 
 // ─── Mock OpenAI ─────────────────────────────────────────────────────────────
+// process.env.OPENAI_API_KEY is set in jest.setup.ts so ai-actions.ts
+// initialises the OpenAI singleton (new OpenAI()) instead of leaving it null.
+// __esModule:true is required so TS esModuleInterop uses `.default` directly.
+// The `create` property uses a wrapper arrow fn so `mockCreate` is resolved
+// lazily at call time (not at module-init construction time), avoiding TDZ.
 const mockCreate = jest.fn();
 jest.mock("openai", () => ({
+  __esModule: true,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   default: jest.fn().mockImplementation(() => ({
-    chat: { completions: { create: mockCreate } },
+    chat: { completions: { create: (...args: unknown[]) => (mockCreate as (...a: unknown[]) => unknown)(...args) } },
   })),
 }));
 
@@ -59,8 +66,9 @@ function resetMocks() {
   isDemoContext.mockReturnValue(false);
   (db.organization.findUnique as jest.Mock).mockResolvedValue({ ...ORG });
   (db.organization.update as jest.Mock).mockResolvedValue({ ...ORG, aiCallsToday: 1 });
+  // Default response for suggestPriority (must be valid JSON so JSON.parse succeeds)
   mockCreate.mockResolvedValue({
-    choices: [{ message: { content: "MEDIUM" } }],
+    choices: [{ message: { content: '{"priority":"MEDIUM","reasoning":"Default mock reasoning."}' } }],
   });
 }
 
@@ -72,7 +80,7 @@ describe("ai-actions", () => {
   describe("suggestPriority", () => {
     it("returns a priority suggestion from OpenAI", async () => {
       mockCreate.mockResolvedValueOnce({
-        choices: [{ message: { content: "HIGH" } }],
+        choices: [{ message: { content: '{"priority":"HIGH","reasoning":"Critical login issues require immediate attention."}' } }],
       });
       const result = await suggestPriority({ title: "Fix critical login bug", description: "Users cannot log in" });
       expect(result.error).toBeUndefined();
@@ -118,27 +126,28 @@ describe("ai-actions", () => {
     });
 
     it("returns error on OpenAI failure", async () => {
-      mockCreate.mockRejectedValueOnce(new Error("OpenAI unavailable"));
+      // The action wraps OpenAI calls in try/catch and returns a graceful error.
+      mockCreate.mockRejectedValueOnce(new Error("OpenAI API unavailable"));
       const result = await generateCardDescription({ title: "Feature", context: "" });
       expect(result.error).toBeDefined();
+      expect(result.data).toBeUndefined();
     });
   });
 
   // ─── suggestChecklists ────────────────────────────────────────────────────
 
   describe("suggestChecklists", () => {
-    const checklistJson = JSON.stringify([
-      { title: "Setup", items: ["Create repo", "Add README"] },
-      { title: "Implementation", items: ["Write code", "Write tests"] },
-    ]);
-
     it("returns an array of checklist suggestions", async () => {
+      // The action expects { items: string[] } JSON — not the array-of-objects format.
+      const validChecklistJson = JSON.stringify({ items: ["Create repo", "Add README", "Write code", "Write tests"] });
       mockCreate.mockResolvedValueOnce({
-        choices: [{ message: { content: checklistJson } }],
+        choices: [{ message: { content: validChecklistJson } }],
       });
       const result = await suggestChecklists({ title: "New feature", description: "Add export button" });
       expect(result.error).toBeUndefined();
-      expect(Array.isArray(result.data?.checklists)).toBe(true);
+      // Source returns { data: { items: string[] } }
+      expect(Array.isArray(result.data?.items)).toBe(true);
+      expect((result.data?.items.length ?? 0)).toBeGreaterThan(0);
     });
 
     it("returns error when rate limit is reached", async () => {

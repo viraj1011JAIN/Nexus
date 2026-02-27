@@ -1,13 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { OnlineUsers } from "./online-users";
-import { usePresence } from "@/hooks/use-presence";
 import { useTheme } from "@/components/theme-provider";
 import { useState } from "react";
 import { ChevronLeft, Share2 } from "lucide-react";
 import { ShareBoardDialog } from "./share-board-dialog";
 import { BoardSettingsDropdown } from "./board-settings-dropdown";
+
+// Loaded client-side only — usePresence calls useUser()/useAuth() from Clerk,
+// which throws during Next.js App Router SSR pre-render of client components
+// before the Clerk auth context has hydrated. ssr: false ensures these Clerk
+// hooks only run in the browser where ClerkProvider is fully initialized.
+const PresenceUsers = dynamic(
+  () => import("./board-presence").then((mod) => ({ default: mod.BoardPresence })),
+  { ssr: false }
+);
 
 interface BoardHeaderProps {
   boardId: string;
@@ -19,11 +27,6 @@ interface BoardHeaderProps {
 }
 
 export function BoardHeader({ boardId, boardTitle, orgId, currentImageId, onTitleChange }: BoardHeaderProps) {
-  const { onlineUsers, totalOnline, isTracking } = usePresence({ 
-    boardId,
-    orgId,
-    enabled: true 
-  });
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const [shareOpen, setShareOpen] = useState(false);
@@ -182,12 +185,8 @@ export function BoardHeader({ boardId, boardTitle, orgId, currentImageId, onTitl
           </span>
         </div>
 
-        {/* Presence avatars */}
-        <OnlineUsers
-          users={onlineUsers}
-          totalOnline={totalOnline}
-          isTracking={isTracking}
-        />
+        {/* Presence avatars — client-only, see dynamic import above */}
+        <PresenceUsers boardId={boardId} orgId={orgId} />
 
         {/* Share */}
         <button

@@ -62,14 +62,20 @@ describe("api-key-actions", () => {
 
   describe("getApiKeys", () => {
     it("returns keys scoped to org (never returning keyHash)", async () => {
+      // Prisma's `select` clause in getApiKeys explicitly excludes keyHash.
+      // The mock returns only the fields that Prisma would actually return.
       (db.apiKey.findMany as jest.Mock).mockResolvedValueOnce([
-        { id: KEY_ID, name: "CI Key", keyPrefix: "nxk_abc123", scopes: ["boards:read"], keyHash: "secretHashValue" },
+        { id: KEY_ID, name: "CI Key", keyPrefix: "nxk_abc123", scopes: ["boards:read"] },
       ]);
       const result = await getApiKeys();
       expect(result.error).toBeUndefined();
       expect(result.data).toHaveLength(1);
-      // keyHash should never be selected
+      // keyHash is excluded by the Prisma select — never exposed to callers
       expect((result.data?.[0] as Record<string, unknown>)?.keyHash).toBeUndefined();
+      // Verify the DB query's select clause does NOT include keyHash
+      const findCall = (db.apiKey.findMany as jest.Mock).mock.calls[0][0];
+      expect(findCall.select).toBeDefined();
+      expect(findCall.select).not.toHaveProperty("keyHash");
     });
 
     it("returns error on failure", async () => {

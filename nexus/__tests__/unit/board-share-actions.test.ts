@@ -108,10 +108,10 @@ describe("board-share-actions", () => {
       (db.board.findFirst as jest.Mock).mockResolvedValueOnce({ id: BOARD_ID, orgId: "org_1" });
       (db.boardShare.updateMany as jest.Mock).mockResolvedValueOnce({ count: 1 });
       (db.boardShare.create as jest.Mock).mockResolvedValueOnce({
-        id: SHARE_ID, boardId: BOARD_ID, token: "newtoken", isActive: true, requiresPassword: false,
+        id: SHARE_ID, boardId: BOARD_ID, token: "newtoken", isActive: true,
       });
 
-      const result = await createBoardShareLink({ boardId: BOARD_ID, requiresPassword: false });
+      const result = await createBoardShareLink({ boardId: BOARD_ID });
       expect(result.error).toBeUndefined();
       expect(db.boardShare.updateMany).toHaveBeenCalled();
     });
@@ -123,7 +123,7 @@ describe("board-share-actions", () => {
         Promise.resolve({ id: SHARE_ID, ...data })
       );
 
-      const result = await createBoardShareLink({ boardId: BOARD_ID, requiresPassword: false });
+      const result = await createBoardShareLink({ boardId: BOARD_ID });
       expect(result.error).toBeUndefined();
       expect(result.data?.token).toBeDefined();
       expect(result.data?.boardId).toBe(BOARD_ID);
@@ -135,7 +135,7 @@ describe("board-share-actions", () => {
     it("returns error in demo mode", async () => {
       const { isDemoContext } = jest.requireMock("@/lib/tenant-context") as { isDemoContext: jest.Mock };
       isDemoContext.mockReturnValue(true);
-      const result = await createBoardShareLink({ boardId: BOARD_ID, requiresPassword: false });
+      const result = await createBoardShareLink({ boardId: BOARD_ID });
       expect(result.error).toBeDefined();
     });
   });
@@ -145,7 +145,7 @@ describe("board-share-actions", () => {
   describe("checkShareRequiresPassword", () => {
     it("returns requiresPassword false for passwordless share", async () => {
       (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce({
-        id: SHARE_ID, token: TOKEN, isActive: true, requiresPassword: false,
+        id: SHARE_ID, token: TOKEN, isActive: true,
       });
       const result = await checkShareRequiresPassword(TOKEN);
       expect(result.error).toBeUndefined();
@@ -153,10 +153,14 @@ describe("board-share-actions", () => {
     });
 
     it("returns requiresPassword true for protected share", async () => {
+      // The action checks `!!share.passwordHash` (not a `requiresPassword` field).
+      // A non-null/non-empty passwordHash → requiresPassword: true.
       (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce({
-        id: SHARE_ID, token: TOKEN, isActive: true, requiresPassword: true,
+        id: SHARE_ID, token: TOKEN, isActive: true,
+        passwordHash: "scrypt$fakesalt$fakehashvalue",
       });
       const result = await checkShareRequiresPassword(TOKEN);
+      expect(result.error).toBeUndefined();
       expect(result.data?.requiresPassword).toBe(true);
     });
 
@@ -229,21 +233,36 @@ describe("board-share-actions", () => {
   // ─── revokeBoardShareLink ────────────────────────────────────────────────
 
   describe("revokeBoardShareLink", () => {
-    it("sets isActive=false on the share", async () => {
-      (db.board.findFirst as jest.Mock).mockResolvedValueOnce({ id: BOARD_ID, orgId: "org_1" });
-      (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce({ id: SHARE_ID, boardId: BOARD_ID });
-      (db.boardShare.update as jest.Mock).mockResolvedValueOnce({ id: SHARE_ID, isActive: false });
+    // The source calls db.boardShare.updateMany (not findFirst+update).
+    // It does NOT validate whether any rows existed before revoking — it just
+    // calls updateMany and always returns { data: true } on success.
+
+    it("calls boardShare.updateMany with isActive=false for the board", async () => {
+      (db.boardShare.updateMany as jest.Mock).mockResolvedValueOnce({ count: 1 });
 
       const result = await revokeBoardShareLink(BOARD_ID);
       expect(result.error).toBeUndefined();
-
-      const updateCall = (db.boardShare.update as jest.Mock).mock.calls[0][0];
-      expect(updateCall.data.isActive).toBe(false);
+      expect(result.data).toBe(true);
+      expect(db.boardShare.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ boardId: BOARD_ID, isActive: true }),
+          data: { isActive: false },
+        })
+      );
     });
 
-    it("returns error when no share exists to revoke", async () => {
-      (db.board.findFirst as jest.Mock).mockResolvedValueOnce({ id: BOARD_ID, orgId: "org_1" });
-      (db.boardShare.findFirst as jest.Mock).mockResolvedValueOnce(null);
+    it("returns { data: true } even when no active shares exist (count: 0)", async () => {
+      // updateMany with 0 matching rows is not an error — the action always succeeds.
+      (db.boardShare.updateMany as jest.Mock).mockResolvedValueOnce({ count: 0 });
+
+      const result = await revokeBoardShareLink(BOARD_ID);
+      expect(result.data).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it("returns error when DB throws", async () => {
+      (db.boardShare.updateMany as jest.Mock).mockRejectedValueOnce(new Error("DB connection lost"));
+
       const result = await revokeBoardShareLink(BOARD_ID);
       expect(result.error).toBeDefined();
     });

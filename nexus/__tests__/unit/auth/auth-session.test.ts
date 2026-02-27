@@ -178,7 +178,7 @@ import middleware from "@/proxy";
 // ─── Typed mock helpers ────────────────────────────────────────────────────
 
 const mockGetTenantContext    = getTenantContext as jest.Mock;
-const mockAuth                = auth             as jest.Mock;
+const mockAuth                = auth             as unknown as jest.Mock;
 const mockClerkClient         = clerkClient      as jest.Mock;
 const mockNextResponseNext    = NextResponse.next    as jest.Mock;
 const mockNextResponseRedirect = NextResponse.redirect as jest.Mock;
