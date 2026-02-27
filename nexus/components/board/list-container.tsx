@@ -213,7 +213,6 @@ export const ListContainer = ({
         return newLists;
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onDragEnd = useCallback((event: DragEndEvent) => {
@@ -305,7 +304,6 @@ export const ListContainer = ({
             updateCardOrder(updates, boardId);
          }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
 
   const { theme } = useTheme();

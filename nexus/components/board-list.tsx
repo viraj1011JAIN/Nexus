@@ -711,7 +711,7 @@ export function BoardList() {
 
             {/* Per-board progress bars */}
             <div className="space-y-2.5 mb-4">
-              {boards.slice(0, 5).map((board, i) => {
+              {boards.slice(0, 5).map((board, _i) => {
                 const pct = Math.max(4, Math.round((board.cardCount / maxBoardCards) * 100));
                 const g   = getBoardGradient(board);
                 return (
