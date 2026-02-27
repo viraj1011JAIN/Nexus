@@ -314,7 +314,7 @@ async function deliverSingle(
       const sig = sign(body, webhook.secret);
 
       const controller = new AbortController();
-      const abortTimeout = setTimeout(() => controller.abort(), 10_000); // 10 s timeout
+      const abortTimeout = setTimeout(() => controller.abort(new Error("Request timeout")), 10_000); // 10 s timeout
 
       try {
         await new Promise<void>((resolve, reject) => {

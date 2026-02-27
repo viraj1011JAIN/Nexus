@@ -66,7 +66,7 @@ export function AttachmentsTab({ cardId, boardId, onCountChange }: AttachmentsTa
     load();
     return () => {
       cancelled = true;
-      controller.abort();
+      controller.abort(new DOMException("Component unmounted", "AbortError"));
     };
   }, [cardId, retryCount]);
 
