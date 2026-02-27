@@ -105,8 +105,10 @@ const nextConfig: NextConfig = {
   // React Compiler — disabled (top-level in Next.js 16+, was experimental in 15)
   reactCompiler: false,
 
-  // Keep Prisma and native deps on the server side — prevents bundling issues
-  serverExternalPackages: ['@prisma/client', 'prisma'],
+  // Keep Prisma, Clerk server SDK, OpenAI and native deps on the server side —
+  // prevents Turbopack from inlining Node.js-only code into client bundles and
+  // eliminates HMR "module factory is not available" errors for server actions.
+  serverExternalPackages: ['@prisma/client', 'prisma', 'openai', '@clerk/nextjs'],
 
   // Disable browser source maps in production (reduces bundle exposure)
   productionBrowserSourceMaps: false,

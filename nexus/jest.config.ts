@@ -7,6 +7,9 @@ const config: Config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // server-only throws in non-Next.js environments (like Jest). Mock it as a
+    // no-op since Jest runs in Node.js where all modules are "server" context.
+    '^server-only$': '<rootDir>/__mocks__/server-only.ts',
   },
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
