@@ -260,98 +260,6 @@ export function BoardList() {
               </div>
             ))}
           </div>
-
-          {/* ── Project Health Panel ────────────────────────────────────── */}
-          <div
-            className="bg-card border border-border rounded-2xl p-5 animate-fade-up"
-            style={{ animationDelay: "0.22s", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display font-bold text-[15px] text-foreground tracking-tight">
-                    Workspace Health
-                  </h2>
-                  <div className="flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-                    LIVE
-                  </div>
-                </div>
-                <p className="text-[12px] text-muted-foreground mt-0.5">
-                  Real-time progress tracking across {boards.length} board{boards.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <div
-                  className="font-display font-bold text-[32px] leading-none tabular-nums"
-                  style={{
-                    background: healthGradient,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  {healthScore}
-                </div>
-                <div className="text-[10px] text-muted-foreground font-medium mt-0.5">
-                  {healthScore >= 70 ? "Excellent" : healthScore >= 40 ? "Good" : "Needs Work"}
-                </div>
-              </div>
-            </div>
-
-            {/* Per-board progress bars */}
-            {boards.length > 0 ? (
-              <div className="space-y-2.5 mb-4">
-                {boards.slice(0, 5).map((board, i) => {
-                  const pct = Math.max(4, Math.round((board.cardCount / maxBoardCards) * 100));
-                  const g   = getBoardGradient(board) !== "none"
-                    ? getBoardGradient(board)
-                    : BOARD_GRADIENTS[i % BOARD_GRADIENTS.length];
-                  return (
-                    <div key={board.id} className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g }} />
-                      <span className="text-[12px] font-medium text-foreground w-28 truncate shrink-0">{board.title}</span>
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${pct}%`, background: g }}
-                        />
-                      </div>
-                      <span className="text-[11px] text-muted-foreground tabular-nums w-14 text-right shrink-0">
-                        {board.cardCount} card{board.cardCount !== 1 ? "s" : ""}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground tabular-nums w-12 text-right shrink-0">
-                        {board.listCount} list{board.listCount !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-[12.5px] text-muted-foreground mb-4">Create boards to start tracking progress.</p>
-            )}
-
-            {/* Progress explanation */}
-            <div className="bg-muted/60 rounded-xl p-3 mb-4">
-              <p className="text-[11.5px] text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground">How progress is tracked:</span>{" "}
-                Each bar shows card volume relative to the busiest board. Move cards through lists
-                (e.g. &#34;To Do → In Progress → Done&#34;) in the board view to reflect real work status.
-                The health score weighs recency (40%), card density (40%), and volume (20%).
-              </p>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-border">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />
-                <span className="text-[11px] text-muted-foreground">Syncing via Supabase Realtime</span>
-              </div>
-              <span className="text-[11px] text-muted-foreground">
-                {recentBoards.length} board{recentBoards.length !== 1 ? "s" : ""} updated this week
-              </span>
-            </div>
-          </div>
           </>
         )}
 
@@ -769,6 +677,96 @@ export function BoardList() {
                 <p className="text-[11px] text-muted-foreground/60 mt-0.5">Start a fresh workspace</p>
               </div>
             </button>
+          </div>
+        )}
+
+        {/* ── Project Health Panel ────────────────────────────────────── */}
+        {boards.length > 0 && (
+          <div
+            className="bg-card border border-border rounded-2xl p-5 animate-fade-up mt-6"
+            style={{ animationDelay: "0.22s", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display font-bold text-[15px] text-foreground tracking-tight">
+                    Workspace Health
+                  </h2>
+                  <div className="flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
+                    LIVE
+                  </div>
+                </div>
+                <p className="text-[12px] text-muted-foreground mt-0.5">
+                  Real-time progress tracking across {boards.length} board{boards.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <div
+                  className="font-display font-bold text-[32px] leading-none tabular-nums"
+                  style={{
+                    background: healthGradient,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  {healthScore}
+                </div>
+                <div className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                  {healthScore >= 70 ? "Excellent" : healthScore >= 40 ? "Good" : "Needs Work"}
+                </div>
+              </div>
+            </div>
+
+            {/* Per-board progress bars */}
+            <div className="space-y-2.5 mb-4">
+              {boards.slice(0, 5).map((board, i) => {
+                const pct = Math.max(4, Math.round((board.cardCount / maxBoardCards) * 100));
+                const g   = getBoardGradient(board) !== "none"
+                  ? getBoardGradient(board)
+                  : BOARD_GRADIENTS[i % BOARD_GRADIENTS.length];
+                return (
+                  <div key={board.id} className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g }} />
+                    <span className="text-[12px] font-medium text-foreground w-28 truncate shrink-0">{board.title}</span>
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, background: g }}
+                      />
+                    </div>
+                    <span className="text-[11px] text-muted-foreground tabular-nums w-14 text-right shrink-0">
+                      {board.cardCount} card{board.cardCount !== 1 ? "s" : ""}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground tabular-nums w-12 text-right shrink-0">
+                      {board.listCount} list{board.listCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Progress explanation */}
+            <div className="bg-muted/60 rounded-xl p-3 mb-4">
+              <p className="text-[11.5px] text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">How progress is tracked:</span>{" "}
+                Each bar shows card volume relative to the busiest board. Move cards through lists
+                (e.g. &#34;To Do → In Progress → Done&#34;) in the board view to reflect real work status.
+                The health score weighs recency (40%), card density (40%), and volume (20%).
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-border">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />
+                <span className="text-[11px] text-muted-foreground">Syncing via Supabase Realtime</span>
+              </div>
+              <span className="text-[11px] text-muted-foreground">
+                {recentBoards.length} board{recentBoards.length !== 1 ? "s" : ""} updated this week
+              </span>
+            </div>
           </div>
         )}
       </div>
