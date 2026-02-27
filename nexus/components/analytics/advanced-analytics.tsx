@@ -461,7 +461,7 @@ function CycleTimeTab({ d }: { d: AdvancedBoardAnalytics }) {
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-              Move cards to your "Done" list to start collecting cycle time data.
+              Move cards to your &ldquo;Done&rdquo; list to start collecting cycle time data.
             </div>
           )}
         </CardContent>
@@ -1017,6 +1017,7 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
     setRefreshing(false);
   }, [boardId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   if (loading) {

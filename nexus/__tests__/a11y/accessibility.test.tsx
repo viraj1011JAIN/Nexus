@@ -210,6 +210,7 @@ describe("Landmark regions", () => {
       <div>
         <header>
           <nav aria-label="Primary navigation">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/">Home</a>
           </nav>
         </header>
@@ -226,6 +227,7 @@ describe("Landmark regions", () => {
     await checkA11y(
       <div>
         <nav aria-label="Primary">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/">Home</a>
         </nav>
         <main>

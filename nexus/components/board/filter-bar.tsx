@@ -239,6 +239,7 @@ function SavedViewsPanel({
     setLoading(false);
   }, [boardId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
@@ -364,6 +365,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
 
   useEffect(() => {
     const parsed = parseFilters(searchParams);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFilters(parsed);
     onChange(parsed);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

@@ -32,8 +32,8 @@ export default function TermsPage() {
           <section aria-labelledby="terms-acceptance">
             <h2 id="terms-acceptance" className="text-2xl font-semibold">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using NEXUS ("Service"), you agree to be bound by these Terms of
-              Service ("Terms"). If you are using the Service on behalf of an organisation, you
+              By accessing or using NEXUS (&ldquo;Service&rdquo;), you agree to be bound by these Terms of
+              Service (&ldquo;Terms&rdquo;). If you are using the Service on behalf of an organisation, you
               represent that you have authority to bind that organisation. If you do not agree to
               these Terms, do not use the Service.
             </p>

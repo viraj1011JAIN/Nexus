@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import {
   Globe, Eye, Lock, Calendar, Users, Flag, AlertTriangle,
@@ -222,10 +223,10 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
               Read-only view — sign up to collaborate
             </span>
             <Button size="sm" variant="outline" className="h-7 text-xs gap-1" asChild>
-              <a href="/">
+              <Link href="/">
                 <ExternalLink className="h-3 w-3" />
                 Open in Nexus
-              </a>
+              </Link>
             </Button>
           </div>
         </div>
@@ -274,7 +275,7 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
       <div className="border-t border-slate-200 dark:border-slate-700 py-6 text-center text-xs text-muted-foreground">
         <p>
           This board is shared publicly via{" "}
-          <a href="/" className="text-indigo-500 hover:underline font-medium">Nexus</a>
+          <Link href="/" className="text-indigo-500 hover:underline font-medium">Nexus</Link>
           {" "}· Read-only view
         </p>
       </div>

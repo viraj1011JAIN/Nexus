@@ -104,7 +104,7 @@ function makePortalReq(): NextRequest {
 
 function resetMocks() {
   const { auth }              = jest.requireMock("@clerk/nextjs/server")      as { auth: jest.Mock };
-  const { isStripeConfigured, stripe } = jest.requireMock("@/lib/stripe")    as { isStripeConfigured: jest.Mock; stripe: any };
+  const { isStripeConfigured, stripe } = jest.requireMock("@/lib/stripe")    as { isStripeConfigured: jest.Mock; stripe: { customers: { create: jest.Mock }; checkout: { sessions: { create: jest.Mock } }; billingPortal: { sessions: { create: jest.Mock } } } };
   const { db }                = jest.requireMock("@/lib/db")                  as { db: { organization: { findUnique: jest.Mock; update: jest.Mock } } };
 
   auth.mockResolvedValue({ orgId: ORG_ID });

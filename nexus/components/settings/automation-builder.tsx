@@ -490,6 +490,7 @@ function LogsDialog({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     getAutomationLogs(automationId).then((result) => {
       if (result.data) setLogs(result.data as typeof logs);
@@ -555,7 +556,7 @@ export function AutomationBuilder({ boardId }: AutomationBuilderProps) {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [boardId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [boardId]); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
 
   const handleToggle = async (auto: AutomationRecord) => {
     setAutomations((prev) => prev.map((a) => a.id === auto.id ? { ...a, isEnabled: !a.isEnabled } : a));

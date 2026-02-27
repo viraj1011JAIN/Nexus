@@ -68,10 +68,16 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 
     // Reset selection when item list changes (new keystroke)
     useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIndex(0);
     }, [items]);
 
     // ── Imperative keyboard handler ────────────────────────────────────────
+
+    function selectItem(index: number) {
+      const item = items[index];
+      if (item) command(item);
+    }
 
     useImperativeHandle(ref, () => ({
       onKeyDown({ event }: SuggestionKeyDownProps) {
@@ -90,11 +96,6 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
         return false;
       },
     }));
-
-    function selectItem(index: number) {
-      const item = items[index];
-      if (item) command(item);
-    }
 
     // ── Render ─────────────────────────────────────────────────────────────
 

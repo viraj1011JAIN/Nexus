@@ -144,7 +144,7 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5 text-indigo-500" />
-            Share "{boardTitle}"
+            Share &ldquo;{boardTitle}&rdquo;
           </DialogTitle>
         </DialogHeader>
 

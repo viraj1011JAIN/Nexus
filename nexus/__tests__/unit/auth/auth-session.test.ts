@@ -760,7 +760,7 @@ describe("Section 1.4 — Demo Mode", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Restore rate limiting to allow for all action tests in this section
-    (require("@/lib/action-protection").checkRateLimit as jest.Mock).mockReturnValue({
+    (jest.requireMock("@/lib/action-protection") as { checkRateLimit: jest.Mock }).checkRateLimit.mockReturnValue({
       allowed: true,
       remaining: 9,
       resetInMs: 60_000,

@@ -32,7 +32,7 @@ export default function PrivacyPage() {
           <section aria-labelledby="section-overview">
             <h2 id="section-overview" className="text-2xl font-semibold">1. Overview</h2>
             <p>
-              NEXUS ("we", "our", or "us") is committed to protecting your personal data in
+              NEXUS (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;) is committed to protecting your personal data in
               accordance with applicable privacy laws, including the General Data Protection
               Regulation (GDPR) and the California Consumer Privacy Act (CCPA). This policy
               explains what data we collect, why we collect it, and your rights regarding it.
@@ -99,7 +99,7 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-6 space-y-1">
               <li><strong>Access</strong> the personal data we hold about you.</li>
               <li><strong>Rectification</strong> — request correction of inaccurate data.</li>
-              <li><strong>Erasure</strong> ("right to be forgotten") — request deletion of your data.</li>
+              <li><strong>Erasure</strong> (&ldquo;right to be forgotten&rdquo;) — request deletion of your data.</li>
               <li><strong>Portability</strong> — export your data in JSON or CSV format via the NEXUS export feature.</li>
               <li><strong>Restriction</strong> — restrict how we process your data in certain circumstances.</li>
               <li><strong>Objection</strong> — object to processing based on legitimate interests.</li>

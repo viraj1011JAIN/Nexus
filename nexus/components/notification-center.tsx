@@ -178,6 +178,7 @@ export function NotificationCenter() {
 
   // Poll every 30 seconds for new notifications
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUnreadCount();
     pollRef.current = setInterval(loadUnreadCount, 30_000);
     return () => {
@@ -187,6 +188,7 @@ export function NotificationCenter() {
 
   // Full load when panel opens
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) loadNotifications();
   }, [open, loadNotifications]);
 
