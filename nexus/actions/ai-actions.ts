@@ -14,19 +14,21 @@
 
 import { auth }  from "@clerk/nextjs/server";
 import { db }    from "@/lib/db";
-import OpenAI    from "openai";
+import type OpenAI from "openai"; // type-only — NOT included in JS output; keeps TS types without a runtime import
 import { z }     from "zod";
 
-// Lazily initialised — nothing is instantiated at module-evaluation time.
-// This is required because ai-actions.ts is imported by "use client" components
-// (e.g. checklists.tsx) for their Server Action references. Turbopack evaluates
-// the module to build the proxy, and any module-level side effects that use
-// server-only packages (new OpenAI(), console.warn, etc.) crash that evaluation
-// and break HMR with "module factory is not available".
-let _openai: OpenAI | null | undefined;   // undefined = not yet initialised
+// `openai` is imported dynamically (await import) rather than statically.
+// Reason: ai-actions.ts is imported by "use client" components (e.g. checklists.tsx)
+// so Turbopack must trace its static import graph when building the client-side
+// Server Action proxy. The `openai` SDK contains Node.js-specific top-level code
+// that breaks Turbopack's client HMR evaluation, causing:
+//   "module factory is not available. It might have been deleted in an HMR update."
+// A dynamic import is invisible to the static graph — it is only resolved at
+// runtime on the server, where Node.js is available.
+let _openai: OpenAI | null | undefined; // undefined = not yet initialised
 
-/** Returns the singleton OpenAI client, initialising it on first call. */
-function getOpenAI(): OpenAI {
+/** Returns the singleton OpenAI client, loading the SDK on the first call. */
+async function getOpenAI(): Promise<OpenAI> {
   if (_openai === undefined) {
     const rawKey  = process.env.OPENAI_API_KEY ?? "";
     const keyValid = Boolean(rawKey) && !rawKey.includes("REPLACE") && rawKey.length >= 20;
@@ -37,7 +39,8 @@ function getOpenAI(): OpenAI {
       );
       _openai = null;
     } else {
-      _openai = new OpenAI({ apiKey: rawKey });
+      const { default: OpenAIClass } = await import("openai");
+      _openai = new OpenAIClass({ apiKey: rawKey });
     }
   }
   if (!_openai) {
@@ -120,7 +123,7 @@ ${parsed.data.description ? `Description: ${parsed.data.description}` : ""}
 Respond with ONLY valid JSON: { "priority": "URGENT"|"HIGH"|"MEDIUM"|"LOW", "reasoning": "<1-2 sentences>" }`;
 
   try {
-    const completion = await getOpenAI().chat.completions.create({
+    const completion = await (await getOpenAI()).chat.completions.create({
       model: AI_MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
@@ -173,7 +176,7 @@ Write 2-4 sentences describing what needs to be done, acceptance criteria, and a
 Keep the tone professional and action-oriented. Do NOT use markdown headers — plain prose only.`;
 
   try {
-    const completion = await getOpenAI().chat.completions.create({
+    const completion = await (await getOpenAI()).chat.completions.create({
       model: AI_MODEL,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 300,
@@ -218,7 +221,7 @@ Respond with ONLY valid JSON: { "items": ["<checklist item>", ...] }
 Provide 4-8 actionable items. Each item should be a short imperative sentence (e.g., "Write unit tests for the auth module").`;
 
   try {
-    const completion = await getOpenAI().chat.completions.create({
+    const completion = await (await getOpenAI()).chat.completions.create({
       model: AI_MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
