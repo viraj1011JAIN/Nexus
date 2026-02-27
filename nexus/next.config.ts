@@ -100,9 +100,10 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-tooltip',
       'date-fns',
     ],
-    // Enable React compiler optimizations in Next.js 15+
-    reactCompiler: false,
   },
+
+  // React Compiler — disabled (top-level in Next.js 16+, was experimental in 15)
+  reactCompiler: false,
 
   // Keep Prisma and native deps on the server side — prevents bundling issues
   serverExternalPackages: ['@prisma/client', 'prisma'],
