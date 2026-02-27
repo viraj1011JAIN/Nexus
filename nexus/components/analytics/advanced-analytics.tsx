@@ -1019,15 +1019,27 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
   }, [boardId]);
 
   // Initial data load and reload on boardId change: server action called inside the
-  // effect; all setState only in .then() (async, never synchronous in effect body).
+  // effect; all setState only in .then()/.catch() (async, never synchronous in effect body).
   // The `load` callback is kept for manual refresh triggered by the user.
+  // An `active` flag guards against stale responses from superseded requests.
   useEffect(() => {
-    getAdvancedBoardAnalytics(boardId).then((result) => {
-      if (result.data) setData(result.data);
-      else setError(result.error ?? "Failed to load analytics");
-      setLoading(false);
-      setRefreshing(false);
-    });
+    let active = true;
+    getAdvancedBoardAnalytics(boardId)
+      .then((result) => {
+        if (!active) return;
+        if (result.data) setData(result.data);
+        else setError(result.error ?? "Failed to load analytics");
+        setLoading(false);
+        setRefreshing(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("[ANALYTICS_LOAD]", err);
+        setError("Failed to load analytics");
+        setLoading(false);
+        setRefreshing(false);
+      });
+    return () => { active = false; };
   }, [boardId]);
 
   if (loading) {

@@ -232,13 +232,23 @@ function SavedViewsPanel({
   const [views, setViews] = useState<SavedView[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Loading state starts true; reset only after the first successful fetch.
-  // Server action is called inside the effect; setState only in .then() callbacks.
+  // Loading state starts true; reset only after the fetch resolves or rejects.
+  // Server action is called inside the effect; setState only in .then()/.catch() callbacks.
+  // An `active` flag guards against stale responses when boardId changes mid-flight.
   useEffect(() => {
-    getSavedViews(boardId).then((result) => {
-      if (result.data) setViews(result.data as unknown as SavedView[]);
-      setLoading(false);
-    });
+    let active = true;
+    getSavedViews(boardId)
+      .then((result) => {
+        if (!active) return;
+        if (result.data) setViews(result.data as unknown as SavedView[]);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("[SAVED_VIEWS]", err);
+        setLoading(false);
+      });
+    return () => { active = false; };
   }, [boardId]);
 
   const handleDelete = async (id: string) => {

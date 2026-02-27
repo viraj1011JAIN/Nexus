@@ -556,13 +556,23 @@ export function AutomationBuilder({ boardId }: AutomationBuilderProps) {
   };
 
   // Initial load and reload on boardId change: server action called inside the
-  // effect; setState only inside .then() (async, never synchronous in the effect body).
+  // effect; setState only inside .then()/.catch() (async, never synchronous in the effect body).
   // The `load` function is kept for programmatic refresh (e.g. after creating an automation).
+  // An `active` flag guards against stale responses when boardId changes mid-flight.
   useEffect(() => {
-    getAutomations(boardId).then((result) => {
-      if (result.data) setAutomations(result.data as unknown as AutomationRecord[]);
-      setLoading(false);
-    });
+    let active = true;
+    getAutomations(boardId)
+      .then((result) => {
+        if (!active) return;
+        if (result.data) setAutomations(result.data as unknown as AutomationRecord[]);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("[AUTOMATIONS_LOAD]", err);
+        setLoading(false);
+      });
+    return () => { active = false; };
   }, [boardId]);
 
   const handleToggle = async (auto: AutomationRecord) => {

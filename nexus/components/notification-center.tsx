@@ -167,9 +167,13 @@ export function NotificationCenter() {
   // inside .then() callbacks (async, not synchronous in the effect).
   useEffect(() => {
     const fetchCount = () => {
-      getUnreadNotificationCount().then((result) => {
-        if (typeof result.data === "number") setUnreadCount(result.data);
-      });
+      getUnreadNotificationCount()
+        .then((result) => {
+          if (typeof result.data === "number") setUnreadCount(result.data);
+        })
+        .catch((err) => {
+          console.error("[UNREAD_COUNT]", err);
+        });
     };
     fetchCount();
     pollRef.current = setInterval(fetchCount, 30_000);
@@ -179,16 +183,26 @@ export function NotificationCenter() {
   }, []);
 
   // Full load when panel opens — server action called inside the effect,
-  // setState only inside the .then() callback (async, never synchronous in the effect body).
+  // setState only inside .then()/.catch() callbacks (async, never synchronous in the effect body).
+  // An `active` flag prevents stale responses from overwriting state after the panel closes/reopens.
   useEffect(() => {
     if (!open) return;
-    getNotifications().then((result) => {
-      setLoading(false);
-      if (result.data) {
-        setNotifications(result.data as NotificationItem[]);
-        setUnreadCount(result.data.filter((n) => !n.isRead).length);
-      }
-    });
+    let active = true;
+    getNotifications()
+      .then((result) => {
+        if (!active) return;
+        setLoading(false);
+        if (result.data) {
+          setNotifications(result.data as NotificationItem[]);
+          setUnreadCount(result.data.filter((n) => !n.isRead).length);
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("[NOTIFICATIONS]", err);
+        setLoading(false);
+      });
+    return () => { active = false; };
   }, [open]);
 
   const handleMarkRead = async (id: string) => {
