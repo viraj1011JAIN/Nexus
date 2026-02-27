@@ -19,12 +19,22 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import webpush from "web-push";
 
-// Configure VAPID once at module load
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT ?? "mailto:admin@nexus.app",
-  process.env.VAPID_PUBLIC_KEY  ?? "",
-  process.env.VAPID_PRIVATE_KEY ?? "",
-);
+// Lazy VAPID initializer — deferred to request time so that a missing/empty
+// key during `next build` (static page-data collection) does not crash the
+// process.  Throws a descriptive error instead of propagating the raw
+// web-push crypto error when the env vars are absent at runtime.
+function initVapid() {
+  const publicKey  = process.env.VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const subject    = process.env.VAPID_SUBJECT ?? "mailto:admin@nexus.app";
+  if (!publicKey || !privateKey) {
+    throw new Error(
+      "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set. " +
+      "Generate them with: npx web-push generate-vapid-keys"
+    );
+  }
+  webpush.setVapidDetails(subject, publicKey, privateKey);
+}
 
 const SendSchema = z.object({
   userId: z.string().optional(),   // send to one specific user
@@ -35,6 +45,10 @@ const SendSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  try { initVapid(); } catch (e: unknown) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 503 });
+  }
+
   const { userId: callerId, orgId } = await auth();
   if (!callerId || !orgId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

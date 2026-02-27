@@ -67,32 +67,10 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     });
   }
 
-  if (values.priority !== undefined) {
-    after(async () => {
-      await emitCardEvent(
-        { type: "PRIORITY_CHANGED", orgId: ctx.orgId, boardId, cardId: card!.id, context: { priority: card!.priority } },
-        cardMeta
-      );
-    });
-  }
-
-  if ("dueDate" in values && values.dueDate !== undefined) {
-    after(async () => {
-      await emitCardEvent(
-        { type: "DUE_DATE_SET", orgId: ctx.orgId, boardId, cardId: card!.id, context: { dueDate: card!.dueDate } },
-        cardMeta
-      );
-    });
-  }
-
-  if (values.description !== undefined) {
-    after(async () => {
-      await emitCardEvent(
-        { type: "CARD_DESCRIPTION_UPDATED", orgId: ctx.orgId, boardId, cardId: card!.id, context: {} },
-        cardMeta
-      );
-    });
-  }
+  // Priority changes are handled exclusively by updateCardPriority (phase3-actions.ts)
+  // which fires PRIORITY_CHANGED with full auto-escalation logic.
+  // DUE_DATE_SET and CARD_DESCRIPTION_UPDATED are not currently registered trigger
+  // types in the automation engine; those blocks are omitted to keep type-safety.
 
   return { data: card };
 };

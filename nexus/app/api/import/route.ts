@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 const ImportSchema = z.discriminatedUnion("format", [
   z.object({ format: z.literal("nexus"),  data: z.unknown() }),
   z.object({ format: z.literal("trello"), data: z.unknown() }),
-  z.object({ format: z.literal("jira"),   data: z.string({ required_error: "data must be an XML string for jira format" }) }),
+  z.object({ format: z.literal("jira"),   data: z.string({ error: "data must be an XML string for jira format" }) }),
 ]);
 
 export async function POST(req: NextRequest) {
