@@ -9,19 +9,23 @@
  *   const { isSupported, isSubscribed, subscribe, unsubscribe } = usePushNotifications();
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useSyncExternalStore, useState, useEffect, useCallback } from "react";
+
+// useSyncExternalStore is the React-canonical way to read browser-only globals
+// with proper SSR safety (server snapshot returns false).
+function getIsSupported() {
+  return "serviceWorker" in navigator && "PushManager" in window;
+}
+const noSubscribe = () => () => {};
 
 export function usePushNotifications() {
-  const [isSupported, setIsSupported]   = useState(false);
+  // isSupported is computed once on the client; server snapshot is always false.
+  const isSupported = useSyncExternalStore(noSubscribe, getIsSupported, () => false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const supported = "serviceWorker" in navigator && "PushManager" in window;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsSupported(supported);
-    if (!supported) return;
+    if (!isSupported) return;
 
     navigator.serviceWorker.register("/sw.js").then((reg) => {
       setRegistration(reg);
@@ -29,7 +33,7 @@ export function usePushNotifications() {
         setIsSubscribed(!!sub);
       });
     });
-  }, []);
+  }, [isSupported]);
 
   const subscribe = useCallback(async () => {
     if (!registration) return;

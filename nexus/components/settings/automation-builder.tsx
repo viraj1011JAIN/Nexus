@@ -486,17 +486,19 @@ function LogsDialog({
 
   useEffect(() => {
     if (!open) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    getAutomationLogs(automationId).then((result) => {
-      if (result.data) setLogs(result.data as typeof logs);
-    }).catch((e) => {
-      console.error("[LOGS_DIALOG]", e);
-      toast.error("Failed to load automation logs.");
-      setLogs([]);
-    }).finally(() => {
-      setLoading(false);
-    });
+    // loading starts as true (useState initial value); reset it after fetch completes
+    getAutomationLogs(automationId)
+      .then((result) => {
+        if (result.data) setLogs(result.data as typeof logs);
+      })
+      .catch((e) => {
+        console.error("[LOGS_DIALOG]", e);
+        toast.error("Failed to load automation logs.");
+        setLogs([]);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [open, automationId]);
 
   return (
@@ -546,13 +548,22 @@ export function AutomationBuilder({ boardId }: AutomationBuilderProps) {
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
 
   const load = async () => {
+    await Promise.resolve(); // defer state updates out of the synchronous effect call chain
     setLoading(true);
     const result = await getAutomations(boardId);
     if (result.data) setAutomations(result.data as unknown as AutomationRecord[]);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [boardId]); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  // Initial load and reload on boardId change: server action called inside the
+  // effect; setState only inside .then() (async, never synchronous in the effect body).
+  // The `load` function is kept for programmatic refresh (e.g. after creating an automation).
+  useEffect(() => {
+    getAutomations(boardId).then((result) => {
+      if (result.data) setAutomations(result.data as unknown as AutomationRecord[]);
+      setLoading(false);
+    });
+  }, [boardId]);
 
   const handleToggle = async (auto: AutomationRecord) => {
     setAutomations((prev) => prev.map((a) => a.id === auto.id ? { ...a, isEnabled: !a.isEnabled } : a));

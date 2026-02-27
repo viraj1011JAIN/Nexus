@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell, Check, CheckCheck, Trash2, User, AlertCircle, Clock, GitBranch, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -158,39 +158,38 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // true so first open shows a spinner
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadNotifications = useCallback(async () => {
-    setLoading(true);
-    const result = await getNotifications();
-    if (result.data) {
-      setNotifications(result.data as NotificationItem[]);
-      setUnreadCount(result.data.filter((n) => !n.isRead).length);
-    }
-    setLoading(false);
-  }, []);
-
-  const loadUnreadCount = useCallback(async () => {
-    const result = await getUnreadNotificationCount();
-    if (typeof result.data === "number") setUnreadCount(result.data);
-  }, []);
-
-  // Poll every 30 seconds for new notifications
+  // Poll every 30 seconds for new notifications.
+  // Fetch the count directly inside the effect (and the interval callback) so no
+  // useCallback reference is called from the effect body — all setState calls are
+  // inside .then() callbacks (async, not synchronous in the effect).
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadUnreadCount();
-    pollRef.current = setInterval(loadUnreadCount, 30_000);
+    const fetchCount = () => {
+      getUnreadNotificationCount().then((result) => {
+        if (typeof result.data === "number") setUnreadCount(result.data);
+      });
+    };
+    fetchCount();
+    pollRef.current = setInterval(fetchCount, 30_000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [loadUnreadCount]);
+  }, []);
 
-  // Full load when panel opens
+  // Full load when panel opens — server action called inside the effect,
+  // setState only inside the .then() callback (async, never synchronous in the effect body).
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) loadNotifications();
-  }, [open, loadNotifications]);
+    if (!open) return;
+    getNotifications().then((result) => {
+      setLoading(false);
+      if (result.data) {
+        setNotifications(result.data as NotificationItem[]);
+        setUnreadCount(result.data.filter((n) => !n.isRead).length);
+      }
+    });
+  }, [open]);
 
   const handleMarkRead = async (id: string) => {
     setNotifications((prev) =>

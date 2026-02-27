@@ -1001,6 +1001,7 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
   const [daysBack, setDaysBack] = useState<DaysBack>(30);
 
   const load = useCallback(async (silent = false) => {
+    await Promise.resolve(); // defer state updates out of the synchronous effect call chain
     if (!silent) setLoading(true);
     else setRefreshing(true);
     setError(null);
@@ -1017,8 +1018,17 @@ export function AdvancedAnalytics({ boardId, boardName }: AdvancedAnalyticsProps
     setRefreshing(false);
   }, [boardId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, [load]);
+  // Initial data load and reload on boardId change: server action called inside the
+  // effect; all setState only in .then() (async, never synchronous in effect body).
+  // The `load` callback is kept for manual refresh triggered by the user.
+  useEffect(() => {
+    getAdvancedBoardAnalytics(boardId).then((result) => {
+      if (result.data) setData(result.data);
+      else setError(result.error ?? "Failed to load analytics");
+      setLoading(false);
+      setRefreshing(false);
+    });
+  }, [boardId]);
 
   if (loading) {
     return (

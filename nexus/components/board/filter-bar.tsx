@@ -232,15 +232,14 @@ function SavedViewsPanel({
   const [views, setViews] = useState<SavedView[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const result = await getSavedViews(boardId);
-    if (result.data) setViews(result.data as unknown as SavedView[]);
-    setLoading(false);
+  // Loading state starts true; reset only after the first successful fetch.
+  // Server action is called inside the effect; setState only in .then() callbacks.
+  useEffect(() => {
+    getSavedViews(boardId).then((result) => {
+      if (result.data) setViews(result.data as unknown as SavedView[]);
+      setLoading(false);
+    });
   }, [boardId]);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -363,11 +362,11 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [searchParams, pathname, router, onChange]);
 
+  // Notify parent of initial filter state derived from URL params.
+  // setFilters is omitted here — the lazy useState initialiser already reads
+  // parseFilters(searchParams) so a synchronous re-set would be redundant.
   useEffect(() => {
-    const parsed = parseFilters(searchParams);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFilters(parsed);
-    onChange(parsed);
+    onChange(parseFilters(searchParams));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleAssignee = (id: string) => {
