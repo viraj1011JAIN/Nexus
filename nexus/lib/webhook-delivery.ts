@@ -33,6 +33,7 @@ const BLOCKED_HOSTNAMES = new Set([
 export function isPrivateIPv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
   if (parts.length !== 4 || parts.some((n) => isNaN(n))) return false;
+  // (returns false for malformed IPs — fail-open; use isPrivateIPv4FailClosed for SSRF checks)
   const [a, b] = parts;
   return (
     a === 10 ||                           // 10.0.0.0/8
@@ -43,6 +44,20 @@ export function isPrivateIPv4(ip: string): boolean {
     (a === 100 && b >= 64 && b <= 127) || // 100.64.0.0/10  RFC 6598 shared address space
     a === 0                               // 0.0.0.0/8
   );
+}
+
+/**
+ * Fail-closed wrapper around isPrivateIPv4.
+ * Returns true (treated as private/unsafe) for any input that is not a
+ * well-formed dotted-decimal IPv4 address, in addition to all genuinely
+ * private ranges. Use this at the SSRF-check layer to ensure malformed
+ * addresses are always blocked rather than accidentally allowed through.
+ */
+export function isPrivateIPv4FailClosed(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  // Malformed: wrong number of octets, non-numeric, or out-of-range octets
+  if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) return true;
+  return isPrivateIPv4(ip);
 }
 
 // IPv6 addresses considered private / loopback / link-local / ULA

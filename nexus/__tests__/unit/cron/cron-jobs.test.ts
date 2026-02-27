@@ -366,9 +366,10 @@ describe("Section 15 — Cron Jobs", () => {
       expect(body1.reportsGenerated).toBe(body2.reportsGenerated);
       expect(body1.success).toBe(body2.success);
 
-      // Side-effect (email) is not duplicated — called at most once per run
-      // (0 times here since no due-soon cards), not doubled across both runs
-      expect(sendDueDateReminderEmail.mock.calls.length).toBeLessThanOrEqual(2);
+      // The fixture contains no due-soon cards, so the email must never be sent
+      // across either run. Using toBe(0) rather than toBeLessThanOrEqual(2) to
+      // pin the exact expected count and catch any accidental sends.
+      expect(sendDueDateReminderEmail.mock.calls.length).toBe(0);
     });
   });
 

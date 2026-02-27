@@ -19,7 +19,7 @@
 import crypto from "crypto";
 import type { NextRequest } from "next/server";
 import { escHtml, escUrl } from "@/app/api/unsplash/route";
-import { isPrivateIPv4 } from "@/lib/webhook-delivery";
+import { isPrivateIPv4, isPrivateIPv4FailClosed } from "@/lib/webhook-delivery";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Mock layer
@@ -335,21 +335,23 @@ describe("Section 18 — Security & Injection", () => {
     });
 
     it("18.7b malformed IP addresses are treated as private (fail-closed)", () => {
-      // A minimal fail-closed wrapper: anything that isn't a valid IPv4 address
-      // is treated as unsafe. This is a separate helper from the production
-      // isPrivateIPv4 (which returns false for malformed input for backwards
-      // compatibility); this documents the expected fail-closed policy for the
-      // application's SSRF-check layer that sits above isPrivateIPv4.
-      const isMalformedOnlyForTest = (ip: string): boolean => {
-        const parts = ip.split(".").map(Number);
-        if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) return true;
-        return false;
-      };
+      // Uses the production isPrivateIPv4FailClosed exported from lib/webhook-delivery.ts.
+      // This wrapper applies fail-closed semantics: anything that is not a
+      // well-formed dotted-decimal IPv4 address is treated as unsafe (returns true).
 
-      expect(isMalformedOnlyForTest("not-an-ip")).toBe(true);
-      expect(isMalformedOnlyForTest("256.1.2.3")).toBe(true);
-      expect(isMalformedOnlyForTest("1.2.3")).toBe(true);
-      expect(isMalformedOnlyForTest("")).toBe(true);
+      // Malformed inputs must be blocked
+      expect(isPrivateIPv4FailClosed("not-an-ip")).toBe(true);
+      expect(isPrivateIPv4FailClosed("256.1.2.3")).toBe(true);
+      expect(isPrivateIPv4FailClosed("1.2.3")).toBe(true);
+      expect(isPrivateIPv4FailClosed("")).toBe(true);
+
+      // Well-formed public IPs must still pass through
+      expect(isPrivateIPv4FailClosed("8.8.8.8")).toBe(false);
+      expect(isPrivateIPv4FailClosed("1.1.1.1")).toBe(false);
+
+      // Well-formed private IPs must still be blocked
+      expect(isPrivateIPv4FailClosed("192.168.1.1")).toBe(true);
+      expect(isPrivateIPv4FailClosed("10.0.0.1")).toBe(true);
     });
   });
 

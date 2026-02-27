@@ -169,56 +169,11 @@ describe("Section 16 — Realtime Presence", () => {
     });
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 16.7 — ErrorBoundaryRealtime behavior
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  describe("16.7 ErrorBoundary behavior", () => {
-    it("16.21 ErrorBoundary is a class component with getDerivedStateFromError", () => {
-      // Test the static method pattern
-      const getDerivedStateFromError = (error: Error) => ({
-        hasError: true,
-        error,
-        errorInfo: null,
-      });
-
-      const state = getDerivedStateFromError(new Error("Realtime connection lost"));
-      expect(state.hasError).toBe(true);
-      expect(state.error.message).toBe("Realtime connection lost");
-    });
-
-    it("16.22 ErrorBoundary catches realtime socket errors", () => {
-      // The boundary catches any error thrown by children
-      const simulateError = () => {
-        const state = { hasError: false, error: null as Error | null };
-        try {
-          throw new Error("Supabase channel disconnected");
-        } catch (e) {
-          state.hasError = true;
-          state.error = e as Error;
-        }
-        return state;
-      };
-
-      const result = simulateError();
-      expect(result.hasError).toBe(true);
-      expect(result.error!.message).toContain("disconnected");
-    });
-
-    it("16.23 reset clears error state", () => {
-      const state = { hasError: true, error: new Error("test"), errorInfo: null };
-      // handleReset equivalent
-      const resetState = {
-        hasError: false,
-        error: null,
-        errorInfo: null,
-      };
-      Object.assign(state, resetState);
-
-      expect(state.hasError).toBe(false);
-      expect(state.error).toBeNull();
-    });
-  });
+  // NOTE: 16.7 (ErrorBoundaryRealtime) — the previous tests in this section
+  // exercised locally-defined state logic rather than the real component and
+  // have been removed to avoid misleading coverage. ErrorBoundaryRealtime
+  // should be tested via React Testing Library in a jsdom environment test file
+  // (e.g., __tests__/unit/realtime/error-boundary-realtime.test.tsx).
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 16.8 — Channel pattern consistency

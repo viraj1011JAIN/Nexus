@@ -26,11 +26,30 @@ function validateOrgId(orgId: string): void {
 }
 
 /**
+ * Throws if an entity ID (boardId, listId, etc.) is empty or contains the
+ * channel delimiter character ':'. Mirrors the validateOrgId guard so all
+ * channel-name segments are uniformly sanitised.
+ */
+function validateEntityId(entityId: string, label = "entityId"): void {
+  if (!entityId) {
+    throw new Error(
+      `Invalid ${label} "${entityId}": ${label} must not be empty.`
+    );
+  }
+  if (entityId.includes(":")) {
+    throw new Error(
+      `Invalid ${label} "${entityId}": ${label} must not contain the ':' delimiter character. Channel names use ':' as a separator and embedding it in a ${label} would corrupt the channel namespace.`
+    );
+  }
+}
+
+/**
  * postgres_changes channel for a specific board.
  * Carries card, list, and board mutations in real time.
  */
 export function boardChannel(orgId: string, boardId: string): string {
   validateOrgId(orgId);
+  validateEntityId(boardId, "boardId");
   return `org:${orgId}:board:${boardId}`;
 }
 
@@ -40,6 +59,7 @@ export function boardChannel(orgId: string, boardId: string): string {
  */
 export function boardPresenceChannel(orgId: string, boardId: string): string {
   validateOrgId(orgId);
+  validateEntityId(boardId, "boardId");
   return `org:${orgId}:presence:${boardId}`;
 }
 
@@ -48,6 +68,7 @@ export function boardPresenceChannel(orgId: string, boardId: string): string {
  */
 export function boardAnalyticsChannel(orgId: string, boardId: string): string {
   validateOrgId(orgId);
+  validateEntityId(boardId, "boardId");
   return `org:${orgId}:analytics:${boardId}`;
 }
 
