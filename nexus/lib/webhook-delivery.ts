@@ -30,7 +30,7 @@ const BLOCKED_HOSTNAMES = new Set([
 ]);
 
 // IPv4 CIDR ranges considered private / link-local / loopback
-function isPrivateIPv4(ip: string): boolean {
+export function isPrivateIPv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
   if (parts.length !== 4 || parts.some((n) => isNaN(n))) return false;
   const [a, b] = parts;

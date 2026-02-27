@@ -31,14 +31,16 @@ import { useTheme } from "@/components/theme-provider";
 /**
  * Sanitize a board title for use as a download filename.
  * Replaces any character outside [A-Za-z0-9._-] with a hyphen,
- * collapses consecutive hyphens, and trims leading/trailing hyphens.
+ * collapses consecutive hyphens, trims leading/trailing hyphens,
+ * and falls back to "untitled" if the result would be empty.
  */
 function sanitizeFilename(title: string): string {
-  return title
+  const sanitized = title
     .replace(/[^A-Za-z0-9._-]/g, "-")  // replace unsafe chars
     .replace(/-{2,}/g, "-")             // collapse consecutive hyphens
     .replace(/^-+|-+$/g, "")            // trim leading/trailing hyphens
     .toLowerCase();
+  return sanitized.length > 0 ? sanitized : "untitled";
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

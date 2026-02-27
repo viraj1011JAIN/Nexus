@@ -58,11 +58,31 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
-      // Allow inline styles for dynamic styling (colors, animations, computed values)
-      "@next/next/no-css-tags": "off",
-      "@next/next/no-sync-scripts": "off",
-      "react/no-unknown-property": "off",
+    },
+  },
+  // app/layout.tsx may embed third-party <link> CSS tags and synchronous
+  // tracking/analytics scripts that Next.js rules flag globally.
+  {
+    files: ["app/**/layout.tsx", "app/**/layout.ts"],
+    rules: {
+      "@next/next/no-css-tags":      "off",
+      "@next/next/no-sync-scripts":  "off",
       "@next/next/inline-script-id": "off",
+    },
+  },
+  // SVG icons and animation components use custom HTML attributes (e.g. fill,
+  // stroke-width) that React's prop-types checker doesn't recognise.
+  {
+    files: ["components/**/*.tsx", "app/**/*.tsx"],
+    rules: {
+      "react/no-unknown-property": "off",
+    },
+  },
+  // Email template files use styled-jsx for inline <style> blocks that are
+  // only rendered server-side and cannot use the Next.js <Head> API.
+  {
+    files: ["emails/**/*.ts", "emails/**/*.tsx"],
+    rules: {
       "@next/next/no-styled-jsx-in-document": "off",
     },
   },

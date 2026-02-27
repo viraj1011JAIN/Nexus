@@ -6,13 +6,14 @@
  * Covers:
  *   13.1  SSRF protection — private IPv4 ranges (10.x, 172.16.x, 192.168.x, 127.x)
  *   13.2  SSRF protection — loopback, blocked hostnames
- *   13.3  SSRF protection — IPv6 private addresses
+ *   13.3  SSRF protection — blocked hostnames (localhost, 0.0.0.0, metadata.google.internal)
  *   13.4  SSRF protection — valid public IPs allowed
  *   13.5  HMAC-SHA256 signature generation & verification
  *   13.6  X-Nexus-Signature-256 header format
  *   13.7  fireWebhooks — delivery orchestration
  *   13.8  Webhook delivery logging
- *   13.9  Retry behavior on 5xx
+ *   13.9  SSRF protection — IPv6 private addresses (::1, fc00::1, fe80::1)
+ *   13.10 Retry behavior on 5xx — delivery retried up to 3 times
  */
 
 import crypto from "crypto";
@@ -373,6 +374,92 @@ describe("Section 13 — Webhook Outbound", () => {
       expect(payload.timestamp).toBeDefined();
       // timestamp should be valid ISO-8601
       expect(new Date(payload.timestamp).toISOString()).toBe(payload.timestamp);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 13.9 — SSRF: IPv6 private addresses
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("13.9 SSRF — IPv6 private addresses", () => {
+    it.each([
+      ["::1",        "IPv6 loopback"],
+      ["fc00::1",    "IPv6 ULA (fc00::/7)"],
+      ["fe80::1",    "IPv6 link-local (fe80::/10)"],
+    ])("should block webhook when hostname resolves to %s (%s)", async (ipv6, _label) => {
+      mockWebhookFindMany.mockResolvedValueOnce([
+        makeWebhook("http://ipv6host.example.com/hook"),
+      ]);
+      // Resolve4 returns nothing; resolve6 returns the private IPv6 address
+      mockResolve4.mockResolvedValueOnce([]);
+      mockResolve6.mockResolvedValueOnce([ipv6]);
+
+      await fireWebhooks(ORG_ID, "card.created", { cardId: "c1" });
+
+      // Delivery should be recorded as failed (SSRF blocked)
+      expect(mockDeliveryCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ success: false }),
+        })
+      );
+      // No outbound HTTP request should have been made
+      expect(mockHttpRequest).not.toHaveBeenCalled();
+      expect(mockHttpsRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 13.10 — Retry behavior on 5xx
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("13.10 Retry behavior on 5xx", () => {
+    it("records delivery as failed after all retry attempts return 5xx", async () => {
+      jest.useFakeTimers();
+
+      mockWebhookFindMany.mockResolvedValueOnce([
+        makeWebhook("http://api.example.com/hook"),
+      ]);
+      mockResolve4.mockResolvedValue(["93.184.216.34"]);
+      mockResolve6.mockResolvedValue([]);
+
+      // Mock http.request to simulate a 5xx response on every attempt
+      const mockReq = {
+        on: jest.fn().mockReturnThis(),
+        write: jest.fn(),
+        end: jest.fn(),
+        destroy: jest.fn(),
+      };
+      mockHttpRequest.mockImplementation((_opts: unknown, cb: (res: unknown) => void) => {
+        // Simulate 503 response
+        const mockRes = {
+          statusCode: 503,
+          resumeCalled: false,
+          resume() { this.resumeCalled = true; return this; },
+          on: jest.fn().mockImplementation(function(this: unknown, event: string, handler: () => void) {
+            if (event === "end") handler();
+            return this;
+          }),
+        };
+        setTimeout(() => cb(mockRes), 0);
+        return mockReq;
+      });
+
+      // Run and advance all timers (backoff delays) so the retry loop completes
+      const deliveryPromise = fireWebhooks(ORG_ID, "card.created", { cardId: "c1" });
+      await jest.runAllTimersAsync();
+      await deliveryPromise;
+
+      // After 3 failed attempts, delivery should be recorded as failed
+      expect(mockDeliveryCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            success: false,
+            statusCode: 503,
+          }),
+        })
+      );
+
+      jest.useRealTimers();
     });
   });
 });

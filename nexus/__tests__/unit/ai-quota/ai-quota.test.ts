@@ -449,4 +449,69 @@ describe("Section 8 — AI Quota", () => {
       expect(result.error).toBe("Unauthorized");
     });
   });
+
+  // ─── 8.17 AI_DAILY_LIMIT env override ────────────────────────────────────────
+
+  describe("8.17 AI_DAILY_LIMIT env override is respected", () => {
+    const ORIGINAL_ENV = process.env.AI_DAILY_LIMIT;
+
+    afterEach(() => {
+      // Restore the original env var and reset module registry
+      if (ORIGINAL_ENV === undefined) {
+        delete process.env.AI_DAILY_LIMIT;
+      } else {
+        process.env.AI_DAILY_LIMIT = ORIGINAL_ENV;
+      }
+      jest.resetModules();
+    });
+
+    it("uses AI_DAILY_LIMIT=3 override and rejects the call when aiCallsToday >= 3", async () => {
+      process.env.AI_DAILY_LIMIT = "3";
+
+      // Re-import the module so it picks up the new env var value at module load time
+      let suggestWithOverride!: typeof suggestPriority;
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        ({ suggestPriority: suggestWithOverride } = require("@/actions/ai-actions") as typeof import("@/actions/ai-actions"));
+      });
+
+      // Org has already used 3 calls today — should hit the overridden limit of 3
+      (db.organization.findUnique as jest.Mock).mockResolvedValueOnce({
+        id: ORG_ID,
+        aiCallsToday: 3,
+        aiCallsLimit: DEFAULT_LIMIT, // DB limit still 50, but env override is 3
+        aiCallsResetAt: new Date(Date.now() + 60 * 60 * 1000), // resets in future
+      });
+
+      const result = await suggestWithOverride({ title: "Override test", description: "" });
+      expect(result.error).toBeDefined();
+      expect(result.error).toMatch(/limit.*3|3.*limit/i);
+    });
+
+    it("uses AI_DAILY_LIMIT=3 override and allows the call when aiCallsToday < 3", async () => {
+      process.env.AI_DAILY_LIMIT = "3";
+
+      let suggestWithOverride!: typeof suggestPriority;
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        ({ suggestPriority: suggestWithOverride } = require("@/actions/ai-actions") as typeof import("@/actions/ai-actions"));
+      });
+
+      // Org has only used 2 calls — should still be under the limit of 3
+      (db.organization.findUnique as jest.Mock).mockResolvedValueOnce({
+        id: ORG_ID,
+        aiCallsToday: 2,
+        aiCallsLimit: DEFAULT_LIMIT,
+        aiCallsResetAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+      (db.organization.update as jest.Mock).mockResolvedValueOnce({});
+      mockCreate.mockResolvedValueOnce({
+        choices: [{ message: { content: "HIGH" } }],
+      });
+
+      const result = await suggestWithOverride({ title: "Under override limit", description: "" });
+      // Should succeed (not quota-blocked)
+      expect(result.error).toBeUndefined();
+    });
+  });
 });

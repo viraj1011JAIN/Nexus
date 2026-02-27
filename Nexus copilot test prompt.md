@@ -230,6 +230,35 @@ THEN:  Exactly ONE succeeds (Serializable transaction prevents both inserting)
 AND:   One returns LIMIT_REACHED
 ```
 
+### Context — Transaction Isolation
+Plan limit enforcement (both `createBoard()` and the attachment-limit re-check) **must** run under
+`Serializable` isolation to prevent phantom reads between the count query and the insert:
+
+```typescript
+await prisma.$transaction(
+  async (tx) => { /* count-then-insert */ },
+  { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+);
+```
+
+**Performance & retry implications:**
+- Serializable transactions are heavier than `ReadCommitted`; reserve them for
+  concurrent write-paths only.
+- Postgres serialization failures surface as Prisma error code **P2034**
+  (`Transaction failed due to a write conflict or a deadlock`).
+- Callers must catch P2034 and retry or surface a user-friendly message.
+- Tests must cover P2034 (see TEST F below).
+
+**TEST F — Serialization failure (P2034) handling:**
+```
+GIVEN: prisma.$transaction throws P2034 (serialization failure)
+WHEN:  createBoard() is called
+THEN:  Action retries the transaction OR returns a user-friendly error message
+AND:   The raw Prisma error (P2034) is NEVER exposed in the API response
+AND:   If retry logic is implemented, repeated retries eventually succeed
+        when the mock is configured to fail N times then succeed
+```
+
 ### 4.2 Card Limits
 ```
 GIVEN: Board has 499 cards (FREE plan)
@@ -292,12 +321,31 @@ THEN:  Returns "zza"
 GIVEN: generateMidpointOrder("m", "n") is called
 THEN:  Returns "ma"
 
-GIVEN: incrementOrder() is called on a string of 32 characters
-THEN:  Returns string starting with "\uFFFF" with timestamp+random suffix
-AND:   Result always sorts last
+GIVEN: incrementOrder() is called on a string of 32 characters (cap reached)
+THEN:  Returns a fallback key that starts with "\uFFFF"
+AND:   Fallback key format: "\uFFFF" + <13-digit ms timestamp> + <fixed-length
+       high-entropy suffix> (e.g. 8 crypto-random hex chars + 4-digit monotonic
+       counter-per-timestamp), giving a total fallback length of 1+13+8+4 = 26
+       chars (deterministic length — never variable)
+AND:   The 32-char cap applies to NORMAL keys only; fallback keys may exceed 32 chars
+AND:   Result always sorts last (\uFFFF prefix is lexicographically after all
+       printable ASCII used in normal keys)
+AND:   Concurrent fallback generation cannot collide because the suffix combines
+       a high-entropy random segment with a process-unique monotonic counter;
+       fallbacks with equal timestamps are ordered by counter (deterministic tie-breaker)
+
+GIVEN: rebalanceOrders() is called on a list that contains fallback keys
+THEN:  \uFFFF-prefixed keys are treated as coming AFTER all normal keys
+AND:   They are compacted/reassigned back into normal key-space so the list
+       no longer contains any \uFFFF-prefixed keys after rebalance
 
 GIVEN: Many midpoint insertions between same two keys
 THEN:  String grows but rebalanceOrders() compacts back to m, n, o, ...
+
+Unit test expectations:
+- concurrent fallback generation (two goroutines/Promise.all) never collides
+- multiple consecutive fallback keys sort deterministically (by timestamp then counter)
+- fallback key length equals exactly the declared fixed length (no variable-length output)
 ```
 
 ### 5.3 Concurrent Writes / Card Not Found
@@ -345,14 +393,26 @@ THEN:  Returns FORBIDDEN (CardNotInOrg guard)
 
 ### 6.2 Reactions
 ```
-GIVEN: addReaction() called with valid single emoji "👍"
+GIVEN: addReaction() called with valid single emoji "\ud83d\udc4d" (👍)
 THEN:  Reaction created successfully
 
 GIVEN: addReaction() called with text "thumbsup"
-THEN:  Emoji validation fails (regex /^[\u{1F300}-\u{1F9FF}]$/u rejects it)
+THEN:  Emoji validation fails
+NOTE:  Implementation must NOT use a single Unicode-range regex such as
+       /^[\u{1F300}-\u{1F9FF}]$/u because it is too narrow and rejects valid
+       emojis in ranges U+2600-26FF, U+2700-27BF, U+1FA70-1FAFF, skin-tone
+       modifier sequences, and ZWJ families (e.g. family emojis).
+       Instead, addReaction() MUST:
+         (a) use a maintained emoji detection library such as `emoji-regex` to
+             validate that the input is exactly one visible emoji/grapheme cluster, OR
+         (b) split the input into Unicode grapheme clusters and verify that
+             exactly one grapheme cluster is present and is an emoji.
 
-GIVEN: addReaction() called with "👍👎" (two emojis)
-THEN:  Validation fails (multi-character rejected)
+GIVEN: addReaction() called with "\ud83d\udc4d\ud83d\udc4e" (two emojis: 👍👎)
+THEN:  Validation fails (more than one grapheme cluster)
+
+GIVEN: addReaction() called with a skin-tone variant (e.g. "\ud83d\udc4d\ud83c\udffd" 👍🏽)
+THEN:  Reaction created successfully (multi-codepoint sequences are valid single emojis)
 
 GIVEN: Same user reacts with same emoji on same comment twice
 THEN:  Second call returns { error: "Already reacted" } (DB unique constraint)

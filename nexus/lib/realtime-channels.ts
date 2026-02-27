@@ -16,11 +16,21 @@
 
 // ── Board-level channels ───────────────────────────────────────────────────
 
+/** Throws if orgId contains the channel delimiter character ':'. */
+function validateOrgId(orgId: string): void {
+  if (orgId.includes(":")) {
+    throw new Error(
+      `Invalid orgId "${orgId}": orgId must not contain the ':' delimiter character. Channel names use ':' as a separator and embedding it in an orgId would corrupt the channel namespace.`
+    );
+  }
+}
+
 /**
  * postgres_changes channel for a specific board.
  * Carries card, list, and board mutations in real time.
  */
 export function boardChannel(orgId: string, boardId: string): string {
+  validateOrgId(orgId);
   return `org:${orgId}:board:${boardId}`;
 }
 
@@ -29,6 +39,7 @@ export function boardChannel(orgId: string, boardId: string): string {
  * Presence state includes: userId, name, avatar, cursor position, active card.
  */
 export function boardPresenceChannel(orgId: string, boardId: string): string {
+  validateOrgId(orgId);
   return `org:${orgId}:presence:${boardId}`;
 }
 
@@ -36,6 +47,7 @@ export function boardPresenceChannel(orgId: string, boardId: string): string {
  * Analytics channel for live board metrics (card counts, velocity, etc.).
  */
 export function boardAnalyticsChannel(orgId: string, boardId: string): string {
+  validateOrgId(orgId);
   return `org:${orgId}:analytics:${boardId}`;
 }
 
@@ -46,6 +58,7 @@ export function boardAnalyticsChannel(orgId: string, boardId: string): string {
  * Used for board list updates (new/deleted boards visible in dashboard).
  */
 export function orgBoardsChannel(orgId: string): string {
+  validateOrgId(orgId);
   return `org:${orgId}:boards`;
 }
 
@@ -54,6 +67,7 @@ export function orgBoardsChannel(orgId: string): string {
  * Audit log events streamed to the activity sidebar.
  */
 export function orgActivityChannel(orgId: string): string {
+  validateOrgId(orgId);
   return `org:${orgId}:activity`;
 }
 

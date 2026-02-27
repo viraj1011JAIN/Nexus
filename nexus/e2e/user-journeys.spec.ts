@@ -138,6 +138,7 @@ test.describe("Section 17 — Complete User Journeys", () => {
       .getByRole("button", { name: /add.*card/i })
       .or(page.locator('[data-testid="add-card-btn"]'))
       .last();
+    await expect(addCardBtn).toBeVisible({ timeout: 8_000 });
     await addCardBtn.click();
 
     const cardInput = page
@@ -192,7 +193,34 @@ test.describe("Section 17 — Complete User Journeys", () => {
 
     if (await descField.isVisible().catch(() => false)) {
       await descField.click();
-      await descField.fill(`Updated description ${Date.now()}`);
+      const updatedDesc = `Updated description ${Date.now()}`;
+      await descField.fill(updatedDesc);
+      // Wait for autosave or click an explicit save control if present
+      const saveBtn = page.locator('[data-testid="save-description"], button:has-text("Save")').first();
+      if (await saveBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await saveBtn.click();
+        await saveBtn.waitFor({ state: "hidden", timeout: 5_000 }).catch(() => null);
+      } else {
+        // Rely on autosave — wait briefly for debounce to fire
+        await page.waitForTimeout(500);
+      }
+
+      // Close and re-open the modal to verify persistence
+      await page.keyboard.press("Escape");
+      await expect(modal).not.toBeVisible({ timeout: 5_000 });
+
+      // Re-open the card modal
+      await card.click();
+      await modal.waitFor({ state: "visible", timeout: 8_000 });
+
+      // Confirm the description persisted
+      const reopenedDescField = page
+        .locator('[data-testid="card-description"], [contenteditable="true"], textarea[name="description"]')
+        .first();
+      const savedText = await reopenedDescField.inputValue().catch(() =>
+        reopenedDescField.textContent()
+      );
+      expect(savedText).toContain(updatedDesc.slice(0, 20));
     }
 
     // Close modal with Escape
@@ -242,8 +270,9 @@ test.describe("Section 17 — Complete User Journeys", () => {
   test("17.5 search navigates to results page", async ({ page }) => {
     await navigateToDashboard(page);
 
-    // Open command palette or search with Ctrl+K
-    await page.keyboard.press("Control+k");
+    // Open command palette or search with Ctrl+K (cross-platform)
+    const isMac = process.platform === "darwin";
+    await page.keyboard.press(isMac ? "Meta+k" : "Control+k");
 
     const searchInput = page
       .locator(
@@ -263,10 +292,7 @@ test.describe("Section 17 — Complete User Journeys", () => {
 
     await searchInput.fill("test");
 
-    // Wait for results
-    await page.waitForTimeout(1_000);
-
-    // Results should be visible (either inline or navigated to /search)
+    // Wait for results element to become visible instead of a fixed delay
     const hasResults = page
       .locator(
         '[data-testid="search-results"], [cmdk-list], [role="listbox"]'
@@ -366,7 +392,7 @@ test.describe("Section 17 — Complete User Journeys", () => {
 
     // Either the card itself is draggable or it has a drag handle child
     const isDraggable = await card.getAttribute("draggable");
-    const hasDragHandle = await page
+    const hasDragHandle = await card
       .locator('[data-testid="drag-handle"], .drag-handle, [role="img"][aria-label*="drag" i]')
       .first()
       .isVisible()

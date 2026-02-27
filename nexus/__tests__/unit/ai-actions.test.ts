@@ -147,7 +147,7 @@ describe("ai-actions", () => {
       expect(result.error).toBeUndefined();
       // Source returns { data: { items: string[] } }
       expect(Array.isArray(result.data?.items)).toBe(true);
-      expect((result.data?.items.length ?? 0)).toBeGreaterThan(0);
+      expect((result.data?.items?.length ?? 0)).toBeGreaterThan(0);
     });
 
     it("returns error when rate limit is reached", async () => {

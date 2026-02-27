@@ -234,13 +234,12 @@ describe("Section 16 — Realtime Presence", () => {
       expect(orgActivityChannel(ORG_A)).toMatch(pattern);
     });
 
-    it("16.25 channel names never contain user-controlled input unescaped", () => {
-      // Even with special chars in orgId, the format is consistent
+    it("16.25 boardChannel throws when orgId contains the ':' delimiter", () => {
+      // orgIds sourced from Clerk should never contain ':', but if one does the
+      // channel factory must reject it rather than embed it verbatim and corrupt
+      // the channel namespace (which uses ':' as a separator).
       const specialOrg = "org:with:colons";
-      const ch = boardChannel(specialOrg, BOARD_ID);
-      // Org id would embed colons, but assertChannelBelongsToOrg would fail for cross-tenant
-      // This proves we need clean orgIds
-      expect(ch).toContain(specialOrg);
+      expect(() => boardChannel(specialOrg, BOARD_ID)).toThrow(/orgId.*must not contain/i);
     });
   });
 });

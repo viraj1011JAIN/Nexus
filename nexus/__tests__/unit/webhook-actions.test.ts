@@ -115,14 +115,14 @@ describe("webhook-actions", () => {
       const result = await createWebhook("https://example.com/hook", ["card.created", "card.moved"]);
       expect(result.error).toBeUndefined();
       // The signing secret IS returned on creation so callers can configure their endpoint.
-      // It is stored hashed in the DB; this is the only time the plaintext is exposed.
+      // It is stored as plaintext in the DB — the production createWebhook does not hash it.
       expect(result.data?.secret).toMatch(/^whsec_/);
       // No 'rawKey' field — that's the API-key naming convention, not webhooks.
       expect((result.data as Record<string, unknown>)?.rawKey).toBeUndefined();
       expect(db.webhook.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            secret: expect.stringMatching(/^whsec_/),
+            secret: expect.stringMatching(/^whsec_/),  // plaintext stored in DB
             orgId: "org_1",
             events: ["card.created", "card.moved"],
           }),

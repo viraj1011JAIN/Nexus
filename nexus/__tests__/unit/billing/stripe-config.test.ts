@@ -202,6 +202,17 @@ describe("Section 11C — STRIPE_CONFIG limits & isStripeConfigured()", () => {
         expect(isStripeConfigured()).toBe(false);
       });
     });
+
+    it("returns false when STRIPE_PRO_YEARLY_PRICE_ID is empty string", () => {
+      withEnv({
+        STRIPE_SECRET_KEY:             "sk_test_dummy",
+        STRIPE_PRO_MONTHLY_PRICE_ID:   "price_monthly",
+        STRIPE_PRO_YEARLY_PRICE_ID:    "",
+      }, () => {
+        const { isStripeConfigured } = loadStripeModule();
+        expect(isStripeConfigured()).toBe(false);
+      });
+    });
   });
 
   // ─── 11.45 currency = "gbp" ──────────────────────────────────────────────────

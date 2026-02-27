@@ -39,6 +39,12 @@ import { useSearchParams } from "next/navigation";
 
 // ─── Module-level mocks ────────────────────────────────────────────────────────
 
+jest.mock("next/navigation", () => ({
+  useSearchParams: jest.fn(),
+  useRouter:       jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
+  usePathname:     jest.fn(() => "/billing"),
+}));
+
 jest.mock("sonner", () => ({
   toast: {
     success: jest.fn(),

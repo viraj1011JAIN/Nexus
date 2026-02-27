@@ -89,7 +89,8 @@ function makeKeyRow(rawKey: string, overrides: Record<string, unknown> = {}) {
 }
 
 // NextRequest constructor requires URL string; we use a thin wrapper
-function makeNextRequest(rawKey?: string, _method = "GET", url = "http://localhost:3000/api/v1/boards"): {
+function makeNextRequest(rawKey?: string, method = "GET", url = "http://localhost:3000/api/v1/boards"): {
+  method: string;
   headers: { get: (name: string) => string | null };
   nextUrl: { searchParams: URLSearchParams };
   json: () => Promise<unknown>;
@@ -100,6 +101,7 @@ function makeNextRequest(rawKey?: string, _method = "GET", url = "http://localho
   }
   const parsedUrl = new URL(url);
   return {
+    method,
     headers: { get: (name: string) => headers.get(name) ?? null },
     nextUrl: { searchParams: parsedUrl.searchParams },
     json: () => Promise.resolve({}),
@@ -156,12 +158,15 @@ describe("Section 12 — API Key Authentication", () => {
     });
 
     it("12.4 should return 401 for empty Authorization header", async () => {
+      const req = makeNextRequest(undefined) as never;
+      // Override the authorization header to be empty string rather than absent
       const headers = new Map<string, string>();
       headers.set("authorization", "");
-      const req = {
+      const reqWithEmptyAuth = {
         headers: { get: (name: string) => headers.get(name) ?? null },
+        nextUrl: { searchParams: new URLSearchParams() },
       } as never;
-      const result = await authenticateApiKey(req, ["boards:read"]);
+      const result = await authenticateApiKey(reqWithEmptyAuth, ["boards:read"]);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.status).toBe(401);
     });
@@ -629,10 +634,11 @@ describe("Section 12 — /api/v1/boards route", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("Section 12 — Key prefix & hash", () => {
-  it("12.31 keyPrefix stores only first 8 chars of the raw key as plaintext", () => {
+  it("12.31 keyPrefix stores only first 8 hex chars of the raw key as plaintext", () => {
     const rawKey = makeRawKey();
     const prefix = rawKey.substring(0, 12); // "nxk_" + 8 hex chars
-    expect(prefix).toMatch(/^nxk_[A-Za-z0-9]{8}$/);
+    // Raw key format is nxk_<64 lowercase hex chars>, so prefix is nxk_ + 8 hex chars
+    expect(prefix).toMatch(/^nxk_[a-f0-9]{8}$/i);
     expect(prefix.length).toBe(12);
     // Prefix does NOT contain the full key
     expect(prefix.length).toBeLessThan(rawKey.length);

@@ -526,9 +526,10 @@ describe("4.1 Board Limits", () => {
       ]);
 
       // Both pass the limit check — race condition is NOT guarded by a transaction
-      expect([r1, r2].every((r) => !r.error || r.error === "LIMIT_REACHED")).toBe(true);
-      // At least one succeeds
-      expect([r1, r2].some((r) => r.data)).toBe(true);
+      expect(r1.error).toBeUndefined();
+      expect(r2.error).toBeUndefined();
+      expect(r1.data).toBeTruthy();
+      expect(r2.data).toBeTruthy();
     });
 
     it("LIMIT_REACHED response includes current board count from DB read", async () => {
@@ -536,14 +537,16 @@ describe("4.1 Board Limits", () => {
         .mockResolvedValueOnce(fakeOrg(49, "FREE"))
         .mockResolvedValueOnce(fakeOrg(50, "FREE"));
 
-      const [, r2] = await Promise.all([
+      const results = await Promise.all([
         createBoard({ title: "Board A" }),
         createBoard({ title: "Board B" }),
       ]);
 
-      expect(r2.error).toBe("LIMIT_REACHED");
-      expect((r2 as unknown as { data: { current: number; limit: number } }).data.current).toBe(50);
-      expect((r2 as unknown as { data: { limit: number } }).data.limit).toBe(50);
+      // Detect which result hit the limit — don't assume ordering
+      const failedResult = results.find((r) => r.error === "LIMIT_REACHED");
+      expect(failedResult).toBeDefined();
+      expect((failedResult as unknown as { data: { current: number; limit: number } }).data.current).toBe(50);
+      expect((failedResult as unknown as { data: { limit: number } }).data.limit).toBe(50);
     });
   });
 

@@ -22,7 +22,7 @@ function getUnsplashClient() {
 }
 
 /** Escape HTML entities to prevent XSS in generated attribution HTML. */
-function escHtml(str: string): string {
+export function escHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -31,7 +31,7 @@ function escHtml(str: string): string {
 }
 
 /** Allow only https:// URLs to prevent protocol-injection in href attributes. */
-function escUrl(url: string): string {
+export function escUrl(url: string): string {
   try {
     const parsed = new URL(url);
     return parsed.protocol === "https:" ? url : "https://unsplash.com";

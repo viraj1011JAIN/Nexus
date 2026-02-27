@@ -686,7 +686,7 @@ describe("Section 11B — Stripe Webhook Handler", () => {
     });
   });
 
-  // ─── 11.33 Unknown plan key → fail-closed ─────────────────────────────────────
+  // ─── 11.33 Stripe subscription retrieval error propagates from handler ─────────
 
   describe("11.33 Stripe subscription retrieval error propagates from handler", () => {
     it("route propagates error when stripe.subscriptions.retrieve throws", async () => {

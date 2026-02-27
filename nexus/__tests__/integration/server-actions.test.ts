@@ -189,9 +189,7 @@ describe('Server Actions - Demo Mode Integration', () => {
       expect(protection).toMatchObject({
         error: expect.any(String),
       });
-      if (protection?.error) {
-        expect(protection.error.length).toBeGreaterThan(0);
-      }
+      expect(protection!.error.length).toBeGreaterThan(0);
     });
 
     it('should handle missing orgId gracefully', async () => {
