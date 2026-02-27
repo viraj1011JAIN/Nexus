@@ -60,23 +60,21 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <head>
-          {/* DNS Prefetch for external resources */}
-          <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-          {/* eslint-disable-next-line @next/next/google-font-preconnect */}
-          <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-          
-          {/* Preconnect to critical origins */}
-          <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          
-          {/* Optimized theme script - runs before paint */}
+          {/*
+           * next/font/google (Inter, DM_Sans, Playfair_Display) automatically
+           * injects the required preconnect / preload link tags for
+           * fonts.googleapis.com and fonts.gstatic.com, so manual <link> tags
+           * here are redundant and would trigger @next/next/google-font-preconnect.
+           */}
+
+          {/* Optimized theme script - runs before paint to prevent FOUC */}
           <Script
             id="theme-script"
             strategy="beforeInteractive"
             dangerouslySetInnerHTML={{ __html: themeScript }}
           />
-          
-          {/* Viewport optimization for better mobile performance */}
+
+          {/* Viewport – allow pinch-zoom for accessibility (max-scale ≥ 5) */}
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         </head>
         <body className={`${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${dmSans.className} antialiased`} suppressHydrationWarning>

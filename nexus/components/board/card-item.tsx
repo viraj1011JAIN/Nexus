@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
@@ -39,10 +40,10 @@ interface CardItemProps {
   listColor?: string;
 }
 
-export const CardItem = ({
+const CardItemInner = ({
   data,
   index,
-  listColor = "#7C3AED",
+  listColor: _listColor = "#7C3AED",
 }: CardItemProps) => {
   const params = useParams();
   const cardModal = useCardModal();
@@ -120,7 +121,7 @@ export const CardItem = ({
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative text-sm rounded-[14px] cursor-pointer animate-card-enter touch-manipulation min-h-[72px] overflow-hidden",
+        "group relative text-sm rounded-[14px] cursor-pointer animate-card-enter touch-manipulation min-h-[72px] overflow-hidden kanban-card",
         isSelected && "ring-2 ring-primary"
       )}
     >
@@ -286,3 +287,11 @@ export const CardItem = ({
     </motion.div>
   );
 };
+
+export const CardItem = memo(CardItemInner, (prev, next) => {
+  return (
+    prev.data === next.data &&
+    prev.listColor === next.listColor &&
+    prev.index === next.index
+  );
+});

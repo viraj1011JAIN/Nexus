@@ -260,7 +260,7 @@ export async function deleteAutomation(id: string) {
     await db.automation.delete({ where: { id } });
     if (automation.boardId) revalidatePath(`/board/${automation.boardId}`);
     return { data: true };
-  } catch (e) {
+  } catch (_e) {
     return { error: "Failed to delete automation." };
   }
 }
@@ -481,10 +481,6 @@ async function executeAction(
       }
       break;
 
-    // Backward-compat shim: records persisted with the old string value still work.
-    // Run `npx tsx scripts/migrate-automation-actions.ts` to rename stored values in DB,
-    // then remove this shim once all records are updated.
-    // eslint-disable-next-line no-fallthrough
     case "COMPLETE_CHECKLIST_ITEM" as ActionType:
     case "COMPLETE_CHECKLIST":
       if (action.checklistId) {

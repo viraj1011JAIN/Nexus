@@ -198,7 +198,7 @@ const mockOrgFindUnique     = db.organization.findUnique as jest.Mock;
 const mockOrgCreate         = db.organization.create     as jest.Mock;
 const mockAttachmentCount   = db.attachment.count        as jest.Mock;
 const mockCardFindFirst     = db.card.findFirst          as jest.Mock;
-const mockCardFindUnique    = (db as unknown as { card: { findUnique: jest.Mock } }).card?.findUnique as jest.Mock | undefined;
+const _mockCardFindUnique    = (db as unknown as { card: { findUnique: jest.Mock } }).card?.findUnique as jest.Mock | undefined;
 const mockDbTransaction     = db.$transaction            as jest.Mock;
 const mockUserFindUnique    = db.user.findUnique         as jest.Mock;
 

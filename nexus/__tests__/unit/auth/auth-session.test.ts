@@ -160,7 +160,7 @@ jest.mock("@/actions/template-actions", () => ({
 
 import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { db, setCurrentOrgId } from "@/lib/db";
+import { db } from "@/lib/db";
 import {
   getTenantContext,
   TenantError,
@@ -200,7 +200,7 @@ const ORG_ROLE  = "org:member";
 const DB_USER   = { id: "uuid-internal-user-1" };
 const DEMO_ORG  = "demo-org-id";
 
-const AUTHED_CTX: TenantContext = {
+const _AUTHED_CTX: TenantContext = {
   userId: USER_ID,
   orgId: ORG_ID,
   orgRole: ORG_ROLE,

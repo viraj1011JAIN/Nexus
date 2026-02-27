@@ -265,13 +265,11 @@ function conditionsPass(conditions: any[], card: any, _event: AutomationEvent): 
         // Type-coerce: compare numbers as numbers, booleans as booleans
         if (typeof cardValue === "number") return cardValue === Number(value);
         if (typeof cardValue === "boolean") return cardValue === (value === "true");
-        // eslint-disable-next-line eqeqeq
         return cardValue == value;
       }
       case "neq": {
         if (typeof cardValue === "number") return cardValue !== Number(value);
         if (typeof cardValue === "boolean") return cardValue !== (value === "true");
-        // eslint-disable-next-line eqeqeq
         return cardValue != value;
       }
       case "contains":

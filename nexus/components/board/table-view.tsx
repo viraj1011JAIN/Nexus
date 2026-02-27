@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, Priority } from "@prisma/client";
+import { Card } from "@prisma/client";
 import { format, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import {

@@ -158,7 +158,7 @@ describe("Section 12 — API Key Authentication", () => {
     });
 
     it("12.4 should return 401 for empty Authorization header", async () => {
-      const req = makeNextRequest(undefined) as never;
+      const _req = makeNextRequest(undefined) as never;
       // Override the authorization header to be empty string rather than absent
       const headers = new Map<string, string>();
       headers.set("authorization", "");

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { headers } from "next/headers";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
@@ -53,8 +52,8 @@ export async function POST(req: NextRequest) {
         session.subscription as string
       );
       
-      // Access properties safely - Stripe SDK returns Response<Subscription>
-      const subscription: any = subscriptionResponse;
+      // Stripe.Response<Subscription> extends Subscription directly
+      const subscription: Stripe.Subscription = subscriptionResponse;
 
       // Update organization with subscription details
       await db.organization.update({
@@ -65,8 +64,8 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionId: subscription.id,
           stripeSubscriptionStatus: subscription.status,
           stripePriceId: subscription.items.data[0].price.id,
-          stripeCurrentPeriodEnd: subscription.current_period_end 
-            ? new Date(subscription.current_period_end * 1000)
+          stripeCurrentPeriodEnd: subscription.items.data[0]?.current_period_end 
+            ? new Date(subscription.items.data[0].current_period_end * 1000)
             : null,
         },
       });
@@ -76,16 +75,19 @@ export async function POST(req: NextRequest) {
     }
 
     case "invoice.payment_succeeded": {
-      const invoice: any = event.data.object;
-      const subscriptionId = typeof invoice.subscription === 'string' 
-        ? invoice.subscription 
-        : invoice.subscription?.id;
+      const invoice = event.data.object as Stripe.Invoice;
+      const subscriptionDetails = invoice.parent?.subscription_details;
+      const subscriptionId = subscriptionDetails
+        ? typeof subscriptionDetails.subscription === 'string'
+          ? subscriptionDetails.subscription
+          : subscriptionDetails.subscription?.id
+        : null;
 
       if (!subscriptionId) break;
 
       // Get subscription and organization with proper type casting
       const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId);
-      const subscription: any = subscriptionResponse;
+      const subscription: Stripe.Subscription = subscriptionResponse;
       const orgId = subscription.metadata?.orgId;
 
       if (orgId) {
@@ -94,8 +96,8 @@ export async function POST(req: NextRequest) {
           where: { id: orgId },
           data: {
             stripeSubscriptionStatus: subscription.status,
-            stripeCurrentPeriodEnd: subscription.current_period_end
-              ? new Date(subscription.current_period_end * 1000)
+            stripeCurrentPeriodEnd: subscription.items.data[0]?.current_period_end
+              ? new Date(subscription.items.data[0].current_period_end * 1000)
               : null,
           },
         });
@@ -106,15 +108,18 @@ export async function POST(req: NextRequest) {
     }
 
     case "invoice.payment_failed": {
-      const invoice: any = event.data.object;
-      const subscriptionId = typeof invoice.subscription === 'string' 
-        ? invoice.subscription 
-        : invoice.subscription?.id;
+      const invoice = event.data.object as Stripe.Invoice;
+      const subscriptionDetails2 = invoice.parent?.subscription_details;
+      const subscriptionId = subscriptionDetails2
+        ? typeof subscriptionDetails2.subscription === 'string'
+          ? subscriptionDetails2.subscription
+          : subscriptionDetails2.subscription?.id
+        : null;
 
       if (!subscriptionId) break;
 
       const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId);
-      const subscription: any = subscriptionResponse;
+      const subscription: Stripe.Subscription = subscriptionResponse;
       const orgId = subscription.metadata?.orgId;
 
       if (orgId) {
@@ -131,7 +136,7 @@ export async function POST(req: NextRequest) {
     }
 
     case "customer.subscription.updated": {
-      const subscription: any = event.data.object;
+      const subscription = event.data.object as Stripe.Subscription;
       const orgId = subscription.metadata?.orgId;
 
       if (!orgId) {
@@ -145,8 +150,8 @@ export async function POST(req: NextRequest) {
             where: { id: org.id },
             data: {
               stripeSubscriptionStatus: subscription.status,
-              stripeCurrentPeriodEnd: subscription.current_period_end
-                ? new Date(subscription.current_period_end * 1000)
+              stripeCurrentPeriodEnd: subscription.items.data[0]?.current_period_end
+                ? new Date(subscription.items.data[0].current_period_end * 1000)
                 : null,
             },
           });
@@ -156,8 +161,8 @@ export async function POST(req: NextRequest) {
           where: { id: orgId },
           data: {
             stripeSubscriptionStatus: subscription.status,
-            stripeCurrentPeriodEnd: subscription.current_period_end
-              ? new Date(subscription.current_period_end * 1000)
+            stripeCurrentPeriodEnd: subscription.items.data[0]?.current_period_end
+              ? new Date(subscription.items.data[0].current_period_end * 1000)
               : null,
           },
         });
@@ -168,7 +173,7 @@ export async function POST(req: NextRequest) {
     }
 
     case "customer.subscription.deleted": {
-      const subscription: any = event.data.object;
+      const subscription = event.data.object as Stripe.Subscription;
       const orgId = subscription.metadata?.orgId;
 
       if (!orgId) {

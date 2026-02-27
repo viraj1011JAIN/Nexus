@@ -4,8 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { 
-  Filter, X, Save, ChevronDown, User, Tag, Flag, Calendar,
-  BookmarkPlus, Bookmark, Trash2, Share2, Check, Search
+  X, ChevronDown, User, Tag, Flag, Calendar,
+  BookmarkPlus, Bookmark, Trash2, Share2, Search
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";

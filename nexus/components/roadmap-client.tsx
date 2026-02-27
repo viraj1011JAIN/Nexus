@@ -48,10 +48,8 @@ import { toast } from "sonner";
 import {
   getInitiatives,
   createInitiative,
-  updateInitiative,
   deleteInitiative,
   createEpic,
-  updateEpic,
 } from "@/actions/roadmap-actions";
 import { format, differenceInDays, isPast, startOfMonth, endOfMonth, addMonths, eachMonthOfInterval, min as dateMin, max as dateMax, parseISO } from "date-fns";
 
@@ -310,7 +308,7 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
 function InitiativeRow({
   initiative,
   onDelete,
-  onRefresh,
+  onRefresh: _onRefresh,
   onAddEpic,
 }: {
   initiative: InitiativeData;

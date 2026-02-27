@@ -40,7 +40,7 @@ import { db } from "@/lib/db";
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const ORG_A   = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const ORG_B   = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const _ORG_B   = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const BOARD_A = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const LIST_A  = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const CARD_A  = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";

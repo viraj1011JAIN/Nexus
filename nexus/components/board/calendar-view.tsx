@@ -1,26 +1,24 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
-  Clock, Flag, GripVertical, LayoutGrid, List, Plus,
+  Clock, LayoutGrid, List,
   AlertTriangle
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  eachDayOfInterval, isSameMonth, isSameDay, isToday, isPast,
+  eachDayOfInterval, isSameMonth, isToday, isPast,
   addMonths, subMonths, parseISO, isValid, addWeeks, subWeeks, addDays,
   startOfWeek as getWeekStart,
 } from "date-fns";
-import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateCard } from "@/actions/update-card";
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCardModal } from "@/hooks/use-card-modal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -133,9 +131,11 @@ function MiniCard({
       {isOverdue && <AlertTriangle className="h-2.5 w-2.5 flex-shrink-0 text-red-500" />}
       <span className="truncate">{card.title}</span>
       {!compact && card.assigneeImageUrl && (
-        <img
+        <Image
           src={card.assigneeImageUrl}
           alt={card.assigneeName ?? ""}
+          width={14}
+          height={14}
           className="h-3.5 w-3.5 rounded-full flex-shrink-0 ml-auto"
         />
       )}

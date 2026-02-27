@@ -55,7 +55,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

@@ -9,10 +9,20 @@
  *   window.dispatchEvent(
  *     new CustomEvent("nexus:announce", { detail: { message, priority: "polite" | "assertive" } })
  *   );
+ *
+ * Implementation notes
+ * --------------------
+ * We intentionally render the two empty <div> containers on both the server
+ * and the client (no "mounted" guard / null-return).  This keeps the server
+ * and client DOM trees structurally identical and eliminates the React
+ * hydration mismatch that occurred when AriaLiveRegion returned null during
+ * SSR but the browser found an existing element in that slot (e.g. injected
+ * by a browser extension or a stale CDN-cached server response).
+ * suppressHydrationWarning on each container suppresses harmless attribute
+ * or text-content differences that can arise from browser extensions.
  */
 
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
 
 interface Announcement {
   id:       number;
@@ -21,29 +31,26 @@ interface Announcement {
 }
 
 export function AriaLiveRegion() {
-  const [mounted, setMounted] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const counterRef = useRef(0);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     function onAnnounce(e: Event) {
-      const { message, priority = "polite" } = (e as CustomEvent<{ message: string; priority?: "polite" | "assertive" }>).detail;
+      const { message, priority = "polite" } = (
+        e as CustomEvent<{ message: string; priority?: "polite" | "assertive" }>
+      ).detail;
       const id = ++counterRef.current;
       setAnnouncements((prev) => [...prev.slice(-4), { id, message, priority }]);
-      // Remove after 5s so the region doesn't accumulate stale announcements
-      setTimeout(() => setAnnouncements((prev) => prev.filter((a) => a.id !== id)), 5000);
+      // Remove after 5 s so the region doesn't accumulate stale text
+      setTimeout(
+        () => setAnnouncements((prev) => prev.filter((a) => a.id !== id)),
+        5000,
+      );
     }
 
     window.addEventListener("nexus:announce", onAnnounce);
     return () => window.removeEventListener("nexus:announce", onAnnounce);
   }, []);
-
-  if (!mounted) return null;
 
   return (
     <>
@@ -52,26 +59,29 @@ export function AriaLiveRegion() {
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className={cn(
-          "sr-only",
-          // Make visible during development: toggle by adding "not-sr-only" below
-        )}
+        className="sr-only"
+        suppressHydrationWarning
       >
-        {announcements.filter((a) => a.priority === "polite").map((a) => (
-          <span key={a.id}>{a.message}</span>
-        ))}
+        {announcements
+          .filter((a) => a.priority === "polite")
+          .map((a) => (
+            <span key={a.id}>{a.message}</span>
+          ))}
       </div>
 
-      {/* Assertive region — interrupts current speech (errors / urgent messages) */}
+      {/* Assertive region — interrupts current speech (errors / urgent) */}
       <div
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
         className="sr-only"
+        suppressHydrationWarning
       >
-        {announcements.filter((a) => a.priority === "assertive").map((a) => (
-          <span key={a.id}>{a.message}</span>
-        ))}
+        {announcements
+          .filter((a) => a.priority === "assertive")
+          .map((a) => (
+            <span key={a.id}>{a.message}</span>
+          ))}
       </div>
     </>
   );

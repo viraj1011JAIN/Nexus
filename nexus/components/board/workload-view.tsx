@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
   Users, User, Flag, Clock, AlertTriangle, ChevronDown, ChevronUp,
   BarChart2, Circle,
@@ -230,9 +231,11 @@ function MemberRow({ member }: { member: WorkloadMember }) {
       >
         {/* Avatar */}
         {member.imageUrl ? (
-          <img
+          <Image
             src={member.imageUrl}
             alt={member.name}
+            width={36}
+            height={36}
             className="h-9 w-9 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-sm"
           />
         ) : (

@@ -2,20 +2,18 @@
 
 import { useState, useEffect } from "react";
 import {
-  Share2, Copy, Check, Globe, Lock, Calendar, Loader2,
-  AlertTriangle, ExternalLink, Eye, Trash2, Settings,
+  Share2, Copy, Check, Globe, Loader2,
+  ExternalLink, Trash2, Settings,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   getBoardShareLink,

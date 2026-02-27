@@ -945,6 +945,30 @@ html:not(.theme-mounted) * {
 .dark .board-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
 .board-scrollbar:not(.dark)::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); }
 
+/* ============================================================================
+   KANBAN BOARD PERFORMANCE
+   Containment notes: Do NOT use contain:layout or contain:paint on draggable
+   elements — they break dnd-kit's CSS-transform drag by isolating layout
+   contexts. Only backface-visibility is safe for GPU layer promotion.
+   ============================================================================ */
+
+/* Each list column — GPU compositing layer, safe for dnd-kit transforms */
+.kanban-list-col {
+  backface-visibility: hidden;
+}
+
+/* Individual card — GPU compositing layer, safe for dnd-kit transforms */
+.kanban-card {
+  backface-visibility: hidden;
+}
+
+/* Board tile on dashboard — promote to own layer for hover transforms */
+.board-card-tile {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
 /* Font assignments */
 .font-display { font-family: var(--font-playfair), 'Playfair Display', Georgia, serif; }
 .font-body    { font-family: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif; }
@@ -968,4 +992,17 @@ html:not(.theme-mounted) * {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
+}
+
+/* ============================================================================
+   BOARD CARD UTILITIES
+   ============================================================================ */
+
+/**
+ * Fractal-noise texture overlay rendered as a static SVG data-URI.
+ * Used by board card banners to add tactile depth without an extra network
+ * request.  Kept in CSS so component JSX stays free of inline style objects.
+ */
+.board-noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
 }

@@ -10,9 +10,6 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
-  ToggleLeft,
-  ToggleRight,
-  ExternalLink,
   Loader2,
   Copy,
   Check,
@@ -25,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -94,7 +90,7 @@ function WebhookRow({
   webhook,
   onToggle,
   onDelete,
-  onRotateSecret,
+  onRotateSecret: _onRotateSecret,
 }: {
   webhook: WebhookData;
   onToggle: (id: string, enabled: boolean) => void;
@@ -291,7 +287,7 @@ export function WebhooksSettings() {
     setWebhooks((prev) => prev.filter((w) => w.id !== id));
   };
 
-  const handleRotateSecret = async (id: string) => {
+  const handleRotateSecret = async (_id: string) => {
     // Handled inside WebhookRow component
   };
 

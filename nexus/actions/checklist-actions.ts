@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
-import { createDAL } from "@/lib/dal";
 import { db } from "@/lib/db";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────

@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from "react";
 import {
-  Zap, Plus, Trash2, Play, Pause, ChevronDown, ChevronRight,
-  Settings, ArrowRight, AlertCircle, Check, Loader2, Clock,
-  Activity, ChevronUp, Edit3, Eye
+  Zap, Plus, Trash2,
+  ArrowRight, AlertCircle, Check, Loader2, Clock,
+  Activity, Eye
 } from "lucide-react";
 import { format } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +18,6 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {

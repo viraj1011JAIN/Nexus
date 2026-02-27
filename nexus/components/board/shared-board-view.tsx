@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Globe, Eye, Lock, Calendar, Users, Flag, AlertTriangle,
-  Copy, Check, ExternalLink, Share2, Layers
+  Copy, Check, ExternalLink, Layers
 } from "lucide-react";
 import { format, isPast, isToday, parseISO, isValid } from "date-fns";
 import { motion } from "framer-motion";

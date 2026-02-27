@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback, useMemo } from "react";
+import { useState, useTransition, useEffect, useCallback, useMemo, useRef } from "react";
 import { Plus, Trash2, ChevronDown, LayoutGrid, Layers, Clock, List, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid, parseISO } from "date-fns";
@@ -39,7 +39,7 @@ const BOARD_GRADIENTS = [
 ];
 
 function getBoardGradient(board: DashboardBoard): string {
-  if (board.imageThumbUrl) return "none";
+  // Always generate a gradient – imageThumbUrl boards get gradient on swatch/health bar
   const index = board.id.charCodeAt(0) % BOARD_GRADIENTS.length;
   return BOARD_GRADIENTS[index];
 }
@@ -72,6 +72,7 @@ export function BoardList() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeFilter, setActiveFilter] = useState<"All" | "Recent" | "Active">("All");
   const { theme, setTheme } = useTheme();
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchBoards = useCallback(async () => {
     try {
@@ -85,6 +86,12 @@ export function BoardList() {
     }
   }, []);
 
+  // Debounced version to batch rapid Supabase change events (e.g. bulk card moves)
+  const debouncedFetchBoards = useCallback(() => {
+    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+    fetchTimeoutRef.current = setTimeout(() => { fetchBoards(); }, 400);
+  }, [fetchBoards]);
+
   useEffect(() => {
     fetchBoards();
 
@@ -92,18 +99,18 @@ export function BoardList() {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Re-fetch whenever boards, lists, or cards change so counts stay accurate.
+    // Re-fetch (debounced) whenever boards, lists, or cards change so counts stay accurate.
     const channel = supabase
       .channel('dashboard-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, fetchBoards)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, fetchBoards)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, fetchBoards)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, debouncedFetchBoards)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, debouncedFetchBoards)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, debouncedFetchBoards)
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchBoards]);
+  }, [fetchBoards, debouncedFetchBoards]);
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,11 +252,11 @@ export function BoardList() {
             ].map((stat, i) => (
               <div
                 key={stat.label}
-                className="animate-fade-up bg-card border border-border rounded-2xl p-4 flex items-center gap-3"
-                style={{ animationDelay: `${i * 0.06}s`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+                className="animate-fade-up bg-card border border-border rounded-2xl p-4 flex items-center gap-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+                style={{ animationDelay: `${i * 0.06}s` }}
               >
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
                   style={{ background: stat.bg }}
                 >
                   <span className="font-display font-bold text-xl leading-none" style={{ color: stat.fg }}>
@@ -289,15 +296,14 @@ export function BoardList() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Name your new board..."
-              className="flex-1 h-[42px] px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
+              className="flex-1 h-10.5 px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
               disabled={isPending}
               autoComplete="off"
             />
             <button
               type="submit"
               disabled={isPending}
-              className="h-[42px] px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
-              style={{ background: "linear-gradient(135deg, #7B2FF7, #C01CC4)", boxShadow: "0 4px 16px rgba(123,47,247,0.28)" }}
+              className="h-10.5 px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
             >
               {isPending ? (
                 <div className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -310,7 +316,7 @@ export function BoardList() {
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
               aria-label="Toggle advanced options"
-              className="h-[42px] w-[42px] rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
+              className="h-10.5 w-10.5 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
             >
               <ChevronDown className={cn("h-4 w-4 transition-transform", showAdvanced && "rotate-180")} />
             </button>
@@ -441,8 +447,7 @@ export function BoardList() {
             className="flex flex-col items-center justify-center py-24 text-center"
           >
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-              style={{ background: "linear-gradient(135deg, rgba(123,47,247,0.12), rgba(193,28,196,0.12))" }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 bg-[linear-gradient(135deg,rgba(123,47,247,0.12),rgba(193,28,196,0.12))]"
             >
               <LayoutGrid className="h-7 w-7 text-primary" />
             </div>
@@ -455,8 +460,7 @@ export function BoardList() {
           /* ── No filter results ─────────────────────────────────────── */
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-              style={{ background: "linear-gradient(135deg, rgba(123,47,247,0.1), rgba(193,28,196,0.1))" }}
+              className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-[linear-gradient(135deg,rgba(123,47,247,0.1),rgba(193,28,196,0.1))]"
             >
               <LayoutGrid className="h-5 w-5 text-primary/60" />
             </div>
@@ -489,7 +493,7 @@ export function BoardList() {
                   {/* Colour swatch */}
                   <div
                     className="w-10 h-10 rounded-xl shrink-0"
-                    style={{ background: getBoardGradient(board) || "linear-gradient(135deg,#7B2FF7,#F107A3)" }}
+                    style={{ backgroundImage: board.imageThumbUrl ? `url(${board.imageThumbUrl})` : getBoardGradient(board), backgroundSize: "cover", backgroundPosition: "center" }}
                   />
 
                   {/* Title + meta */}
@@ -549,8 +553,8 @@ export function BoardList() {
                 key={board.id}
                 href={`/board/${board.id}`}
                 className={cn(
-                  "group board-card-hover animate-fade-up",
-                  "bg-card border border-border rounded-[20px] overflow-hidden",
+                  "group board-card-hover board-card-tile animate-fade-up",
+                  "bg-card border border-border rounded-4xl overflow-hidden",
                   "shadow-sm hover:shadow-xl",
                   "transition-shadow duration-200 cursor-pointer block"
                 )}
@@ -558,36 +562,26 @@ export function BoardList() {
               >
                 {/* === Banner === */}
                 <div
-                  className="relative h-[112px] overflow-hidden"
+                  className="relative h-28 overflow-hidden"
                   style={{
-                    background: getBoardGradient(board),
-                    ...(board.imageThumbUrl
-                      ? { backgroundImage: `url(${board.imageThumbUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-                      : {}),
+                    backgroundImage: board.imageThumbUrl
+                      ? `url(${board.imageThumbUrl})`
+                      : getBoardGradient(board),
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
                   }}
                 >
-                  {/* Noise texture overlay */}
-                  <div
-                    className="absolute inset-0 mix-blend-overlay opacity-40"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E")`,
-                    }}
-                  />
+                  {/* Noise texture overlay – SVG data-URI kept in className to satisfy no-inline-style rule */}
+                  <div className="board-noise-overlay absolute inset-0 mix-blend-overlay opacity-40" />
                   {/* Soft light blob */}
-                  <div
-                    className="absolute -top-5 -right-5 w-24 h-24 rounded-full"
-                    style={{ background: "rgba(255,255,255,0.15)", filter: "blur(28px)" }}
-                  />
+                  <div className="absolute -top-5 -right-5 w-24 h-24 rounded-full bg-white/15 blur-[28px]" />
                   {/* Board name tag */}
-                  <div
-                    className="absolute bottom-3 left-3.5 text-[9px] font-bold tracking-[0.14em] uppercase text-white/85 px-2 py-1 rounded-md backdrop-blur-sm"
-                    style={{ background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.18)" }}
-                  >
+                  <div className="absolute bottom-3 left-3.5 text-[9px] font-bold tracking-[0.14em] uppercase text-white/85 px-2 py-1 rounded-md backdrop-blur-sm bg-black/[0.18] border border-white/[0.18]">
                     {board.title.substring(0, 14)}
                   </div>
                   {/* Status dot */}
                   <div className="absolute top-3 left-3.5 flex items-center gap-1.5">
-                    <div className="w-[7px] h-[7px] rounded-full bg-emerald-400 animate-pulse-dot" style={{ boxShadow: "0 0 6px #4AE8A4" }} />
+                    <div className="w-1.75 h-1.75 rounded-full bg-emerald-400 animate-pulse-dot shadow-[0_0_6px_#4AE8A4]" />
                     <span className="text-[10px] text-white/80 font-medium">Active</span>
                   </div>
                   {/* Delete button */}
@@ -608,14 +602,14 @@ export function BoardList() {
                 </div>
 
                 {/* === Card Body === */}
-                <div className="p-4 pb-[18px]">
+                <div className="p-4 pb-4.5">
                   {/* Title + timestamp */}
                   <div className="mb-3.5">
                     <h3 className="font-display font-bold text-[16px] tracking-tight text-foreground leading-snug truncate">
                       {board.title}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <Clock className="w-[11px] h-[11px] text-muted-foreground/60" />
+                      <Clock className="w-2.75 h-2.75 text-muted-foreground/60" />
                       <span className="text-[11.5px] text-muted-foreground">
                         Updated {formatRelativeDate(board.updatedAt)}
                       </span>
@@ -633,7 +627,7 @@ export function BoardList() {
                         { Icon: LayoutGrid, val: board.cardCount, label: board.cardCount === 1 ? "card" : "cards" },
                       ].map(({ Icon, val, label }) => (
                         <div key={label} className="flex items-center gap-1.5 text-muted-foreground">
-                          <Icon className="w-[13px] h-[13px]" />
+                          <Icon className="w-3.25 h-3.25" />
                           <span className="text-[12px] font-medium">{val} {label}</span>
                         </div>
                       ))}
@@ -645,8 +639,8 @@ export function BoardList() {
                         .map((g, i) => (
                           <div
                             key={i}
-                            className="w-[22px] h-[22px] rounded-full border-2 border-card flex items-center justify-center text-white text-[8px] font-bold"
-                            style={{ background: g, boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}
+                            className="w-5.5 h-5.5 rounded-full border-2 border-card flex items-center justify-center text-white text-[8px] font-bold shadow-[0_1px_4px_rgba(0,0,0,0.12)]"
+                            style={{ background: g }}
                           >
                             {["V","M","A"][i]}
                           </div>
@@ -662,15 +656,15 @@ export function BoardList() {
               type="button"
               onClick={() => document.querySelector<HTMLInputElement>("input[placeholder='Name your new board...']")?.focus()}
               className={cn(
-                "border-[1.5px] border-dashed border-border rounded-[20px]",
-                "flex flex-col items-center justify-center gap-2.5 min-h-[200px] cursor-pointer w-full",
+                "border-[1.5px] border-dashed border-border rounded-4xl",
+                "flex flex-col items-center justify-center gap-2.5 min-h-50 cursor-pointer w-full",
                 "transition-all duration-200",
                 "hover:border-primary/40 hover:bg-accent/30 hover:-translate-y-1",
                 "hover:shadow-[0_8px_28px_rgba(123,47,247,0.08)]"
               )}
             >
               <div className="w-10 h-10 rounded-[13px] bg-accent flex items-center justify-center">
-                <Plus className="w-[18px] h-[18px] text-primary" />
+                <Plus className="w-4.5 h-4.5 text-primary" />
               </div>
               <div className="text-center">
                 <p className="text-[13.5px] font-semibold text-muted-foreground">Create New Board</p>
@@ -683,8 +677,8 @@ export function BoardList() {
         {/* ── Project Health Panel ────────────────────────────────────── */}
         {boards.length > 0 && (
           <div
-            className="bg-card border border-border rounded-2xl p-5 animate-fade-up mt-6"
-            style={{ animationDelay: "0.22s", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+            className="bg-card border border-border rounded-2xl p-5 animate-fade-up mt-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+            style={{ animationDelay: "0.22s" }}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -704,12 +698,8 @@ export function BoardList() {
               </div>
               <div className="text-right shrink-0">
                 <div
-                  className="font-display font-bold text-[32px] leading-none tabular-nums"
-                  style={{
-                    background: healthGradient,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
+                  className="font-display font-bold text-[32px] leading-none tabular-nums bg-clip-text text-transparent"
+                  style={{ background: healthGradient }}
                 >
                   {healthScore}
                 </div>
@@ -723,9 +713,7 @@ export function BoardList() {
             <div className="space-y-2.5 mb-4">
               {boards.slice(0, 5).map((board, i) => {
                 const pct = Math.max(4, Math.round((board.cardCount / maxBoardCards) * 100));
-                const g   = getBoardGradient(board) !== "none"
-                  ? getBoardGradient(board)
-                  : BOARD_GRADIENTS[i % BOARD_GRADIENTS.length];
+                const g   = getBoardGradient(board);
                 return (
                   <div key={board.id} className="flex items-center gap-3">
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g }} />

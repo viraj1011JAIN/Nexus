@@ -18,7 +18,7 @@
 
 import { useState, useMemo, useRef } from "react";
 import { addDays, addMonths, differenceInDays, format, startOfDay, endOfDay, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isToday, isSameMonth } from "date-fns";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCardModal } from "@/hooks/use-card-modal";
@@ -91,7 +91,7 @@ function formatColSub(date: Date, zoom: Zoom): string {
 function GanttBar({
   card,
   rangeStart,
-  totalDays,
+  totalDays: _totalDays,
   colWidth,
   zoom,
   containerWidth,

@@ -1,7 +1,7 @@
 "use client";
 
 import { List, Card } from "@prisma/client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import {
@@ -127,7 +127,7 @@ export const ListContainer = ({
     }),
   );
 
-  const onDragOver = (event: DragOverEvent) => {
+  const onDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
@@ -213,9 +213,10 @@ export const ListContainer = ({
         return newLists;
       });
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const onDragEnd = (event: DragEndEvent) => {
+  const onDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
 
@@ -304,7 +305,8 @@ export const ListContainer = ({
             updateCardOrder(updates, boardId);
          }
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId]);
 
   const { theme } = useTheme();
   const isDark = theme === "dark";

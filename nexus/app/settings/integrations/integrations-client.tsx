@@ -18,7 +18,7 @@ interface IntegrationState {
 
 const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
 
-export function IntegrationsClient({ orgId }: Props) {
+export function IntegrationsClient({ orgId: _orgId }: Props) {
   const [state, setState] = useState<IntegrationState>({
     github: { enabled: false, webhookSecret: "", copied: false },
     slack:  { enabled: false, webhookUrl: "", botToken: "" },

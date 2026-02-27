@@ -3,16 +3,14 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 import { 
-  X, Trash2, MoveRight, Flag, User, Tag, Calendar,
+  X, Trash2, MoveRight, Flag, User, Tag,
   CheckSquare, ChevronDown, AlertTriangle, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,

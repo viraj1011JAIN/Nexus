@@ -1,0 +1,116 @@
+﻿
+C:\Nexus\nexus\__tests__\unit\ai-actions.test.ts
+  26:3  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Nexus\nexus\__tests__\unit\api-keys\api-key-auth.test.ts
+  161:13  warning  'req' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\__tests__\unit\auth\auth-session.test.ts
+  163:14  warning  'setCurrentOrgId' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  203:7   warning  'AUTHED_CTX' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\__tests__\unit\billing\stripe-checkout.test.ts
+  101:10  warning  'makePortalReq' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\__tests__\unit\cards\card-operations.test.ts
+  144:7  warning  'CARD_ID_FOREIGN' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\__tests__\unit\import-export\import-export-actions.test.ts
+  43:7  warning  'ORG_B' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\__tests__\unit\plan-limits\plan-limits.test.ts
+  201:7  warning  'mockCardFindUnique' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\actions\analytics\get-advanced-analytics.ts
+  150:11  warning  'totalStart' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\actions\automation-actions.ts
+  263:12  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u       @typescript-eslint/no-unused-vars
+  487:5   warning  Unused eslint-disable directive (no problems were reported from 'no-fallthrough')
+
+C:\Nexus\nexus\actions\delete-card.ts
+  11:46  warning  'boardId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\app\api\push\subscribe\route.ts
+  47:30  warning  'req' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\app\board\[boardId]\settings\_components\board-fields-client.tsx
+  13:16  warning  'AlertDialogAction' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\app\settings\integrations\integrations-client.tsx
+  21:38  warning  'orgId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\calendar-view.tsx
+    6:10  warning  'Flag' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+    6:16  warning  'GripVertical' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+    6:48  warning  'Plus' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   11:35  warning  'isSameDay' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   15:35  warning  'Reorder' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   17:10  warning  'Badge' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   22:3   warning  'Tooltip' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   22:12  warning  'TooltipContent' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   22:45  warning  'TooltipTrigger' is defined but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  136:9   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\components\board\card-item.tsx
+  45:3  warning  'listColor' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\checklist-panel.tsx
+  323:53  warning  'boardId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\filter-bar.tsx
+  7:3   warning  'Filter' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  7:14  warning  'Save' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\gantt-view.tsx
+  21:37  warning  'ZoomIn' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  21:45  warning  'ZoomOut' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  94:3   warning  'totalDays' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\sprint-panel.tsx
+  58:3  warning  'ReferenceLine' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\board\workload-view.tsx
+  233:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\components\modals\card-modal\index.tsx
+   557:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  1050:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Nexus\nexus\components\roadmap-client.tsx
+   51:3  warning  'updateInitiative' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   54:3  warning  'updateEpic' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  313:3  warning  'onRefresh' is defined but never used. Allowed unused args must match /^_/u         @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\settings\automation-builder.tsx
+   5:22  warning  'Play' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+   5:28  warning  'Pause' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   5:35  warning  'ChevronDown' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   5:48  warning  'ChevronRight' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   6:3   warning  'Settings' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+   7:13  warning  'ChevronUp' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+   7:24  warning  'Edit3' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  10:10  warning  'motion' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  10:18  warning  'AnimatePresence' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  23:3   warning  'Collapsible' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  23:16  warning  'CollapsibleContent' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  23:36  warning  'CollapsibleTrigger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\components\settings\webhooks-settings.tsx
+   13:3   warning  'ToggleLeft' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   14:3   warning  'ToggleRight' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   15:3   warning  'ExternalLink' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   28:10  warning  'ScrollArea' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   97:3   warning  'onRotateSecret' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  294:37  warning  'id' is defined but never used. Allowed unused args must match /^_/u              @typescript-eslint/no-unused-vars
+
+C:\Nexus\nexus\lib\automation-engine.ts
+  268:9  warning  Unused eslint-disable directive (no problems were reported from 'eqeqeq')
+  274:9  warning  Unused eslint-disable directive (no problems were reported from 'eqeqeq')
+
+C:\Nexus\nexus\next.config.ts
+  4:7  warning  'isDev' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+Γ£û 60 problems (0 errors, 60 warnings)
+  0 errors and 4 warnings potentially fixable with the `--fix` option.
+

@@ -23,7 +23,6 @@ const ORG = { id: "org_1", aiCallsToday: 0, aiCallsResetAt: new Date(), aiCallsL
 const mockCreate = jest.fn();
 jest.mock("openai", () => ({
   __esModule: true,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   default: jest.fn().mockImplementation(() => ({
     chat: { completions: { create: (...args: unknown[]) => (mockCreate as (...a: unknown[]) => unknown)(...args) } },
   })),

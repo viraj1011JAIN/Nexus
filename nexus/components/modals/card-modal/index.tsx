@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
+import NextImage from "next/image";
 import { Card, AuditLog, List, Label, Priority } from "@prisma/client";
 import {
   X,
@@ -554,7 +555,7 @@ export const CardModal = () => {
               {(cardData.coverImageUrl || cardData.coverColor) ? (
                 <>
                   {cardData.coverImageUrl
-                    ? <img src={cardData.coverImageUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                    ? <NextImage src={cardData.coverImageUrl} alt="" width={600} height={148} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
                     : <div style={{ width:"100%", height:"100%", background: cardData.coverColor ?? "#7B2FF7" }} />
                   }
                   <div style={{ position:"absolute", inset:0, background: T.coverOverlay }} />
@@ -1047,7 +1048,7 @@ export const CardModal = () => {
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:7, marginLeft:18 }}>
                         {cardData.assignee.imageUrl ? (
-                          <img src={cardData.assignee.imageUrl} alt={cardData.assignee.name} style={{ width:20, height:20, borderRadius:"50%", objectFit:"cover" }} />
+                          <NextImage src={cardData.assignee.imageUrl} alt={cardData.assignee.name} width={20} height={20} style={{ borderRadius:"50%", objectFit:"cover" }} />
                         ) : (
                           <div style={{
                             width:20, height:20, borderRadius:"50%",

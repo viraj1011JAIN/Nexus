@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useTheme } from "@/components/theme-provider";
 import { useState } from "react";
 import { ChevronLeft, Share2 } from "lucide-react";
 import { ShareBoardDialog } from "./share-board-dialog";
@@ -26,208 +25,91 @@ interface BoardHeaderProps {
   onTitleChange?: (title: string) => void;
 }
 
-export function BoardHeader({ boardId, boardTitle, orgId, currentImageId, onTitleChange }: BoardHeaderProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+export function BoardHeader({
+  boardId,
+  boardTitle,
+  orgId,
+  currentImageId,
+  onTitleChange,
+}: BoardHeaderProps) {
   const [shareOpen, setShareOpen] = useState(false);
 
   return (
     <>
-    <header
-      style={{
-        flexShrink: 0,
-        zIndex: 10,
-        padding: "0 24px",
-        height: 56,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: isDark ? "rgba(13,12,20,0.85)" : "rgba(255,253,249,0.92)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        borderBottom: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.08)",
-        boxShadow: isDark ? "none" : "0 1px 12px rgba(0,0,0,0.06)",
-      }}
-    >
-      {/* LEFT: back + divider + board identity */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <Link
-          href="/"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 12.5,
-            color: isDark ? "rgba(255,255,255,0.35)" : "#9A8F85",
-            fontWeight: 500,
-            textDecoration: "none",
-            padding: "4px 8px",
-            borderRadius: 7,
-            transition: "color 0.15s ease",
-            fontFamily: "'DM Sans', sans-serif",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.color = isDark ? "rgba(255,255,255,0.7)" : "#1A1714";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.color = isDark ? "rgba(255,255,255,0.35)" : "#9A8F85";
-          }}
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-          Back
-        </Link>
+      <header className="shrink-0 z-10 px-6 h-14 flex items-center justify-between bg-[rgba(255,253,249,0.92)] dark:bg-[rgba(13,12,20,0.85)] backdrop-blur-[16px] border-b border-b-black/[0.08] dark:border-b-white/[0.07] shadow-[0_1px_12px_rgba(0,0,0,0.06)] dark:shadow-none">
 
-        <div
-          style={{
-            width: 1,
-            height: 18,
-            background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
-          }}
-        />
-
-        {/* Board identity */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Logo mark */}
-          <div
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 9,
-              background: "linear-gradient(135deg,#7B2FF7,#F107A3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 13,
-              fontWeight: 800,
-              color: "#fff",
-              fontFamily: "'Playfair Display', serif",
-              boxShadow: "0 4px 14px rgba(123,47,247,0.35)",
-              flexShrink: 0,
-            }}
+        {/* LEFT: back + divider + board identity */}
+        <div className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="flex items-center gap-[5px] text-[12.5px] font-medium no-underline py-1 px-2 rounded-[7px] transition-colors duration-150 ease-in-out text-[#9A8F85] hover:text-[#1A1714] dark:text-white/35 dark:hover:text-white/70 font-[family-name:var(--font-dm-sans)]"
           >
-            N
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Back
+          </Link>
+
+          {/* vertical rule */}
+          <div className="w-px h-[18px] bg-black/10 dark:bg-white/10" />
+
+          {/* Board identity */}
+          <div className="flex items-center gap-[10px]">
+            {/* Logo mark */}
+            <div className="w-[30px] h-[30px] rounded-[9px] bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] flex items-center justify-center text-[13px] font-extrabold text-white font-[family-name:var(--font-playfair)] shadow-[0_4px_14px_rgba(123,47,247,0.35)] shrink-0">
+              N
+            </div>
+
+            {/* Board title */}
+            <h1 className="m-0 text-base font-bold tracking-[-0.02em] font-[family-name:var(--font-playfair)] whitespace-nowrap overflow-hidden text-ellipsis max-w-[240px] text-[#0F0D0B] dark:text-transparent dark:bg-gradient-to-br dark:from-[#C084FC] dark:via-[#F0ABFC] dark:to-[#818CF8] dark:bg-clip-text">
+              {boardTitle}
+            </h1>
+
+            {/* PROJECT badge */}
+            <span className="text-[10px] font-bold py-[2px] px-2 rounded-full tracking-[0.05em] whitespace-nowrap bg-[rgba(123,47,247,0.1)] text-[#7B2FF7] border border-[rgba(123,47,247,0.2)] dark:bg-[rgba(123,47,247,0.15)] dark:text-[#A78BFA] dark:border-[rgba(123,47,247,0.3)]">
+              PROJECT
+            </span>
+          </div>
+        </div>
+
+        {/* RIGHT: live badge + presence + share + settings */}
+        <div className="flex items-center gap-2">
+
+          {/* Live badge */}
+          <div className="flex items-center gap-[6px] py-[5px] px-[10px] rounded-full bg-[rgba(5,150,105,0.08)] border border-[rgba(5,150,105,0.2)] dark:bg-[rgba(79,255,176,0.08)] dark:border-[rgba(79,255,176,0.2)]">
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse-dot bg-[#059669] shadow-[0_0_5px_rgba(5,150,105,0.4)] dark:bg-[#4FFFB0] dark:shadow-[0_0_5px_rgba(79,255,176,0.5)]" />
+            <span className="text-[11px] font-semibold text-[#059669] dark:text-[#4FFFB0]">
+              Live
+            </span>
           </div>
 
-          {/* Board title */}
-          <h1
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              fontFamily: "'Playfair Display', serif",
-              letterSpacing: "-0.02em",
-              color: isDark ? undefined : "#0F0D0B",
-              background: isDark
-                ? "linear-gradient(135deg, #C084FC, #F0ABFC, #818CF8)"
-                : undefined,
-              WebkitBackgroundClip: isDark ? "text" : undefined,
-              WebkitTextFillColor: isDark ? "transparent" : undefined,
-              margin: 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: 240,
-            }}
-          >
-            {boardTitle}
-          </h1>
+          {/* Presence avatars — client-only, see dynamic import above */}
+          <PresenceUsers boardId={boardId} orgId={orgId} />
 
-          {/* PROJECT tag */}
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              padding: "2px 8px",
-              borderRadius: 20,
-              background: isDark ? "rgba(123,47,247,0.15)" : "rgba(123,47,247,0.1)",
-              color: isDark ? "#A78BFA" : "#7B2FF7",
-              border: isDark ? "1px solid rgba(123,47,247,0.3)" : "1px solid rgba(123,47,247,0.2)",
-              letterSpacing: "0.05em",
-              whiteSpace: "nowrap",
-            }}
+          {/* Share */}
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="flex items-center gap-[6px] py-[6px] px-3 rounded-[9px] border cursor-pointer text-[12.5px] font-medium transition-all duration-[180ms] ease-in-out font-[family-name:var(--font-dm-sans)] border-black/[0.09] bg-[#FFFDF9] text-[#6B6560] shadow-[0_1px_4px_rgba(0,0,0,0.05)] hover:opacity-80 dark:border-white/[0.09] dark:bg-white/[0.04] dark:text-white/45 dark:shadow-none"
           >
-            PROJECT
-          </span>
-        </div>
-      </div>
+            <Share2 className="w-3 h-3" />
+            Share
+          </button>
 
-      {/* RIGHT: live badge + presence + filter + share + settings */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {/* Live badge */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "5px 10px",
-            borderRadius: 20,
-            background: isDark ? "rgba(79,255,176,0.08)" : "rgba(5,150,105,0.08)",
-            border: isDark ? "1px solid rgba(79,255,176,0.2)" : "1px solid rgba(5,150,105,0.2)",
-          }}
-        >
-          <div
-            className="animate-pulse-dot"
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: isDark ? "#4FFFB0" : "#059669",
-              boxShadow: isDark ? "0 0 5px rgba(79,255,176,0.5)" : "0 0 5px rgba(5,150,105,0.4)",
-            }}
+          {/* Settings */}
+          <BoardSettingsDropdown
+            boardId={boardId}
+            boardTitle={boardTitle}
+            currentImageId={currentImageId}
+            onTitleChange={onTitleChange}
           />
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: isDark ? "#4FFFB0" : "#059669",
-            }}
-          >
-            Live
-          </span>
         </div>
+      </header>
 
-        {/* Presence avatars — client-only, see dynamic import above */}
-        <PresenceUsers boardId={boardId} orgId={orgId} />
-
-        {/* Share */}
-        <button
-          onClick={() => setShareOpen(true)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 12px",
-            borderRadius: 9,
-            border: isDark ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(0,0,0,0.09)",
-            background: isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
-            color: isDark ? "rgba(255,255,255,0.45)" : "#6B6560",
-            fontSize: 12.5,
-            fontWeight: 500,
-            cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
-            boxShadow: isDark ? "none" : "0 1px 4px rgba(0,0,0,0.05)",
-            transition: "all 0.18s ease",
-          }}
-        >
-          <Share2 className="w-3 h-3" />
-          Share
-        </button>
-
-        {/* Settings */}
-        <BoardSettingsDropdown
-          boardId={boardId}
-          boardTitle={boardTitle}
-          currentImageId={currentImageId}
-          onTitleChange={onTitleChange}
-        />
-      </div>
-    </header>
-
-    <ShareBoardDialog
-      boardId={boardId}
-      boardTitle={boardTitle}
-      open={shareOpen}
-      onClose={() => setShareOpen(false)}
-    />
+      <ShareBoardDialog
+        boardId={boardId}
+        boardTitle={boardTitle}
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+      />
     </>
   );
 }

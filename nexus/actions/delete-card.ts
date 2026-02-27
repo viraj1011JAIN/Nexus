@@ -8,7 +8,7 @@ import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-conte
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { emitCardEvent } from "@/lib/event-bus";
 
-export async function deleteCard(id: string, boardId: string) {
+export async function deleteCard(id: string, _boardId: string) {
   const ctx = await getTenantContext();
   // Deleting cards requires ADMIN role
   await requireRole("ADMIN", ctx);

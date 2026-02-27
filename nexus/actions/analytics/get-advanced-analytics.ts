@@ -147,7 +147,7 @@ export async function getAdvancedBoardAnalytics(
 
     // ─── 1. Burndown (last 60 days) ─────────────────────────────────────────
     const DAYS = 60;
-    const totalStart = allCards.length; // approximation: current total as "scope"
+    const _totalStart = allCards.length; // approximation: current total as "scope"
     const burndown: { date: string; remaining: number; ideal: number }[] = [];
 
     for (let i = DAYS - 1; i >= 0; i--) {

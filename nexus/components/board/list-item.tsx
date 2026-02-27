@@ -1,6 +1,6 @@
 "use client";
 
-import { ElementRef, useEffect, useRef, useState } from "react";
+import { ElementRef, memo, useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -31,7 +31,7 @@ interface ListItemProps {
 
 const LIST_COLORS = ["#7C3AED","#D97706","#8B5CF6","#059669","#1A73E8","#E0284A"];
 
-export const ListItem = ({
+const ListItemInner = ({
   index,
   data,
   boardId,
@@ -152,7 +152,7 @@ export const ListItem = ({
         touchAction: "none",
       }}
       {...attributes}
-      className="animate-list-enter"
+      className="animate-list-enter kanban-list-col"
     >
       {/* List column outer shell */}
       <div
@@ -173,26 +173,25 @@ export const ListItem = ({
             justifyContent: "space-between",
             padding: "11px 14px",
             marginBottom: 10,
-            background: isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
-            border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
-            borderTop: isDark
-              ? "1px solid rgba(255,255,255,0.08)"
-              : `3px solid ${listColor}`,
-            borderRadius: isDark ? 12 : "12px 12px 10px 10px",
-            boxShadow: isDark ? "none" : "0 2px 8px rgba(0,0,0,0.05)",
-            backdropFilter: isDark ? "blur(8px)" : "none",
+            background: isDark
+              ? `linear-gradient(135deg, ${listColor}18 0%, rgba(255,255,255,0.03) 100%)`
+              : `linear-gradient(135deg, ${listColor}0D 0%, #FFFDF9 100%)`,
+            border: isDark ? `1px solid ${listColor}35` : `1px solid ${listColor}25`,
+            borderTop: `3px solid ${listColor}`,
+            borderRadius: "12px 12px 10px 10px",
+            boxShadow: isDark
+              ? `0 2px 12px ${listColor}18, 0 1px 4px rgba(0,0,0,0.3)`
+              : `0 2px 8px rgba(0,0,0,0.05), 0 1px 0 ${listColor}15`,
             cursor: "grab",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-            {/* Color glow dot — dark mode only */}
-            {isDark && (
-              <div style={{
-                width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-                background: listColor,
-                boxShadow: `0 0 8px ${listColor}88`,
-              }}/>
-            )}
+            {/* Color dot — always visible in both themes */}
+            <div style={{
+              width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+              background: listColor,
+              boxShadow: isDark ? `0 0 8px ${listColor}99` : `0 0 4px ${listColor}66`,
+            }}/>
 
             {/* Inline title editing — keep existing logic */}
             {isEditing ? (
@@ -435,3 +434,12 @@ export const ListItem = ({
     </div>
   );
 };
+
+export const ListItem = memo(ListItemInner, (prev, next) => {
+  // Only re-render when the list data identity changes or index/boardId changes
+  return (
+    prev.data === next.data &&
+    prev.index === next.index &&
+    prev.boardId === next.boardId
+  );
+});

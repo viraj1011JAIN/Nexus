@@ -98,7 +98,7 @@ function makeCheckoutReq(body: unknown): NextRequest {
   });
 }
 
-function makePortalReq(): NextRequest {
+function _makePortalReq(): NextRequest {
   return new NextRequest("http://localhost/api/stripe/portal", { method: "POST" });
 }
 

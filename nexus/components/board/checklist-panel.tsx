@@ -320,7 +320,7 @@ export function ChecklistPanel({ cardId, boardId, initialChecklists }: Checklist
   };
 
   // Override to hook delete into reload
-  const handleDeleteWithReload = async (id: string, boardId: string) => {
+  const handleDeleteWithReload = async (id: string, _boardId: string) => {
     handleDeleteChecklist(id);
     await reload();
   };

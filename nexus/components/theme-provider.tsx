@@ -30,8 +30,23 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 // ============================================================================
 
 function ThemeProviderComponent({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>("light");
+  // Lazy initializers read from localStorage / matchMedia only on the client.
+  // On the server they fall back to safe defaults ("system" / "light").
+  // This avoids calling setState synchronously inside a useEffect
+  // (react-hooks/set-state-in-effect) while still hydrating from stored prefs.
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof localStorage !== "undefined") {
+      return (localStorage.getItem(STORAGE_KEY) as Theme) || "system";
+    }
+    return "system";
+  });
+
+  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia(COLOR_SCHEME_QUERY).matches ? "dark" : "light";
+    }
+    return "light";
+  });
 
   // Memoize resolved theme to prevent recalculations
   const resolvedTheme: ResolvedTheme = useMemo(
@@ -56,27 +71,24 @@ function ThemeProviderComponent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(COLOR_SCHEME_QUERY);
-    const storedTheme = (localStorage.getItem(STORAGE_KEY) as Theme) || "system";
-    
-    // Set initial state in single batch
-    const initialSystemTheme = mediaQuery.matches ? "dark" : "light";
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSystemTheme(initialSystemTheme);
-    setThemeState(storedTheme);
-    
-    // Apply theme (script already did this, just sync)
-    const themeToApply: ResolvedTheme = storedTheme === "system" ? initialSystemTheme : storedTheme;
+
+    // Apply stored theme on mount (the inline theme-script already did this
+    // server-side, but we need to sync the DOM once React takes over).
+    const themeToApply: ResolvedTheme = theme === "system" ? systemTheme : theme;
     applyTheme(themeToApply);
 
-    // Optimized system theme listener
+    // Subscribe: update systemTheme whenever the OS dark-mode preference changes
     const handleChange = (e: MediaQueryListEvent) => {
-      const newSystemTheme = e.matches ? "dark" : "light";
+      const newSystemTheme: ResolvedTheme = e.matches ? "dark" : "light";
       setSystemTheme(newSystemTheme);
-      if (storedTheme === "system") applyTheme(newSystemTheme);
+      if (theme === "system") applyTheme(newSystemTheme);
     };
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
+    // theme and systemTheme are intentionally omitted: we only want this to
+    // run once on mount to avoid re-subscribing on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyTheme]);
 
   // ============================================================================

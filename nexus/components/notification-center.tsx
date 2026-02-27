@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Bell, Check, CheckCheck, Trash2, ExternalLink, User, AlertCircle, Clock, GitBranch, Share2, Zap } from "lucide-react";
+import { Bell, Check, CheckCheck, Trash2, User, AlertCircle, Clock, GitBranch, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
