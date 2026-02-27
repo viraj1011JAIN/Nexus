@@ -17,25 +17,33 @@ import { db }    from "@/lib/db";
 import OpenAI    from "openai";
 import { z }     from "zod";
 
-const _rawKey = process.env.OPENAI_API_KEY ?? "";
-const _keyValid = Boolean(_rawKey) && !_rawKey.includes("REPLACE") && _rawKey.length >= 20;
+// Lazily initialised — nothing is instantiated at module-evaluation time.
+// This is required because ai-actions.ts is imported by "use client" components
+// (e.g. checklists.tsx) for their Server Action references. Turbopack evaluates
+// the module to build the proxy, and any module-level side effects that use
+// server-only packages (new OpenAI(), console.warn, etc.) crash that evaluation
+// and break HMR with "module factory is not available".
+let _openai: OpenAI | null | undefined;   // undefined = not yet initialised
 
-if (!_keyValid) {
-  console.warn(
-    "[ai-actions] ⚠  OPENAI_API_KEY is missing or is still the placeholder value.\n" +
-    "            AI features are disabled. Add your real key to .env.local:  OPENAI_API_KEY=sk-..."
-  );
-}
-
-// Null when key is missing/invalid — callers must check via getOpenAI() before calling the API.
-const openai: OpenAI | null = _keyValid ? new OpenAI({ apiKey: _rawKey }) : null;
-
-/** Returns the OpenAI client or throws a descriptive error if not configured. */
+/** Returns the singleton OpenAI client, initialising it on first call. */
 function getOpenAI(): OpenAI {
-  if (!openai) {
+  if (_openai === undefined) {
+    const rawKey  = process.env.OPENAI_API_KEY ?? "";
+    const keyValid = Boolean(rawKey) && !rawKey.includes("REPLACE") && rawKey.length >= 20;
+    if (!keyValid) {
+      console.warn(
+        "[ai-actions] ⚠  OPENAI_API_KEY is missing or is still the placeholder value.\n" +
+        "            AI features are disabled. Add your real key to .env.local:  OPENAI_API_KEY=sk-..."
+      );
+      _openai = null;
+    } else {
+      _openai = new OpenAI({ apiKey: rawKey });
+    }
+  }
+  if (!_openai) {
     throw new Error("AI features are disabled: OPENAI_API_KEY is missing or invalid. Set it in .env.local.");
   }
-  return openai;
+  return _openai;
 }
 
 const AI_MODEL       = process.env.AI_MODEL ?? "gpt-4o-mini";

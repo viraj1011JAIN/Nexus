@@ -113,6 +113,19 @@ function resetMocks(overrides: { aiCallsToday?: number; aiCallsResetAt?: Date | 
       { message: { content: '{"priority":"MEDIUM","reasoning":"Default test reasoning."}' } },
     ],
   });
+
+  // Re-establish the OpenAI constructor mock after jest.resetAllMocks() clears it.
+  // ai-actions.ts lazily initialises the OpenAI client on the first getOpenAI() call.
+  // Without this, the first call after resetAllMocks would invoke new OpenAI() with no
+  // mockImplementation and get a bare jest mock with no `chat` property, causing every
+  // test that expects a successful AI response to fail with "AI request failed."
+  (jest.requireMock("openai") as { default: jest.Mock }).default.mockImplementation(() => ({
+    chat: {
+      completions: {
+        create: (...args: unknown[]) => (mockCreate as (...a: unknown[]) => unknown)(...args),
+      },
+    },
+  }));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
