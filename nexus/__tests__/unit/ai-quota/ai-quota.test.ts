@@ -500,7 +500,6 @@ describe("Section 8 — AI Quota", () => {
         // module registry is cleared, so jest.isolateModules creates a *fresh*
         // @/lib/db mock instance that is different from the top-level `db` import.
         // We must configure the isolated instance directly.
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { db: isolatedDb } = jest.requireMock("@/lib/db") as { db: typeof import("@/lib/db").db };
 
         // Org has only used 2 calls — should still be under the limit of 3
