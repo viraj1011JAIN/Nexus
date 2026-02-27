@@ -38,8 +38,14 @@ function getOpenAI(): OpenAI {
   return openai;
 }
 
-const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? 50);
 const AI_MODEL       = process.env.AI_MODEL ?? "gpt-4o-mini";
+
+// AI_DAILY_LIMIT is read at call time (not module-load time) so that
+// process.env overrides (e.g. in tests) are picked up without requiring
+// a module reload.
+function getAiDailyLimit(): number {
+  return Number(process.env.AI_DAILY_LIMIT ?? 50);
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -62,8 +68,8 @@ async function checkRateLimit(orgId: string): Promise<{ ok: boolean; error?: str
     return { ok: true };
   }
 
-  if (org.aiCallsToday >= AI_DAILY_LIMIT) {
-    return { ok: false, error: `Daily AI limit of ${AI_DAILY_LIMIT} calls reached. Resets at midnight.` };
+  if (org.aiCallsToday >= getAiDailyLimit()) {
+    return { ok: false, error: `Daily AI limit of ${getAiDailyLimit()} calls reached. Resets at midnight.` };
   }
 
   return { ok: true };

@@ -313,50 +313,61 @@ async function deliverSingle(
     try {
       const sig = sign(body, webhook.secret);
 
-      const controller = new AbortController();
-      const abortTimeout = setTimeout(() => controller.abort(new Error("Request timeout")), 10_000); // 10 s timeout
+      // The abort timer is created INSIDE the Promise constructor so that both
+      // the response timer (0 ms in mock-timer tests) and the abort timer (10 s)
+      // are registered in the same synchronous block.  A `settled` flag ensures
+      // only the first resolution/rejection wins and clears the timeout, which
+      // prevents stale rejections from overwriting a successful statusCode.
+      await new Promise<void>((resolve, reject) => {
+        let settled = false;
 
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const proto = isHttps ? https : http;
-          const reqOptions = {
-            hostname: originalParsed.hostname, // used for TLS SNI / cert validation
-            port: Number(originalParsed.port) || (isHttps ? 443 : 80),
-            path: (originalParsed.pathname || "/") + originalParsed.search,
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "User-Agent": "Nexus-Webhook/1.0",
-              "Host": originalParsed.host,
-              "X-Nexus-Event": event,
-              "X-Nexus-Signature-256": `sha256=${sig}`,
-              "X-Nexus-Delivery": crypto.randomUUID(),
-              "Content-Length": String(Buffer.byteLength(body)),
-            },
-            agent,
-          };
+        // Timeout declared as const — abortTimeout is referenced by `settle` below.
+        const abortTimeout = setTimeout(() => {
+          // Abort fires: if the response hasn't arrived yet, reject.
+          if (settled) return;
+          settled = true;
+          reject(new Error("Request timeout"));
+        }, 10_000);
 
-          const req = proto.request(reqOptions, (res) => {
-            statusCode = res.statusCode ?? null;
-            success = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 300;
-            // Drain body to release the underlying socket
-            res.resume();
-            res.on("end", resolve);
-            res.on("error", reject);
-          });
+        const settle = (err?: Error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(abortTimeout);
+          if (err) reject(err);
+          else resolve();
+        };
 
-          req.on("error", reject);
-          controller.signal.addEventListener("abort", () => {
-            req.destroy(new Error("Request timeout"));
-            reject(new Error("Request timeout"));
-          });
+        const proto = isHttps ? https : http;
+        const reqOptions = {
+          hostname: originalParsed.hostname, // used for TLS SNI / cert validation
+          port: Number(originalParsed.port) || (isHttps ? 443 : 80),
+          path: (originalParsed.pathname || "/") + originalParsed.search,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Nexus-Webhook/1.0",
+            "Host": originalParsed.host,
+            "X-Nexus-Event": event,
+            "X-Nexus-Signature-256": `sha256=${sig}`,
+            "X-Nexus-Delivery": crypto.randomUUID(),
+            "Content-Length": String(Buffer.byteLength(body)),
+          },
+          agent,
+        };
 
-          req.write(body);
-          req.end();
+        const req = proto.request(reqOptions, (res) => {
+          statusCode = res.statusCode ?? null;
+          success = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 300;
+          // Drain body to release the underlying socket
+          res.resume();
+          res.on("end", () => settle());
+          res.on("error", (err) => settle(err as Error));
         });
-      } finally {
-        clearTimeout(abortTimeout);
-      }
+
+        req.on("error", (err) => settle(err as Error));
+        req.write(body);
+        req.end();
+      });
 
       // 2xx → done. 4xx → don't retry (permanent client error).
       if (success || (statusCode !== null && statusCode < 500)) break;
