@@ -62,7 +62,7 @@ jest.mock("@clerk/nextjs/server", () => {
       return patterns.some((p) => {
         if (p === "/") return pathname === "/";
         const base = p.replace("(.*)", "");
-        return pathname === base || pathname.startsWith(base + "/") || pathname.startsWith(base + "?");
+        return pathname === base || pathname.startsWith(base + "/");
       });
     }),
   };
