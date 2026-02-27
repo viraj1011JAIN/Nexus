@@ -19,4 +19,17 @@
 
 import "server-only";
 
-export { suggestChecklists } from "./ai-actions";
+import { suggestChecklists as _suggestChecklists } from "./ai-actions";
+
+/**
+ * Thin async wrapper so this "use server" file satisfies the constraint that
+ * only async functions may be exported from a "use server" module.
+ * Re-exports are not permitted — the function must be declared here.
+ *
+ * WHY THIS FILE EXISTS — see module-level comment in ai-actions.ts.
+ */
+export async function suggestChecklists(
+  input: Parameters<typeof _suggestChecklists>[0],
+): Promise<Awaited<ReturnType<typeof _suggestChecklists>>> {
+  return _suggestChecklists(input);
+}
