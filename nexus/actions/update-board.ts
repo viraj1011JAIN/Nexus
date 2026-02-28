@@ -11,6 +11,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, TenantError } from "@/lib/tenant-context";
+import { requireBoardPermission } from "@/lib/board-permissions";
 import { z } from "zod";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 
@@ -46,7 +47,10 @@ export async function updateBoard(
     // 2. Auth + role check — inside try so TenantError is caught and returned
     //    as { error } rather than propagating as an unhandled exception.
     const ctx = await getTenantContext();
-    await requireRole("ADMIN", ctx);
+    await requireRole("MEMBER", ctx);
+
+    // RBAC: require BOARD_EDIT_SETTINGS permission (default: OWNER + ADMIN)
+    await requireBoardPermission(ctx, boardId, "BOARD_EDIT_SETTINGS");
 
     // 3. Rate limit (reuse "update-card" bucket — 120 req/min, generous for settings)
     const rl = checkRateLimit(ctx.userId, "update-card", RATE_LIMITS["update-card"]);

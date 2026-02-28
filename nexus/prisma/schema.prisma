@@ -11,6 +11,84 @@ datasource db {
 }
 
 // ============================================
+// RBAC ENUMS
+// ============================================
+
+/// Board-level role — independent of org-level role.
+/// Strict isolation: even org ADMIN/OWNER must be added as a BoardMember.
+enum BoardRole {
+  OWNER   // Full board control — can delete, transfer, manage all members
+  ADMIN   // Manage settings, members, automations, but not delete
+  MEMBER  // Create/edit cards, comment
+  VIEWER  // Read-only — cannot create, edit, or delete anything
+}
+
+/// Granular permissions applied per BoardRole.
+/// PermissionSchemes can override these defaults.
+enum BoardPermission {
+  // Board-level
+  BOARD_VIEW
+  BOARD_EDIT_SETTINGS
+  BOARD_DELETE
+  BOARD_SHARE
+  BOARD_MANAGE_MEMBERS
+
+  // List-level
+  LIST_CREATE
+  LIST_EDIT
+  LIST_DELETE
+  LIST_REORDER
+
+  // Card-level
+  CARD_CREATE
+  CARD_VIEW
+  CARD_EDIT
+  CARD_DELETE
+  CARD_MOVE
+  CARD_ASSIGN
+  CARD_COMMENT
+  CARD_EDIT_OWN_COMMENT
+  CARD_DELETE_OWN_COMMENT
+  CARD_DELETE_ANY_COMMENT
+
+  // Field visibility (Freelancer use case — hide sensitive fields)
+  FIELD_DESCRIPTION_VIEW
+  FIELD_STORY_POINTS_VIEW
+  FIELD_TIME_TRACKING_VIEW
+  FIELD_ATTACHMENTS_VIEW
+  FIELD_CUSTOM_FIELDS_VIEW
+
+  // Automation & Analytics
+  AUTOMATION_VIEW
+  AUTOMATION_MANAGE
+  ANALYTICS_VIEW
+  ANALYTICS_EXPORT
+}
+
+/// Org membership lifecycle states.
+/// New members start as PENDING — quarantined until an org admin approves.
+enum MembershipStatus {
+  PENDING    // Awaiting admin approval — cannot access any org data
+  ACTIVE     // Full org access (still gated per board)
+  SUSPENDED  // Manually revoked — equivalent to removal
+}
+
+/// State machine for board/org access requests (dual-gate approval).
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+}
+
+/// Distinguishes org-level join requests from board-level access requests.
+enum MembershipRequestType {
+  ORG_MEMBERSHIP  // Gate 1: request to join the org
+  BOARD_ACCESS    // Gate 2: request access to a specific board
+}
+
+// ============================================
 // ORGANIZATION & USER MODELS
 // ============================================
 
@@ -34,19 +112,21 @@ model Organization {
   stripePriceId           String?  @map("stripe_price_id")
   stripeCurrentPeriodEnd  DateTime? @map("stripe_current_period_end")
 
-  boards     Board[]
-  auditLogs  AuditLog[]
-  members    OrganizationUser[]
-  templates  BoardTemplate[]
-  notifications Notification[]
-  webhooks   Webhook[]
-  apiKeys    ApiKey[]
-  automations Automation[]
-  savedViews  SavedView[]
-  initiatives Initiative[]
-  epics       Epic[]
-  customFields CustomField[]
-  boardShares  BoardShare[]
+  boards            Board[]
+  auditLogs         AuditLog[]
+  members           OrganizationUser[]
+  templates         BoardTemplate[]
+  notifications     Notification[]
+  webhooks          Webhook[]
+  apiKeys           ApiKey[]
+  automations       Automation[]
+  savedViews        SavedView[]
+  initiatives       Initiative[]
+  epics             Epic[]
+  customFields      CustomField[]
+  boardShares       BoardShare[]
+  permissionSchemes PermissionScheme[]
+  membershipRequests MembershipRequest[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -64,7 +144,7 @@ model User {
   email          String   @unique
   name           String
   imageUrl       String?  @map("image_url")
-  
+
   organizations  OrganizationUser[]
   assignedCards  Card[]   @relation("CardAssignee")
   preferences    UserPreference?
@@ -82,33 +162,46 @@ model User {
   // Push subscription (TASK-029)
   pushSubscription String? @map("push_subscription") @db.Text
 
+  // RBAC membership requests
+  membershipRequests MembershipRequest[]
+
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
-  
+
   @@map("users")
 }
 
 model OrganizationUser {
-  id             String       @id @default(uuid())
-  role           Role         @default(MEMBER)
-  
+  id             String           @id @default(uuid())
+  role           Role             @default(MEMBER)
+
+  /// Org membership lifecycle state.
+  /// ACTIVE  = can access the org (still gated per board).
+  /// PENDING = quarantined until admin approves (Gate 1 of dual-gate).
+  /// SUSPENDED = immediately revoked.
+  /// DEFAULT: ACTIVE — existing users are already active. New users provisioned
+  /// via the healing path in getTenantContext also default to ACTIVE.
+  /// Orgs that enable "require approval" set new members to PENDING explicitly.
+  status         MembershipStatus @default(ACTIVE) @map("status")
+
   userId         String       @map("user_id")
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   organizationId String       @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Membership lifecycle
-  isActive       Boolean      @default(true)  @map("is_active")
+  isActive       Boolean      @default(true)  @map("is_active")  // Legacy — use status instead
   invitedById    String?      @map("invited_by_id")
   invitedAt      DateTime?    @map("invited_at")
   joinedAt       DateTime?    @map("joined_at")
-  
+
   createdAt      DateTime     @default(now()) @map("created_at")
-  
+
   @@unique([userId, organizationId])
   @@index([userId])
   @@index([organizationId])
+  @@index([organizationId, status])
   @@map("organization_users")
 }
 
@@ -120,24 +213,132 @@ enum Role {
 }
 
 // ============================================
+// BOARD-LEVEL RBAC MODELS
+// ============================================
+
+/// Explicit board membership record.
+/// A user must have a BoardMember row to access ANY board — even org ADMIN/OWNER.
+/// This enforces Strict Isolation (Zero-Trust, Principle of Least Privilege).
+model BoardMember {
+  id                 String            @id @default(uuid())
+  boardId            String            @map("board_id")
+  board              Board             @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId             String            @map("user_id")
+  /// orgId denormalized from Board for cross-board member queries without double join.
+  orgId              String            @map("org_id")
+  role               BoardRole         @default(MEMBER)
+
+  /// Per-member permission scheme override.
+  /// When set, this scheme's entries override the board's default scheme for this specific member.
+  /// Use case: grant a contractor VIEWER role but with a "Contractor" scheme that hides budget fields.
+  permissionSchemeId String?           @map("permission_scheme_id")
+  scheme             PermissionScheme? @relation(fields: [permissionSchemeId], references: [id])
+
+  invitedBy          String?           @map("invited_by")   // userId of inviter
+  invitedAt          DateTime          @default(now())      @map("invited_at")
+  joinedAt           DateTime?         @map("joined_at")    // null until invitation accepted
+
+  @@unique([boardId, userId])
+  @@index([boardId])
+  @@index([userId])
+  @@index([orgId])
+  @@map("board_members")
+}
+
+/// Named permission scheme — a reusable template of role→permission grants.
+/// Admins create schemes (e.g. "Freelancer", "Auditor") and assign them to boards.
+/// Boards can have one scheme; individual members can override with a different scheme.
+model PermissionScheme {
+  id          String   @id @default(uuid())
+  orgId       String   @map("org_id")
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  description String?  @db.Text
+  /// When true, new boards created in this org inherit this scheme automatically.
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  entries     PermissionSchemeEntry[]
+  boards      Board[]       @relation("BoardPermissionScheme")
+  members     BoardMember[]
+
+  @@index([orgId])
+  @@map("permission_schemes")
+}
+
+/// A single permission grant or denial within a PermissionScheme.
+/// granted=true  → this role has this permission.
+/// granted=false → this role is explicitly denied this permission (overrides default).
+model PermissionSchemeEntry {
+  id         String           @id @default(uuid())
+  schemeId   String           @map("scheme_id")
+  scheme     PermissionScheme @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  role       BoardRole
+  permission BoardPermission
+  granted    Boolean          @default(true)
+
+  @@unique([schemeId, role, permission])
+  @@index([schemeId, role])
+  @@map("permission_scheme_entries")
+}
+
+/// Dual-gate access request model.
+/// Gate 1 — ORG_MEMBERSHIP: user requests to join the org (status starts PENDING).
+/// Gate 2 — BOARD_ACCESS: org member requests access to a specific board.
+model MembershipRequest {
+  id            String                @id @default(uuid())
+  orgId         String                @map("org_id")
+  organization  Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId        String                @map("user_id")
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          MembershipRequestType
+  boardId       String?               @map("board_id")    // Null for org requests
+  board         Board?                @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  requestedRole BoardRole             @default(MEMBER)    @map("requested_role")
+  status        RequestStatus         @default(PENDING)
+  message       String?               @db.Text            // User's message to admin
+  reviewedBy    String?               @map("reviewed_by") // userId of reviewing admin
+  reviewedAt    DateTime?             @map("reviewed_at")
+  reviewNote    String?               @db.Text            @map("review_note")
+  expiresAt     DateTime?             @map("expires_at")  // Auto-expire after N days
+  createdAt     DateTime              @default(now())     @map("created_at")
+
+  @@index([orgId, status])
+  @@index([userId])
+  @@index([boardId, status])
+  @@map("membership_requests")
+}
+
+// ============================================
 // BOARD, LIST, CARD MODELS
 // ============================================
 
 model Board {
   id             String       @id @default(uuid())
   title          String
-  
+
   // Unsplash Integration
   imageId        String?      @map("image_id")
   imageThumbUrl  String?      @map("image_thumb_url") @db.Text
   imageFullUrl   String?      @map("image_full_url") @db.Text
   imageUserName  String?      @map("image_user_name") @db.Text
   imageLinkHTML  String?      @map("image_link_html") @db.Text
-  
+
   // Link to Organization for Multi-tenancy
   orgId          String       @map("org_id")
   organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
+  /// Boards are private by default — visible only to explicit BoardMembers.
+  isPrivate      Boolean      @default(true) @map("is_private")
+
+  /// Permission scheme governing this board's role→permission matrix.
+  /// Null = use built-in default matrix from lib/board-permissions.ts.
+  permissionSchemeId String?           @map("permission_scheme_id")
+  permissionScheme   PermissionScheme? @relation("BoardPermissionScheme", fields: [permissionSchemeId], references: [id])
+
+  members        BoardMember[]
+  membershipRequests MembershipRequest[]
   lists          List[]
   analytics      BoardAnalytics?
   sprints        Sprint[]
@@ -146,7 +347,7 @@ model Board {
   automations    Automation[]
   shares         BoardShare[]
   epics          Epic[]
-  
+
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -157,15 +358,15 @@ model Board {
 model List {
   id        String   @id @default(uuid())
   title     String
-  
+
   // Lexorank: String-based ordering is mandatory for Senior roles
-  order     String   @default("m") 
-  
+  order     String   @default("m")
+
   boardId   String   @map("board_id")
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  
+
   cards     Card[]
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -177,20 +378,20 @@ model Card {
   id          String    @id @default(uuid())
   title       String
   description String?   @db.Text
-  
+
   // Lexorank: String-based ordering is mandatory for Senior roles
   order       String    @default("m")
-  
+
   // Enhanced task management fields
   dueDate     DateTime? @map("due_date")
   priority    Priority  @default(MEDIUM)
-  
+
   listId      String   @map("list_id")
   list        List     @relation(fields: [listId], references: [id], onDelete: Cascade)
-  
+
   assigneeId  String?  @map("assignee_id")
   assignee    User?    @relation("CardAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  
+
   labels      CardLabelAssignment[]
   comments    Comment[]
   attachments Attachment[]
@@ -236,15 +437,15 @@ model Label {
   id       String @id @default(uuid())
   name     String
   color    String @default("#6B7280")
-  
+
   // Organization scoped for multi-tenancy
   orgId    String @map("org_id")
-  
+
   cards    CardLabelAssignment[]
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@unique([orgId, name])
   @@index([orgId])
   @@map("labels")
@@ -253,15 +454,15 @@ model Label {
 // Join table for many-to-many Card <-> Label relationship
 model CardLabelAssignment {
   id      String @id @default(uuid())
-  
+
   cardId  String @map("card_id")
   card    Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  
+
   labelId String @map("label_id")
   label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
-  
+
   createdAt DateTime @default(now())
-  
+
   @@unique([cardId, labelId])
   @@index([cardId])
   @@index([labelId])
@@ -282,28 +483,28 @@ enum Priority {
 model Comment {
   id        String   @id @default(uuid())
   text      String   @db.Text // Rich text HTML from TipTap
-  
+
   // Card relationship
   cardId    String   @map("card_id")
   card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  
+
   // User metadata (denormalized for performance)
   userId    String   @map("user_id")
   userName  String   @map("user_name")
   userImage String?  @map("user_image")
-  
+
   // Threading support
   parentId  String?  @map("parent_id")
   parent    Comment? @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
   replies   Comment[] @relation("CommentThread")
-  
+
   // Social features
   reactions CommentReaction[]
   mentions  String[] // Array of mentioned user IDs
-  
+
   // Draft support
   isDraft   Boolean  @default(false) @map("is_draft")
-  
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -316,13 +517,13 @@ model Comment {
 model CommentReaction {
   id        String   @id @default(uuid())
   emoji     String   // e.g., "👍", "❤️", "🎉"
-  
+
   commentId String   @map("comment_id")
   comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  
+
   userId    String   @map("user_id")
   userName  String   @map("user_name")
-  
+
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([commentId, userId, emoji]) // One reaction type per user per comment
@@ -339,39 +540,80 @@ enum ENTITY_TYPE {
   LIST
   CARD
   ORGANIZATION
+  // RBAC entities
+  BOARD_MEMBER
+  ORG_MEMBER
+  PERMISSION_SCHEME
+  API_KEY
+  MEMBERSHIP_REQUEST
 }
 
 enum ACTION {
   CREATE
   UPDATE
   DELETE
+  // Org membership lifecycle
+  MEMBER_INVITED
+  MEMBER_JOINED
+  MEMBER_REMOVED
+  MEMBER_ROLE_CHANGED
+  MEMBER_STATUS_CHANGED
+  // Board membership lifecycle
+  BOARD_MEMBER_ADDED
+  BOARD_MEMBER_REMOVED
+  BOARD_MEMBER_ROLE_CHANGED
+  // Permission management
+  PERMISSION_SCHEME_CREATED
+  PERMISSION_SCHEME_UPDATED
+  PERMISSION_SCHEME_DELETED
+  PERMISSION_SCHEME_ASSIGNED
+  // Access requests (dual-gate)
+  ACCESS_REQUESTED
+  ACCESS_APPROVED
+  ACCESS_REJECTED
+  // Security forensics — ALWAYS logged before throwing
+  ACCESS_DENIED
+  // API key lifecycle
+  API_KEY_CREATED
+  API_KEY_REVOKED
 }
 
 model AuditLog {
   id          String      @id @default(uuid())
-  
+
   // Multi-tenant audit trail
   orgId       String      @map("org_id")
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  
+
+  /// Board-scoped filtering — allows admins to view a board's full activity history.
+  boardId     String?     @map("board_id")
+
   action      ACTION
   entityId    String      @map("entity_id")
   entityType  ENTITY_TYPE @map("entity_type")
   entityTitle String      @map("entity_title")
-  
+
   userId      String      @map("user_id")
   userImage   String      @db.Text @map("user_image")
   userName    String      @db.Text @map("user_name")
 
-  // Request context for security forensics
+  // Request context for security forensics — NOW populated
   ipAddress   String?     @map("ip_address")
   userAgent   String?     @map("user_agent")  @db.Text
+
+  /// Serialised before-state for UPDATE/DELETE actions.
+  /// Enables full forensic reconstruction of what changed and by whom.
+  previousValues Json?    @map("previous_values")
+
+  /// Serialised after-state for CREATE/UPDATE actions.
+  newValues      Json?    @map("new_values")
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   @@index([orgId])
   @@index([userId])
+  @@index([boardId])
   // Composite index for findManyForEntity (card modal audit log fetch)
   @@index([orgId, entityId, createdAt(sort: Desc)])
   @@map("audit_logs")
@@ -385,25 +627,25 @@ model BoardAnalytics {
   id            String   @id @default(uuid())
   boardId       String   @unique @map("board_id")
   board         Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  
+
   // Snapshot data (updated daily)
   totalCards    Int      @default(0) @map("total_cards")
   completedCards Int     @default(0) @map("completed_cards")
   overdueCards  Int      @default(0) @map("overdue_cards")
   activeMembers Int      @default(0) @map("active_members")
-  
+
   // Velocity metrics
   cardsCreatedToday    Int @default(0) @map("cards_created_today")
   cardsCompletedToday  Int @default(0) @map("cards_completed_today")
   avgCompletionTime    Int @default(0) @map("avg_completion_time") // in hours
-  
+
   // Trend data (JSON for flexibility)
   weeklyTrends         Json? @map("weekly_trends") // {week1: {created: 10, completed: 8}, ...}
   priorityDistribution Json? @map("priority_distribution") // {urgent: 5, high: 10, medium: 15, low: 20}
-  
+
   lastCalculated DateTime @updatedAt @map("last_calculated")
   createdAt      DateTime @default(now()) @map("created_at")
-  
+
   @@index([boardId])
   @@index([lastCalculated])
   @@map("board_analytics")
@@ -413,17 +655,17 @@ model UserAnalytics {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
   orgId        String   @map("org_id")
-  
+
   // Daily snapshot
   date         DateTime @db.Date
   cardsCreated Int      @default(0) @map("cards_created")
   cardsCompleted Int    @default(0) @map("cards_completed")
   commentsAdded Int     @default(0) @map("comments_added")
   activeMinutes Int     @default(0) @map("active_minutes")
-  
+
   // Metadata
   createdAt    DateTime @default(now()) @map("created_at")
-  
+
   @@unique([userId, orgId, date])
   @@index([userId, date])
   @@index([orgId, date])
@@ -434,13 +676,13 @@ model ActivitySnapshot {
   id        String   @id @default(uuid())
   orgId     String   @map("org_id")
   timestamp DateTime @default(now())
-  
+
   // Aggregate metrics (for timeline charts)
   activeUsers      Int @default(0) @map("active_users")
   totalBoards      Int @default(0) @map("total_boards")
   totalCards       Int @default(0) @map("total_cards")
   actionsPerformed Int @default(0) @map("actions_performed")
-  
+
   @@index([orgId, timestamp])
   @@map("activity_snapshots")
 }

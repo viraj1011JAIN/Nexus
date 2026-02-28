@@ -14,6 +14,7 @@ import { logger } from "@/lib/logger";
 import { STRIPE_CONFIG } from "@/lib/stripe";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { createBoardFromTemplate } from "@/actions/template-actions";
+import { clearPermissionCache } from "@/lib/board-permissions";
 
 type InputType = z.infer<typeof CreateBoard>;
 type ReturnType = ActionState<InputType, Board>;
@@ -95,6 +96,29 @@ const handler = async (data: InputType): Promise<ReturnType> => {
         entityTitle: board.title,
         action: "CREATE",
       });
+    }
+
+    // ── RBAC: Auto-add the creator as board OWNER ──
+    // This is the ONLY way to become the first board member.
+    // Without this, strict isolation means nobody can access the board.
+    try {
+      await db.boardMember.create({
+        data: {
+          boardId: board.id,
+          userId: ctx.internalUserId,
+          orgId: ctx.orgId,
+          role: "OWNER",
+          invitedAt: new Date(),
+          joinedAt: new Date(),
+        },
+      });
+      clearPermissionCache();
+    } catch (memberError) {
+      // If board member creation fails, delete the board to avoid an orphaned board
+      // that nobody can access.
+      logger.error("Failed to create board member for creator — rolling back board", { error: memberError, boardId: board.id });
+      await db.board.delete({ where: { id: board.id } }).catch(() => {});
+      return { error: "Failed to create board. Please try again." };
     }
 
     logger.info("Board created successfully", { boardId: board.id, orgId });

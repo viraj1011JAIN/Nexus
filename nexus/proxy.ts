@@ -106,6 +106,35 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     return NextResponse.redirect(url);
   }
 
+  // ── Layer 2b: PENDING membership gate ──────────────────────────────────
+  // If the user's org membership is PENDING (set by org admin requiring
+  // approval), redirect to /pending-approval. This is a soft gate — the
+  // hard enforcement is in getTenantContext() which throws FORBIDDEN.
+  //
+  // IMPORTANT: We read from Clerk's sessionClaims (JWT). We CANNOT use
+  // Prisma here because proxy.ts runs on Edge Runtime. Orgs that enable
+  // "require approval" must set a Clerk publicMetadata field
+  // `orgMembershipStatus: "PENDING"` to activate this edge-level redirect.
+  //
+  // This is a UX optimization — not a security gate. The real gate is in
+  // requireRole() / requireActiveStatus() in server actions.
+  const pendingAllowedPaths = ["/pending-approval", "/select-org", "/sign-in", "/sign-up", "/api/webhook"];
+  const isOnPendingAllowedPath = pendingAllowedPaths.some(p => req.nextUrl.pathname.startsWith(p));
+  
+  if (orgId && !isOnPendingAllowedPath) {
+    try {
+      const sessionClaims = authObj.sessionClaims as Record<string, unknown> | undefined;
+      const metadata = sessionClaims?.publicMetadata as Record<string, unknown> | undefined;
+      if (metadata?.orgMembershipStatus === "PENDING") {
+        const url = req.nextUrl.clone();
+        url.pathname = "/pending-approval";
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      // JWT parsing failure — don't block the request, let server-side handle it
+    }
+  }
+
   // ── Layer 3: Inject verified tenant identity headers ───────────────────
   // These headers are set here (server-side, in the trusted proxy runtime)
   // so downstream Server Components and Route Handlers can read the tenant

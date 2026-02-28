@@ -44,9 +44,9 @@ export const systemDb =
 if (process.env.NODE_ENV !== "production") globalThis.systemPrisma = systemDb;
 
 /**
- * Sets the PostgreSQL session variable `app.current_org_id` so RLS policies
- * can read it via `current_org_id()`. Call this at the start of any request
- * that performs tenant-scoped DB queries.
+ * Sets the PostgreSQL session variables for RLS policies:
+ *   - `app.current_org_id` → read by `current_org_id()` in RLS
+ *   - `app.current_user_id` → read by `current_user_id()` in RLS (board isolation)
  *
  * POOLING NOTE — two modes, different behaviour:
  *   - Session-mode pooling (Supabase DIRECT_URL, port 5432):
@@ -56,13 +56,17 @@ if (process.env.NODE_ENV !== "production") globalThis.systemPrisma = systemDb;
  *     so the variable may be absent on the next query. Use withTenantTransaction()
  *     instead for guaranteed enforcement in transaction-mode pools.
  */
-export async function setCurrentOrgId(orgId: string): Promise<void> {
+export async function setCurrentOrgId(orgId: string, userId: string = ''): Promise<void> {
   await db.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, false)`;
+  if (userId) {
+    await db.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, false)`;
+  }
 }
 
 /**
- * Wraps `fn` in an explicit Prisma transaction that sets `app.current_org_id`
- * with `SET LOCAL` (transaction-scoped) BEFORE executing any queries.
+ * Wraps `fn` in an explicit Prisma transaction that sets both `app.current_org_id`
+ * and `app.current_user_id` with `SET LOCAL` (transaction-scoped) BEFORE executing
+ * any queries.
  *
  * This is the correct way to activate RLS with transaction-mode connection pooling
  * (PgBouncer at Supabase port 6543), because `SET LOCAL` is guaranteed to be
@@ -70,19 +74,28 @@ export async function setCurrentOrgId(orgId: string): Promise<void> {
  *
  * Use for all high-value mutations: board delete, member management, billing ops.
  *
+ * @param orgId    The organization ID — always required
+ * @param fn       The function to execute within the transaction
+ * @param userId   The user's internal DB ID — optional for backward compatibility.
+ *                 When provided, sets `app.current_user_id` for board-level RLS.
+ *
  * @example
  * const board = await withTenantTransaction(ctx.orgId, (tx) =>
  *   tx.board.delete({ where: { id: boardId } })
- * );
+ * , userId);
  */
 export async function withTenantTransaction<T>(
   orgId: string,
   fn: (
     tx: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
-  ) => Promise<T>
+  ) => Promise<T>,
+  userId: string = ''
 ): Promise<T> {
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, true)`;
+    if (userId) {
+      await tx.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, true)`;
+    }
     return fn(tx);
   });
 }

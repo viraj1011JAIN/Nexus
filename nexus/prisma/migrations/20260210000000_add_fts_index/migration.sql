@@ -4,7 +4,7 @@
 
 -- Generated search column (stored, always up-to-date via trigger in practice,
 -- but GIN over expression index is simpler and zero-maintenance):
-CREATE INDEX CONCURRENTLY IF NOT EXISTS cards_fts_idx
+CREATE INDEX IF NOT EXISTS cards_fts_idx
   ON cards USING gin (
     to_tsvector(
       'english',
@@ -16,5 +16,5 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS cards_fts_idx
 -- (requires pg_trgm extension, available on Supabase by default)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS cards_title_trgm_idx
+CREATE INDEX IF NOT EXISTS cards_title_trgm_idx
   ON cards USING gin (title gin_trgm_ops);

@@ -6,13 +6,13 @@ import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
+import { requireBoardPermission } from "@/lib/board-permissions";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/action-protection";
 import { emitCardEvent } from "@/lib/event-bus";
 
 export async function deleteCard(id: string, _boardId: string) {
   const ctx = await getTenantContext();
-  // Deleting cards requires ADMIN role
-  await requireRole("ADMIN", ctx);
+  await requireRole("MEMBER", ctx);
 
   const rl = checkRateLimit(ctx.userId, "delete-card", RATE_LIMITS["delete-card"]);
   if (!rl.allowed) {
@@ -42,6 +42,9 @@ export async function deleteCard(id: string, _boardId: string) {
     throw new Error(`Card ${id} is missing its list association — cannot resolve a trusted boardId.`);
   }
   const trustedBoardId = card.list.boardId;
+
+  // RBAC: require CARD_DELETE permission on the board (not the untrusted _boardId param)
+  await requireBoardPermission(ctx, trustedBoardId, "CARD_DELETE");
 
   // dal.cards.delete verifies Card→List→Board→orgId === ctx.orgId before deleting
   await dal.cards.delete(id);

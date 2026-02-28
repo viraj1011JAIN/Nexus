@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"async function\\\\|export async function\" /c/Nexus/nexus/actions/*.ts)"
+    ]
+  }
+}

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
+import { requireBoardPermission } from "@/lib/board-permissions";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateCard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
@@ -25,6 +26,9 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   // 1. Build verified tenant context — orgId comes from Clerk, never from input
   const ctx = await getTenantContext();
   await requireRole("MEMBER", ctx);
+
+  // RBAC: require CARD_CREATE permission on this board
+  await requireBoardPermission(ctx, boardId, "CARD_CREATE");
 
   // Rate limit: 60 card creations per minute per user
   const rl = checkRateLimit(ctx.userId, "create-card", RATE_LIMITS["create-card"]);

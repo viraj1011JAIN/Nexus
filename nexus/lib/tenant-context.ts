@@ -19,6 +19,8 @@ import { DEMO_ORG_ID } from "@/lib/action-protection";
 
 export type TenantRole = "OWNER" | "ADMIN" | "MEMBER" | "GUEST";
 
+export type MembershipStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
+
 export type TenantContext = {
   userId: string;
   orgId: string;
@@ -26,7 +28,10 @@ export type TenantContext = {
   membership: {
     role: TenantRole;
     isActive: boolean;
+    status: MembershipStatus;
   };
+  /** Internal DB user ID (User.id UUID) — resolved from Clerk userId */
+  internalUserId: string;
 };
 
 export type TenantErrorCode = "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND";
@@ -125,7 +130,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
   // Step 2: Check the local membership record.
   const membership = await db.organizationUser.findFirst({
     where: { userId: user.id, organizationId: orgId },
-    select: { role: true, isActive: true },
+    select: { role: true, isActive: true, status: true },
   });
 
   // Step 3: Explicit deactivation — local admin decision overrides Clerk session.
@@ -138,12 +143,24 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     );
   }
 
+  // Step 3b: SUSPENDED status check — immediately block suspended members.
+  // SUSPENDED is distinct from isActive=false: SUSPENDED is the RBAC-era
+  // lifecycle state, isActive is legacy. Both are checked for defense in depth.
+  if (membership?.status === "SUSPENDED") {
+    throw new TenantError(
+      "FORBIDDEN",
+      "Your organization membership has been suspended"
+    );
+  }
+
   let tenantRole: TenantRole;
+  let memberStatus: MembershipStatus = "ACTIVE";
 
   if (membership) {
     // ── Normal path ───────────────────────────────────────────────────────
     // Row exists → use the verified local DB role.
     tenantRole = membership.role as TenantRole;
+    memberStatus = (membership.status as MembershipStatus) ?? "ACTIVE";
   } else {
     // ── Healing path ──────────────────────────────────────────────────────
     // No local record. Clerk's signed JWT confirms orgId is valid — the user
@@ -175,6 +192,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
             organizationId: orgId,
             role: tenantRole,
             isActive: true,
+            status: "ACTIVE",
             joinedAt: new Date(),
           },
         })
@@ -195,7 +213,9 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     membership: {
       role: tenantRole,
       isActive: true,
+      status: memberStatus,
     },
+    internalUserId: user.id,
   };
 });
 
@@ -215,7 +235,27 @@ function normalizeClerkRole(clerkRole: string | null | undefined): TenantRole {
 // ─── Role enforcement ─────────────────────────────────────────────────────────
 
 /**
+ * Requires the calling user to have ACTIVE membership status.
+ * PENDING users are blocked from all data access (except their own status page).
+ *
+ * @throws {TenantError} FORBIDDEN if status is PENDING
+ */
+export async function requireActiveStatus(ctx?: TenantContext): Promise<TenantContext> {
+  const context = ctx ?? (await getTenantContext());
+
+  if (context.membership.status === "PENDING") {
+    throw new TenantError(
+      "FORBIDDEN",
+      "Your membership is pending approval. An administrator must approve your access."
+    );
+  }
+
+  return context;
+}
+
+/**
  * Requires the calling user to have at least the specified role.
+ * Also enforces ACTIVE status — PENDING/SUSPENDED users are always blocked.
  * Call this at the top of every mutation server action.
  *
  * @param minimumRole  The lowest role allowed to perform this operation
@@ -233,6 +273,14 @@ export async function requireRole(
   ctx?: TenantContext
 ): Promise<TenantContext> {
   const context = ctx ?? (await getTenantContext());
+
+  // PENDING users cannot perform any role-gated operation
+  if (context.membership.status === "PENDING") {
+    throw new TenantError(
+      "FORBIDDEN",
+      "Your membership is pending approval"
+    );
+  }
 
   if (ROLE_HIERARCHY[context.membership.role] < ROLE_HIERARCHY[minimumRole]) {
     throw new TenantError(

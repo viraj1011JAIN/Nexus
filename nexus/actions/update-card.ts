@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
+import { requireBoardPermission } from "@/lib/board-permissions";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateCard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
@@ -21,6 +22,9 @@ const handler = async (data: InputType): Promise<ReturnType> => {
 
   const ctx = await getTenantContext();
   await requireRole("MEMBER", ctx);
+
+  // RBAC: require CARD_EDIT permission on this board
+  await requireBoardPermission(ctx, boardId, "CARD_EDIT");
 
   const rl = checkRateLimit(ctx.userId, "update-card", RATE_LIMITS["update-card"]);
   if (!rl.allowed) {

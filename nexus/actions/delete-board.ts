@@ -4,6 +4,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole } from "@/lib/tenant-context";
+import { requireBoardPermission } from "@/lib/board-permissions";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { DeleteBoard } from "./schema";
 import { ActionState } from "@/lib/create-safe-action";
@@ -15,9 +16,11 @@ type InputType = z.infer<typeof DeleteBoard>;
 type ReturnType = ActionState<InputType, Board>;
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  // Deleting boards requires OWNER role
   const ctx = await getTenantContext();
-  await requireRole("OWNER", ctx);
+  await requireRole("MEMBER", ctx);
+
+  // RBAC: require BOARD_DELETE permission (default: only OWNER has this)
+  await requireBoardPermission(ctx, data.id, "BOARD_DELETE");
 
   const rl = checkRateLimit(ctx.userId, "delete-board", RATE_LIMITS["delete-board"]);
   if (!rl.allowed) {

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import crypto from "crypto";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
+import { requireBoardPermission } from "@/lib/board-permissions";
 import { db } from "@/lib/db";
 
 // ─── Password helpers (scrypt, no external deps) ──────────────────────────────
@@ -175,7 +176,11 @@ export async function createBoardShareLink(input: {
 }) {
   try {
     const ctx = await getTenantContext();
-    await requireRole("ADMIN", ctx);
+    await requireRole("MEMBER", ctx);
+    
+    // RBAC: require BOARD_SHARE permission
+    await requireBoardPermission(ctx, input.boardId, "BOARD_SHARE");
+    
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
     const validated = CreateShareSchema.parse(input);
@@ -220,7 +225,11 @@ export async function createBoardShareLink(input: {
 export async function revokeBoardShareLink(boardId: string) {
   try {
     const ctx = await getTenantContext();
-    await requireRole("ADMIN", ctx);
+    await requireRole("MEMBER", ctx);
+    
+    // RBAC: require BOARD_SHARE permission
+    await requireBoardPermission(ctx, boardId, "BOARD_SHARE");
+    
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
     await db.boardShare.updateMany({
@@ -246,13 +255,16 @@ export async function updateBoardShareSettings(
 ) {
   try {
     const ctx = await getTenantContext();
-    await requireRole("ADMIN", ctx);
+    await requireRole("MEMBER", ctx);
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
     const share = await db.boardShare.findFirst({
       where: { id: shareId, orgId: ctx.orgId },
     });
     if (!share) return { error: "Share not found." };
+
+    // RBAC: require BOARD_SHARE permission on the board this share belongs to
+    await requireBoardPermission(ctx, share.boardId, "BOARD_SHARE");
 
     const updated = await db.boardShare.update({
       where: { id: shareId },

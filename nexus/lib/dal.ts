@@ -34,8 +34,8 @@ import type { Prisma } from "@prisma/client";
  */
 export async function createDAL(ctx?: TenantContext): Promise<TenantDAL> {
   const context = ctx ?? (await getTenantContext());
-  await setCurrentOrgId(context.orgId).catch(() => { /* non-fatal: session var may not be available in all pooling modes */ });
-  return new TenantDAL(context.orgId, context.userId);
+  await setCurrentOrgId(context.orgId, context.internalUserId).catch(() => { /* non-fatal: session var may not be available in all pooling modes */ });
+  return new TenantDAL(context.orgId, context.internalUserId);
 }
 
 // ─── Main class ───────────────────────────────────────────────────────────────
@@ -50,11 +50,15 @@ class TenantDAL {
 
   get boards() {
     const orgId = this.orgId;
+    const userId = this.userId;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
 
     return {
-      /** Returns all boards for this org. Cannot return boards from other orgs. */
+      /**
+       * Returns boards where this user is an explicit member (strict isolation).
+       * Filters by both orgId AND board membership.
+       */
       findMany: <T extends Omit<Prisma.BoardFindManyArgs, "where"> & {
         where?: Omit<Prisma.BoardWhereInput, "orgId">;
       }>(
@@ -62,10 +66,14 @@ class TenantDAL {
       ) =>
         db.board.findMany({
           ...(args as Prisma.BoardFindManyArgs),
-          where: { ...(args?.where as object), orgId },
+          where: {
+            ...(args?.where as object),
+            orgId,
+            members: { some: { userId } },
+          },
         }),
 
-      /** Fetches board by ID and asserts it belongs to this org. */
+      /** Fetches board by ID and asserts it belongs to this org AND user is a member. */
       findUnique: async (
         boardId: string,
         args?: Omit<Prisma.BoardFindUniqueArgs, "where">
@@ -78,6 +86,8 @@ class TenantDAL {
           board ? { organizationId: board.orgId } : null,
           "Board"
         );
+        // Verify board membership (strict isolation)
+        await self.verifyBoardMembership(boardId);
         return board!;
       },
 
@@ -342,10 +352,10 @@ class TenantDAL {
         });
       },
 
-      /** Returns all users in this organization. */
+      /** Returns all ACTIVE users in this organization (excludes PENDING/SUSPENDED). */
       findOrgMembers: () =>
         db.organizationUser.findMany({
-          where: { organizationId: self.orgId },
+          where: { organizationId: self.orgId, status: "ACTIVE" },
           include: {
             user: { select: { id: true, name: true, imageUrl: true, email: true } },
           },
@@ -501,11 +511,16 @@ class TenantDAL {
        */
       create: (data: {
         entityId: string;
-        entityType: "BOARD" | "LIST" | "CARD" | "ORGANIZATION";
+        entityType: string;
         entityTitle: string;
-        action: "CREATE" | "UPDATE" | "DELETE";
+        action: string;
         userName?: string;
         userImage?: string;
+        boardId?: string;
+        ipAddress?: string;
+        userAgent?: string;
+        previousValues?: Record<string, unknown>;
+        newValues?: Record<string, unknown>;
       }) =>
         db.auditLog.create({
           data: {
@@ -519,6 +534,11 @@ class TenantDAL {
             userId,
             userName: data.userName ?? "",
             userImage: data.userImage ?? "",
+            boardId: data.boardId ?? null,
+            ipAddress: data.ipAddress ?? null,
+            userAgent: data.userAgent ?? null,
+            previousValues: data.previousValues ? (data.previousValues as Record<string, string>) : undefined,
+            newValues: data.newValues ? (data.newValues as Record<string, string>) : undefined,
           },
         }),
     };
@@ -539,13 +559,26 @@ class TenantDAL {
     }
   }
 
-  /** Verifies a board exists and belongs to this org. */
+  /** Verifies a board exists, belongs to this org, AND user is a member. */
   private async verifyBoardOwnership(boardId: string): Promise<void> {
     const board = await db.board.findUnique({
       where: { id: boardId },
       select: { orgId: true },
     });
     if (!board || board.orgId !== this.orgId) {
+      throw new TenantError("NOT_FOUND", "Board not found");
+    }
+    // Strict isolation: must be an explicit board member
+    await this.verifyBoardMembership(boardId);
+  }
+
+  /** Verifies the current user is an explicit board member (strict isolation). */
+  private async verifyBoardMembership(boardId: string): Promise<void> {
+    const member = await db.boardMember.findUnique({
+      where: { boardId_userId: { boardId, userId: this.userId } },
+      select: { id: true },
+    });
+    if (!member) {
       throw new TenantError("NOT_FOUND", "Board not found");
     }
   }
