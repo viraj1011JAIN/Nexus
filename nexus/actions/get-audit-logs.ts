@@ -1,4 +1,5 @@
 "use server";
+import "server-only";
 
 import { createDAL } from "@/lib/dal";
 import { TenantError } from "@/lib/tenant-context";

@@ -3,23 +3,46 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { startOfToday, startOfDay, endOfDay } from "date-fns";
+import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { ListContainer } from "@/components/board/list-container";
-import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
+// ─── Dynamic imports for all components that import server actions ─────────
+// Static imports create a frozen reference to Turbopack's server-action stub
+// chunk (content-hashed ID). When any file changes during HMR the stub gets a
+// new hash; the old ID no longer has a registered factory → runtime crash.
+// dynamic() integrates with the Turbopack HMR system so after each update the
+// next render re-fetches the latest chunk, always getting a live factory.
+const ListContainer = dynamic(() =>
+  import("@/components/board/list-container").then((m) => ({ default: m.ListContainer }))
+);
+const AnalyticsDashboard = dynamic(() =>
+  import("@/components/analytics/analytics-dashboard").then((m) => ({ default: m.AnalyticsDashboard }))
+);
+const SprintPanel = dynamic(() =>
+  import("@/components/board/sprint-panel").then((m) => ({ default: m.SprintPanel }))
+);
+const CalendarView = dynamic(() =>
+  import("@/components/board/calendar-view").then((m) => ({ default: m.CalendarView }))
+);
+const WorkloadView = dynamic(() =>
+  import("@/components/board/workload-view").then((m) => ({ default: m.WorkloadView }))
+);
+const FilterBar = dynamic(() =>
+  import("@/components/board/filter-bar").then((m) => ({ default: m.FilterBar }))
+);
+const BulkActionBar = dynamic(() =>
+  import("@/components/board/bulk-action-bar").then((m) => ({ default: m.BulkActionBar }))
+);
+// TableView and GanttView don't import server actions — static imports are safe
 import { TableView } from "@/components/board/table-view";
-import { SprintPanel } from "@/components/board/sprint-panel";
-import { CalendarView } from "@/components/board/calendar-view";
-import { WorkloadView } from "@/components/board/workload-view";
-import { FilterBar, type BoardFilterState } from "@/components/board/filter-bar";
-import { BulkActionBar } from "@/components/board/bulk-action-bar";
+import { GanttView } from "@/components/board/gantt-view";
+import type { BoardFilterState } from "@/components/board/filter-bar";
 import { BulkSelectionProvider, useBulkSelection } from "@/lib/bulk-selection-context";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import {
   BarChart3, LayoutDashboard, Table2, GitBranch, Calendar, Users, GanttChart, Filter,
 } from "lucide-react";
-import { GanttView } from "@/components/board/gantt-view";
 import { useTheme } from "@/components/theme-provider";
 
 // â”€â”€â”€ Tab definitions (order matters â€” keys 1â€“6 map to tabs by index) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

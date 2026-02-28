@@ -2,14 +2,17 @@ import Stripe from "stripe";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
-if (!stripeSecretKey) {
-  // During build time, use a dummy key to allow static analysis
-  if (process.env.NODE_ENV === "production" && typeof window === "undefined") {
-    console.warn("STRIPE_SECRET_KEY not set during build - Stripe functionality will fail at runtime");
-  }
+// At build time (static analysis pass) STRIPE_SECRET_KEY is not set; that is fine.
+// At request time in production it MUST be set — throw clearly rather than
+// silently authenticating with a dummy key and getting 401s from Stripe.
+if (!stripeSecretKey && process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
+  throw new Error(
+    "[stripe] STRIPE_SECRET_KEY is not set. " +
+    "Add it to your environment variables before starting the production server."
+  );
 }
 
-export const stripe = new Stripe(stripeSecretKey || "sk_test_dummy_key_for_build", {
+export const stripe = new Stripe(stripeSecretKey ?? "sk_test_placeholder_build_only", {
   apiVersion: "2025-12-15.clover",
   typescript: true,
 });

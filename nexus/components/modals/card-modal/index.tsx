@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import NextImage from "next/image";
+import dynamic from "next/dynamic";
 import { Card, AuditLog, List, Label, Priority } from "@prisma/client";
 import {
   X,
@@ -45,16 +46,35 @@ import { updateCard } from "@/actions/update-card";
 import { Activity } from "./activity";
 import { getAuditLogs } from "@/actions/get-audit-logs";
 import { RichTextEditor } from "@/components/rich-text-editor";
-import { LabelManager } from "@/components/label-manager";
-import { AssigneePicker } from "@/components/assignee-picker";
+// Dynamic imports for components that directly import server actions.
+// Static imports would pull server-action stub chunks into the client bundle;
+// when Turbopack invalidates those stubs on HMR the factory becomes stale,
+// producing "module factory is not available". Lazy-loading via next/dynamic
+// ensures each HMR cycle resolves a fresh factory.
+const LabelManager = dynamic(() =>
+  import("@/components/label-manager").then((m) => ({ default: m.LabelManager }))
+);
+const AssigneePicker = dynamic(() =>
+  import("@/components/assignee-picker").then((m) => ({ default: m.AssigneePicker }))
+);
+const TimeTrackingPanel = dynamic(() =>
+  import("@/components/board/time-tracking-panel").then((m) => ({ default: m.TimeTrackingPanel }))
+);
+const CustomFieldsPanel = dynamic(() =>
+  import("@/components/board/custom-fields-panel").then((m) => ({ default: m.CustomFieldsPanel }))
+);
 import { SmartDueDate } from "@/components/smart-due-date";
 import { RichComments, type Comment } from "@/components/rich-comments";
 import { CardCoverPicker } from "@/components/board/card-cover-picker";
-import { TimeTrackingPanel } from "@/components/board/time-tracking-panel";
-import { AttachmentsTab } from "./attachments";
-import { ChecklistsTab } from "./checklists";
-import { DependenciesTab } from "./dependencies";
-import { CustomFieldsPanel } from "@/components/board/custom-fields-panel";
+const AttachmentsTab = dynamic(() =>
+  import("./attachments").then((m) => ({ default: m.AttachmentsTab }))
+);
+const ChecklistsTab = dynamic(() =>
+  import("./checklists").then((m) => ({ default: m.ChecklistsTab }))
+);
+const DependenciesTab = dynamic(() =>
+  import("./dependencies").then((m) => ({ default: m.DependenciesTab }))
+);
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { getOrganizationLabels, getCardLabels } from "@/actions/label-actions";

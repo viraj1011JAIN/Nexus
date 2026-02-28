@@ -372,6 +372,8 @@ model AuditLog {
 
   @@index([orgId])
   @@index([userId])
+  // Composite index for findManyForEntity (card modal audit log fetch)
+  @@index([orgId, entityId, createdAt(sort: Desc)])
   @@map("audit_logs")
 }
 

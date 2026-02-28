@@ -1,4 +1,5 @@
 "use server";
+import "server-only";
 
 /**
  * update-board — rename a board and/or swap its background image.

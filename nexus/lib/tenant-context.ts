@@ -9,6 +9,7 @@
  *   so callers CANNOT accidentally proceed without checking the result
  */
 
+import 'server-only';
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { cache } from "react";

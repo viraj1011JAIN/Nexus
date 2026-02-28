@@ -1,7 +1,10 @@
 /**
  * Structured Logger for Production
- * Replaces console.log with proper logging infrastructure
+ * Replaces console.log with proper logging infrastructure.
+ * In production, error()-level calls are forwarded to Sentry.
  */
+
+import * as Sentry from "@sentry/nextjs";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
@@ -39,11 +42,18 @@ class Logger {
     };
     
     console.error(this.formatMessage("error", message, errorContext));
-    
-    // In production, send to error tracking service (Sentry)
-    if (!this.isDevelopment && typeof window === "undefined") {
-      // Server-side error tracking
-      // Sentry.captureException(error, { extra: context });
+
+    // Forward to Sentry in all non-development environments.
+    // Sentry.init() already sets environment=process.env.NODE_ENV and filters
+    // out dev events via beforeSend, so it is safe to call unconditionally.
+    if (!this.isDevelopment) {
+      if (error instanceof Error) {
+        Sentry.captureException(error, { extra: context });
+      } else if (error !== undefined) {
+        Sentry.captureException(new Error(message), { extra: { raw: error, ...context } });
+      } else {
+        Sentry.captureMessage(message, { level: "error", extra: context });
+      }
     }
   }
 

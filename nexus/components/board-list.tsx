@@ -71,6 +71,7 @@ export function BoardList() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateSummary | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeFilter, setActiveFilter] = useState<"All" | "Recent" | "Active">("All");
+  const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const { theme, setTheme } = useTheme();
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,8 +96,12 @@ export function BoardList() {
   useEffect(() => {
     fetchBoards();
 
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      setRealtimeStatus("disconnected");
+      return;
+    }
 
+    setRealtimeStatus("connecting");
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Re-fetch (debounced) whenever boards, lists, or cards change so counts stay accurate.
@@ -105,7 +110,15 @@ export function BoardList() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, debouncedFetchBoards)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, debouncedFetchBoards)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, debouncedFetchBoards)
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus("connected");
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setRealtimeStatus("disconnected");
+        } else {
+          setRealtimeStatus("connecting");
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -687,9 +700,23 @@ export function BoardList() {
                   <h2 className="font-display font-bold text-[15px] text-foreground tracking-tight">
                     Workspace Health
                   </h2>
-                  <div className="flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-                    LIVE
+                  <div className={cn(
+                    "flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full",
+                    realtimeStatus === "connected"
+                      ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"
+                      : realtimeStatus === "connecting"
+                      ? "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
+                      : "bg-muted text-muted-foreground"
+                  )}>
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      realtimeStatus === "connected"
+                        ? "bg-emerald-500 animate-pulse-dot"
+                        : realtimeStatus === "connecting"
+                        ? "bg-amber-500 animate-pulse-dot"
+                        : "bg-muted-foreground"
+                    )} />
+                    {realtimeStatus === "connected" ? "LIVE" : realtimeStatus === "connecting" ? "SYNC" : "OFF"}
                   </div>
                 </div>
                 <p className="text-[12px] text-muted-foreground mt-0.5">
@@ -748,8 +775,21 @@ export function BoardList() {
             {/* Footer */}
             <div className="flex items-center justify-between pt-3 border-t border-border">
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />
-                <span className="text-[11px] text-muted-foreground">Syncing via Supabase Realtime</span>
+                <div className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  realtimeStatus === "connected"
+                    ? "bg-emerald-400 animate-pulse-dot"
+                    : realtimeStatus === "connecting"
+                    ? "bg-amber-400 animate-pulse-dot"
+                    : "bg-muted-foreground"
+                )} />
+                <span className="text-[11px] text-muted-foreground">
+                  {realtimeStatus === "connected"
+                    ? "Syncing via Supabase Realtime"
+                    : realtimeStatus === "connecting"
+                    ? "Connecting to Supabase Realtime…"
+                    : "Realtime offline – refresh to update"}
+                </span>
               </div>
               <span className="text-[11px] text-muted-foreground">
                 {recentBoards.length} board{recentBoards.length !== 1 ? "s" : ""} updated this week

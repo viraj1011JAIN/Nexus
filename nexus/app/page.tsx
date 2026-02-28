@@ -1,27 +1,22 @@
-"use client";
-
-import { useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Zap, Users, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function LandingPage() {
-  const { isSignedIn, isLoaded } = useAuth();
-  const router = useRouter();
+/**
+ * Landing page — Server Component.
+ *
+ * Checking auth server-side means:
+ *  - No flash of empty content while Clerk loads client-side
+ *  - No client JS required for the redirect path (instant HTTP 307)
+ *  - Signed-in users never see the marketing page
+ */
+export default async function LandingPage() {
+  const { userId } = await auth();
 
-  useEffect(() => {
-    // Redirect authenticated users to dashboard
-    if (isLoaded && isSignedIn) {
-      router.push("/dashboard");
-    }
-  }, [isLoaded, isSignedIn, router]);
-
-  // Show nothing while checking auth (instant redirect)
-  if (!isLoaded || isSignedIn) {
-    return null;
-  }
+  // Redirect authenticated users straight to the app — no client JS needed
+  if (userId) redirect("/dashboard");
 
   return (
     <div className="flex min-h-screen flex-col">

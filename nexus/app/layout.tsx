@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, DM_Sans, Playfair_Display } from "next/font/google";
+import { DM_Sans, Playfair_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Script from "next/script";
+import { validateEnv } from "@/lib/env";
+
+// Validate required env vars at server startup — throws clearly if misconfigured
+validateEnv();
 
 import { ModalProvider } from "@/components/providers/modal-provider";
 import { SonnerProvider } from "@/components/providers/sonner-provider";
 import { ThemeProvider, themeScript } from "@/components/theme-provider";
 import { PerformanceWrapper } from "@/components/performance-wrapper";
-import { CommandPalette } from "@/components/command-palette";
+import { CommandPaletteProvider } from "@/components/providers/command-palette-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AriaLiveRegion } from "@/components/accessibility/aria-live-region";
 import "./globals.css";
-import "./editor.css";
-
-const inter = Inter({ 
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-  weight: ["400", "500", "600", "700"],
-});
+// editor.css is imported directly in rich-text-editor.tsx — no longer global
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -77,7 +74,7 @@ export default function RootLayout({
           {/* Viewport – allow pinch-zoom for accessibility (max-scale ≥ 5) */}
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         </head>
-        <body className={`${inter.variable} ${dmSans.variable} ${playfairDisplay.variable} ${dmSans.className} antialiased`} suppressHydrationWarning>
+        <body className={`${dmSans.variable} ${playfairDisplay.variable} ${dmSans.className} antialiased`} suppressHydrationWarning>
           {/* Skip navigation link — keyboard / screen-reader UX (TASK-036) */}
           <a
             href="#main-content"
@@ -89,7 +86,7 @@ export default function RootLayout({
             <ThemeProvider>
               <div id="main-content" tabIndex={-1} className="bg-background text-foreground min-h-screen contain-layout focus-visible:outline-none" suppressHydrationWarning>
                 <AriaLiveRegion />
-                <CommandPalette />
+                <CommandPaletteProvider />
                 <ModalProvider />
                 <Toaster />
                 <SonnerProvider />

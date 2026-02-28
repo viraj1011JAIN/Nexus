@@ -4,8 +4,14 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
 import { ChevronLeft, Share2 } from "lucide-react";
-import { ShareBoardDialog } from "./share-board-dialog";
-import { BoardSettingsDropdown } from "./board-settings-dropdown";
+// Dynamic — both components import server actions; static import would create
+// a stale Turbopack stub reference after any HMR update.
+const ShareBoardDialog = dynamic(() =>
+  import("./share-board-dialog").then((m) => ({ default: m.ShareBoardDialog }))
+);
+const BoardSettingsDropdown = dynamic(() =>
+  import("./board-settings-dropdown").then((m) => ({ default: m.BoardSettingsDropdown }))
+);
 
 // Loaded client-side only — usePresence calls useUser()/useAuth() from Clerk,
 // which throws during Next.js App Router SSR pre-render of client components

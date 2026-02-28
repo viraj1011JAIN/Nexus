@@ -9,6 +9,7 @@
  */
 
 "use server";
+import "server-only";
 
 import { auth }   from "@clerk/nextjs/server";
 import { db }     from "@/lib/db";

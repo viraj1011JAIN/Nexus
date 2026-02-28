@@ -1,4 +1,5 @@
 "use server";
+import "server-only";
 
 import { z } from "zod";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";

@@ -1,5 +1,9 @@
 "use client";
 
+// Editor-specific styles — imported here so they are only loaded when the
+// rich-text editor is actually rendered (lazy bundle boundary via card-modal).
+import "@/app/editor.css";
+
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';

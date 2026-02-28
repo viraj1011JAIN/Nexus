@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, Home, RotateCcw } from "lucide-react";
-import { logger } from "@/lib/logger";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 
 export default function Error({
@@ -14,11 +14,10 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log the error to console in development
-    logger.error("Global error", { error });
-    
-    // In production, this is where you'd send to Sentry:
-    // Sentry.captureException(error);
+    // Report to Sentry — digest ties the Sentry event back to Next.js server logs
+    Sentry.captureException(error, {
+      extra: { digest: error.digest },
+    });
   }, [error]);
 
   return (

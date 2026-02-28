@@ -1,4 +1,5 @@
 "use server";
+import "server-only";
 
 import { getTenantContext } from "@/lib/tenant-context";
 import { db } from "@/lib/db";

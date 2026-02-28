@@ -1,4 +1,5 @@
 "use server";
+import "server-only";
 
 import { createDAL } from "@/lib/dal";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";

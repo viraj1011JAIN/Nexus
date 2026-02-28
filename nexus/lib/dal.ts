@@ -18,6 +18,7 @@
  *   Comment → cardId         (traverse Comment→Card→List→Board→orgId)
  */
 
+import 'server-only';
 import { db, setCurrentOrgId } from "@/lib/db";
 import { getTenantContext, TenantContext, TenantError } from "@/lib/tenant-context";
 import type { Prisma } from "@prisma/client";
