@@ -61,8 +61,10 @@ export function LabelManager({
     const isAssigned = cardLabels.some((l) => l.id === label.id);
 
     if (isAssigned) {
-      // Optimistic removal
-      const cardLabel = cardLabels.find((l) => l.id === label.id)!;
+      // Optimistic removal — find is guaranteed to return a value because isAssigned
+      // confirmed the label exists, but we use optional chaining to satisfy the type-checker.
+      const cardLabel = cardLabels.find((l) => l.id === label.id);
+      if (!cardLabel) return;
       removeLabel(cardLabel);
 
       // Server action

@@ -24,7 +24,7 @@ import { ActionState } from "@/lib/create-safe-action";
 
 // ─── Demo mode ───────────────────────────────────────────────────────────────
 
-const DEMO_ORG_ID = process.env.DEMO_ORG_ID ?? "demo-org-id";
+export const DEMO_ORG_ID = process.env.DEMO_ORG_ID ?? "demo-org-id";
 
 /**
  * Demo Mode Protection

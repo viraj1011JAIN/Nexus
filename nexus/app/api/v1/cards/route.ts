@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { authenticateApiKey, apiError } from "@/lib/api-key-auth";
 import { z } from "zod";
 import { Priority } from "@prisma/client";
+import { generateNextOrder } from "@/lib/lexorank";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
     orderBy: { order: "desc" },
     select: { order: true },
   });
-  const order = lastCard ? lastCard.order + "z" : "m";
+  const order = generateNextOrder(lastCard?.order);
 
   const card = await db.card.create({
     data: {

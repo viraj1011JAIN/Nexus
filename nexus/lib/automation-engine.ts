@@ -262,15 +262,15 @@ function conditionsPass(conditions: any[], card: any, _event: AutomationEvent): 
     const cardValue: any = card[field];
     switch (op) {
       case "eq": {
-        // Type-coerce: compare numbers as numbers, booleans as booleans
+        // Type-coerce: compare numbers as numbers, booleans as booleans, strings strictly
         if (typeof cardValue === "number") return cardValue === Number(value);
         if (typeof cardValue === "boolean") return cardValue === (value === "true");
-        return cardValue == value;
+        return String(cardValue ?? "") === String(value ?? "");
       }
       case "neq": {
         if (typeof cardValue === "number") return cardValue !== Number(value);
         if (typeof cardValue === "boolean") return cardValue !== (value === "true");
-        return cardValue != value;
+        return String(cardValue ?? "") !== String(value ?? "");
       }
       case "contains":
         return typeof cardValue === "string" && cardValue.toLowerCase().includes(String(value).toLowerCase());

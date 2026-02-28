@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * useDebounce Hook
@@ -60,19 +60,15 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 500
 ): (...args: Parameters<T>) => void {
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Keep callback ref up-to-date without destabilising the returned function
+  const callbackRef = useRef(callback);
+  useEffect(() => { callbackRef.current = callback; });
+  // Cleanup pending timeout on unmount to prevent setState-after-unmount
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
 
-  return (...args: Parameters<T>) => {
-    // Clear existing timeout
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-
-    // Set new timeout
-    const newTimeoutId = setTimeout(() => {
-      callback(...args);
-    }, delay);
-
-    setTimeoutId(newTimeoutId);
-  };
+  return useCallback((...args: Parameters<T>) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => callbackRef.current(...args), delay);
+  }, [delay]);
 }

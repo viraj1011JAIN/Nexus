@@ -206,6 +206,11 @@ export function useRealtimeBoard({
 
     // Connect to real-time channel
     const setupRealtimeSubscription = async () => {
+      // Guard: boardId must be a valid UUID to prevent filter injection
+      if (!/^[0-9a-f-]{36}$/i.test(boardId)) {
+        console.error(`[useRealtimeBoard] Invalid boardId format: ${boardId}`);
+        return;
+      }
       try {
         // Attempt to get a Supabase-scoped JWT from Clerk.
         // Falls back to null if no 'supabase' JWT template is configured in the
@@ -280,7 +285,7 @@ export function useRealtimeBoard({
               setIsConnected(true);
               setError(null);
               retryCountRef.current = 0; // Reset retry count on success
-              console.log(`✅ Real-time connected to board: ${boardId} (Phase 3 enabled)`);
+              if (process.env.NODE_ENV === "development") console.log(`✅ Real-time connected to board: ${boardId} (Phase 3 enabled)`);
             } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
               setIsConnected(false);
 
@@ -289,7 +294,7 @@ export function useRealtimeBoard({
                 const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000); // Max 30s
 
                 // Only log on first retry to reduce noise
-                if (retryCountRef.current === 0) {
+                if (retryCountRef.current === 0 && process.env.NODE_ENV === "development") {
                   console.log(`🔄 Real-time connection ${status === "TIMED_OUT" ? "timed out" : "failed"}, retrying...`);
                 }
 
@@ -300,7 +305,7 @@ export function useRealtimeBoard({
               } else {
                 // Only show error after all retries exhausted
                 setError("Connection failed after multiple attempts");
-                console.warn(`⚠️ Real-time connection failed for board: ${boardId} after ${retryCountRef.current} retries`);
+                if (process.env.NODE_ENV === "development") console.warn(`⚠️ Real-time connection failed for board: ${boardId} after ${retryCountRef.current} retries`);
               }
             }
           });
@@ -325,6 +330,7 @@ export function useRealtimeBoard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     boardId,
+    orgId,
     handleCardChange,
     handleListChange,
     handleCommentChange,

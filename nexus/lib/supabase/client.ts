@@ -69,20 +69,6 @@ export function getSupabaseClient() {
 }
 
 /**
- * Channel name generator for board-specific subscriptions
- */
-export function getBoardChannelName(boardId: string): string {
-  return `board:${boardId}`;
-}
-
-/**
- * Channel name generator for presence tracking
- */
-export function getPresenceChannelName(boardId: string): string {
-  return `presence:board:${boardId}`;
-}
-
-/**
  * Creates a Supabase client that carries a Clerk JWT in the Authorization header.
  *
  * WHY: When Supabase Row-Level Security (RLS) policies use `auth.jwt()` or

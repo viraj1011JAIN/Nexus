@@ -110,9 +110,12 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
 
     const supabase = getSupabaseClient();
     const channelName = `card-locks:${boardId}`;
-    let newChannel: RealtimeChannel;
+    let newChannel: RealtimeChannel | undefined;
+    // Cancellation flag: if cleanup runs before async setup completes, tear down
+    // the channel as soon as it becomes available instead of leaving it subscribed.
+    let cancelled = false;
 
-  const setupLockTracking = async () => {
+    const setupLockTracking = async () => {
       try {
         newChannel = supabase.channel(channelName, {
           config: {
@@ -122,8 +125,15 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
           },
         });
 
+        // If the effect was cleaned up before we reached this point, remove immediately
+        if (cancelled) {
+          supabase.removeChannel(newChannel);
+          return;
+        }
+
         // Handle presence sync
         newChannel.on("presence", { event: "sync" }, () => {
+          if (!newChannel) return;
           const state = newChannel.presenceState();
           const locks = new Map<string, CardLockState>();
 
@@ -147,8 +157,9 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
 
         // Subscribe to channel
         await newChannel.subscribe(async (status) => {
+          if (cancelled) return;
           if (status === "SUBSCRIBED") {
-            setChannel(newChannel);
+            setChannel(newChannel!);
           } else if (status === "CHANNEL_ERROR") {
             // error stored in hook state if needed
           }
@@ -162,6 +173,7 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
 
     // Cleanup
     return () => {
+      cancelled = true;
       if (newChannel) {
         newChannel.untrack();
         supabase.removeChannel(newChannel);

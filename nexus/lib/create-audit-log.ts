@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { captureSentryException } from "@/lib/sentry-helpers";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
 
 interface Props {
@@ -36,6 +37,10 @@ export const createAuditLog = async (props: Props) => {
     });
     
   } catch (error) {
-    logger.error("[AUDIT_LOG_ERROR]", error);
+    // Audit log failure is a compliance gap — log loudly and alert via Sentry.
+    // We intentionally do NOT re-throw so the parent action can still succeed;
+    // however, the failure is tracked for on-call investigation.
+    logger.error("[AUDIT_LOG_ERROR] Failed to write audit log — compliance gap", { error, ...props });
+    captureSentryException(error, { level: "error", tags: { source: "audit-log" } });
   }
 };

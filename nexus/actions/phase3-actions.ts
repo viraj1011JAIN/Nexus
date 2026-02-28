@@ -25,6 +25,7 @@ import { createNotification } from "@/actions/notification-actions";
 import { z } from "zod";
 import { differenceInHours } from "date-fns";
 import { emitCardEvent } from "@/lib/event-bus";
+import { clerkClient } from "@clerk/nextjs/server";
 
 /**
  * ============================================
@@ -283,10 +284,8 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
     throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
-  // Get user info from Clerk
-  const user = await fetch(`https://api.clerk.dev/v1/users/${userId}`, {
-    headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` },
-  }).then((res) => res.json());
+  // Get user info from Clerk SDK
+  const user = await (await clerkClient()).users.getUser(userId);
 
   const { cardId, boardId, text, parentId, mentions, isDraft } = data;
 
@@ -536,9 +535,7 @@ export const addReaction = createSafeAction(AddReactionSchema, async (data) => {
     throw new Error(`Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.`);
   }
 
-  const user = await fetch(`https://api.clerk.dev/v1/users/${userId}`, {
-    headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` },
-  }).then((res) => res.json());
+  const user = await (await clerkClient()).users.getUser(userId);
 
   const { commentId, boardId, emoji } = data;
 

@@ -13,6 +13,7 @@ import 'server-only';
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { cache } from "react";
+import { DEMO_ORG_ID } from "@/lib/action-protection";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -177,9 +178,12 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
             joinedAt: new Date(),
           },
         })
-        .catch(() => {
-          // Unique constraint violation: two concurrent requests both tried to create
-          // the row. The second fails safely — the row from the first already exists.
+        .catch((err: unknown) => {
+          // Only swallow unique-constraint violations — two concurrent requests both
+          // tried to create the same row; the second fails safely because the first
+          // already created it. Re-throw all other errors (connection failures, etc.)
+          const message = err instanceof Error ? err.message : String(err);
+          if (!message.toLowerCase().includes("unique constraint")) throw err;
         });
     }
   }
@@ -248,5 +252,5 @@ export async function requireRole(
  * orgId always comes from ctx, never from caller parameters.
  */
 export function isDemoContext(ctx: TenantContext): boolean {
-  return ctx.orgId === (process.env.DEMO_ORG_ID ?? "demo-org-id");
+  return ctx.orgId === DEMO_ORG_ID;
 }
