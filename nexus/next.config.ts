@@ -17,6 +17,13 @@ const nextConfig: NextConfig = {
   // invocation — saves ~0.5 ms per request in local dev.
   skipProxyUrlNormalize: true,
   skipTrailingSlashRedirect: true,
+
+  // Allow cross-origin requests from ngrok tunnels (dev only)
+  allowedDevOrigins: [
+    "*.ngrok-free.app",
+    "*.ngrok.io",
+    "*.ngrok.app",
+  ],
   
   // Compiler optimizations
   compiler: {

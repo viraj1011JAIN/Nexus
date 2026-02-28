@@ -76,12 +76,14 @@ export function validateEnv(): void {
     }
   }
 
-  if (warnings.length > 0 && process.env.NODE_ENV !== "production") {
-    console.warn(
-      `[env] Optional environment variables not set:\n${warnings.join("\n")}\n` +
-      `These features will be disabled or limited.`
-    );
-  }
+  // Optional-var warnings are intentionally suppressed in dev.
+  // Turbopack spins up multiple worker processes and each would log the same
+  // warnings, creating noise. The .env.example documents every optional key.
+  // Uncomment the block below if you need a one-time audit:
+  //
+  // if (warnings.length > 0 && process.env.NODE_ENV !== "production") {
+  //   console.warn(`[env] Optional env vars not set:\n${warnings.join("\n")}`);
+  // }
 
   if (missing.length > 0) {
     throw new Error(
