@@ -52,10 +52,11 @@ function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Supabase env vars are missing");
-  if (key.length < 100) {
+  // Accept both legacy JWT (eyJ…, ≥100 chars) and new sb_secret_… format keys
+  if (!key.startsWith("sb_secret_") && key.length < 100) {
     throw new Error(
       "SUPABASE_SERVICE_ROLE_KEY looks like a placeholder (too short). " +
-      "Copy the service_role JWT from Supabase Dashboard → Settings → API."
+      "Copy the service_role key from Supabase Dashboard → Settings → API."
     );
   }
   return createClient(url, key, { auth: { persistSession: false } });
@@ -147,7 +148,14 @@ export async function POST(req: NextRequest) {
   });
   const uploaderName = user?.name ?? "Unknown";
 
-  const supabase = getServiceClient();
+  let supabase: ReturnType<typeof getServiceClient>;
+  try {
+    supabase = getServiceClient();
+  } catch (cfgErr) {
+    const msg = cfgErr instanceof Error ? cfgErr.message : "Supabase configuration error";
+    console.error("[UPLOAD] Configuration error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
   const storagePath = `attachments/${cardId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
 
   const arrayBuffer = await file.arrayBuffer();
