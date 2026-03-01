@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { startOfToday, startOfDay, endOfDay } from "date-fns";
 import dynamic from "next/dynamic";
@@ -77,8 +77,10 @@ interface BoardTabsProps {
 // â”€â”€â”€ Inner component (consumes BulkSelectionContext) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: externalFilterOpen, onFilterBarChange }: BoardTabsProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const [activeTab, setActiveTab] = useState<TabValue>("board");
   const [filters, setFilters] = useState<BoardFilterState>({
     assigneeIds: [],

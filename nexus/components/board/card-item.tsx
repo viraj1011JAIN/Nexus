@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
@@ -48,8 +48,10 @@ const CardItemInner = ({
   const params = useParams();
   const cardModal = useCardModal();
   const { isBulkMode, selectedIds, toggleCard } = useBulkSelection();
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const isSelected = selectedIds.includes(data.id);
 
   // Priority dot color for accent bar

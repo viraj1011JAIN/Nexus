@@ -306,8 +306,10 @@ export const ListContainer = ({
     }
   }, [boardId]);
 
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   if (!isMounted) return null;
 

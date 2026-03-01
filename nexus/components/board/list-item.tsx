@@ -36,8 +36,10 @@ const ListItemInner = ({
   data,
   boardId,
 }: ListItemProps) => {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const listColor = LIST_COLORS[index % LIST_COLORS.length];
   // 1. State for Editing
   const [isEditing, setIsEditing] = useState(false);

@@ -75,8 +75,12 @@ export function BoardSettingsDropdown({
   currentImageId,
   onTitleChange,
 }: BoardSettingsDropdownProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { resolvedTheme } = useTheme();
+  // Avoid hydration mismatch: on SSR/hydration isDark is always false (light).
+  // After mount the correct theme kicks in without a React mismatch warning.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const router  = useRouter();
 
   // Dropdown open state
@@ -311,14 +315,19 @@ export function BoardSettingsDropdown({
   return (
     <div ref={dropdownRef} style={{ position: "relative" }}>
       {/* Trigger */}
+      {/* suppressHydrationWarning: this button has theme-dependent inline styles.
+          The mounted pattern ensures isDark=false on both server and first client
+          render, but suppressHydrationWarning guards against any residual React 19
+          strict-hydration warnings from numeric→string unit coercion (e.g. 34 → "34px"). */}
       <button
         onClick={() => (open ? closeDropdown() : openDropdown())}
         aria-label="Board settings"
         title="Board settings"
+        suppressHydrationWarning
         style={{
-          width: 34,
-          height: 34,
-          borderRadius: 9,
+          width: "34px",
+          height: "34px",
+          borderRadius: "9px",
           background: open
             ? isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.07)"
             : isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
@@ -345,8 +354,8 @@ export function BoardSettingsDropdown({
             top: "calc(100% + 8px)",
             right: 0,
             zIndex: 9999,
-            width: 248,
-            borderRadius: 14,
+            width: "248px",
+            borderRadius: "14px",
             boxShadow: isDark
               ? "0 24px 48px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.07)"
               : "0 12px 40px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06)",
