@@ -23,12 +23,12 @@ const ALLOWED_MIME_TYPES = new Set([
   "text/plain",
   "text/csv",
   "text/markdown",
-  // Images
+  // Images (SVG intentionally excluded — can embed JS and is an XSS vector
+  // when served inline; Supabase Storage CDN does not set Content-Disposition: attachment)
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
-  "image/svg+xml",
   // Video
   "video/mp4",
   "video/webm",

@@ -123,7 +123,7 @@ export function FileAttachment({ cardId, boardId, initialAttachments = [], onAtt
             id={`file-upload-${cardId}`}
             className="sr-only"
             onChange={handleFileChange}
-            accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.md,.json,.xml,.zip,.rar,.7z"
+            accept="image/jpeg,image/png,image/gif,image/webp,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.md,.json,.xml,.zip,.rar,.7z"
             disabled={uploading}
           />
           <Button
