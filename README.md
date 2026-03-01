@@ -81,12 +81,450 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ## Screenshots
 
-> All screenshots are located in the `Web-screenshort/` folder.
+> All screenshots are located in the `Web-screenshort/` folder.  
+> The application fully supports **dark mode** (default) and **light mode** with an instant toggle.
+
+---
+
+### Sign In
+
+![Sign In](Web-screenshort/Signin.png)
+
+- Clerk-managed authentication page at `/sign-in`
+- Supports email + password login and social OAuth providers (Google, GitHub, etc.)
+- "Continue with…" buttons for one-click social sign-in
+- Branded with Nexus logo and dark background
+- Redirects to Dashboard after successful authentication
+- Includes a "Sign up" link for new users
+- Fully accessible — keyboard navigable, screen-reader friendly
+
+---
+
+### Sign Up
+
+![Sign Up](Web-screenshort/Signup.png)
+
+- Clerk-managed registration page at `/sign-up`
+- Email verification step (magic link or OTP sent via Clerk)
+- After registration, automatically triggers the "healing" path in `getTenantContext()` — creates `User` and `OrganizationUser` rows
+- Organization creation prompt appears immediately after sign-up if no org exists
+- Redirect URL configurable via `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL`
+
+---
 
 ### Dashboard
 
-![Nexus Dashboard](Web-screenshort/Dashboard.png)
-> Organization boards overview — sidebar navigation, board cards, dark mode, and real-time presence indicators.
+![Dashboard](Web-screenshort/Dashboard.png)
+
+- Main landing page after login at `/dashboard`
+- Displays all boards belonging to the active organization
+- Each board card shows: title, background image/color, member count, and last activity
+- **Create Board button** — opens a dialog with title input, Unsplash background picker, and template selector
+- **Sidebar navigation** — links to Dashboard, Activity feed, Roadmap, Search, Billing, Settings
+- **Online presence bar** — shows avatars of teammates currently active on shared boards
+- **Organization switcher** — powered by Clerk; instantly switches context between orgs
+- **Plan badge** — FREE / PRO indicator with "Upgrade" CTA for free plan users
+- **Board limit meter** — FREE plan shows `X / 50 boards used` progress bar
+- **Dark mode** active by default as shown; toggle in top-right corner
+- Server Component — board list fetched on the server via DAL scoped to `orgId`
+- **Real-time updates** — Supabase `org:{orgId}:boards` channel syncs board additions/deletions live
+
+---
+
+### Boards and Lists (Board View)
+
+![Boards and List](Web-screenshort/Boards%20and%20List.png)
+
+- Full Kanban board view at `/board/[boardId]`
+- **Tab bar at top** — switches between: Board (Kanban), Calendar, Table, Gantt, Workload
+- **Lists rendered as columns** — each list is a named, reorderable column
+  - Drag a list left/right to reorder (LexoRank updates one DB row)
+  - "Add list" button at the far right creates a new column
+  - List title is inline-editable with a click
+- **Cards rendered inside lists** — each card chip shows:
+  - Card title (truncated to 2 lines)
+  - Priority color accent bar on the left edge (Urgent = red, High = orange, Medium = cyan, Low = green)
+  - Due date chip (red if overdue, amber if < 24h, grey otherwise)
+  - Labels as colored pill badges
+  - Assignee avatar
+  - Checklist progress bar
+  - Paperclip + count badge if attachments exist
+  - Dependency lock icon if blocked by other cards
+  - Story points badge
+- **Drag and drop** — powered by `@dnd-kit`; cards and lists both draggable
+  - Optimistic UI fires immediately; server action confirms asynchronously
+  - `DragOverlay` shows a ghost copy of the dragged card
+- **Filter bar** — filter by assignee, label, priority, due date range, keyword search
+- **Bulk selection mode** — toggle to select multiple cards; floating action bar appears
+- **Board header** — shows board title, member avatars, online users, settings menu, share button
+- **3-dot card menu** — hover to reveal delete option per card
+- Background image or color set per board (Unsplash picker)
+- Board is a React Server Component for the shell; drag-and-drop and real-time are client-only
+
+---
+
+### Cards (Card Detail Modal)
+
+![Cards](Web-screenshort/Cards.png)
+
+- Full-screen dialog opened from any card click
+- **Title bar** — inline-editable card title with auto-save
+- **Left panel (main content):**
+  - Rich text description editor (TipTap WYSIWYG — bold, italic, headings, lists, links, code, mentions, GIFs)
+  - Character count indicator
+  - AI "Generate Description" button — calls OpenAI and replaces current description (confirm prompt shown)
+  - Save status indicator: Saved / Saving… / Error
+- **Right sidebar (metadata):**
+  - **Assignee picker** — search org members, assign/unassign
+  - **Priority selector** — dropdown: Low / Medium / High / Urgent, with colored icon
+  - **Due date** — SmartDueDate picker with relative presets (today, tomorrow, next week)
+  - **Labels** — multi-select label picker, org-scoped labels with custom colors
+  - **Sprint** — assign card to an active sprint
+  - **Epic** — link card to an epic/initiative
+  - **Story Points** — numeric estimate input
+- **Tab bar (bottom of modal):**
+  - **Description** — TipTap editor (default tab)
+  - **Attachments** — file upload/download panel (up to 100 MB per file via Supabase Storage)
+    - Files displayed with icon, name (clickable link → opens in new tab), size, uploader, upload time
+    - Download button for forced download
+    - Delete button with confirmation toast
+    - Toast notification on successful upload
+    - FREE plan: 10 attachment limit
+  - **Checklists** — create multiple checklists; check/uncheck items; AI item generation from description
+  - **Custom Fields** — text, number, date, checkbox, select, multi-select, URL, email, phone
+  - **Time Tracking** — log time entries with start/end or duration; set estimate; visual progress bar
+  - **Dependencies** — link cards as Blocks / Blocked By / Related; affected cards show a lock icon
+- **Activity & Comments panel (bottom):**
+  - Threaded comments with TipTap rich text, @mentions, emoji reactions
+  - Audit log timeline — every card mutation recorded with who/what/when
+- **Card edit locking** — if another user has the card open for editing, an overlay shows "Locked by [Name]"
+- Keyboard shortcuts: `Esc` closes modal, `L` opens labels, `A` opens assignee, `D` opens due date
+
+---
+
+### Realtime Analytics Dashboard
+
+![Realtime Analytics Dashboard](Web-screenshort/Realtime%20Analytics%20Dashboard.png)
+
+- Analytics overlay accessible from within a board (chart icon in header)
+- **Live metrics panel (top row):**
+  - Total Cards, Completed, Overdue, Active Members — all update in real time via Supabase broadcast
+- **Charts section:**
+  - **Priority Distribution** — donut chart showing Urgent / High / Medium / Low split
+  - **Weekly Trend** — line chart of cards created vs completed over the past 7 days
+  - **Burndown chart** — remaining vs completed items across the sprint timeline
+  - **Velocity chart** — story points completed per sprint
+  - **Label distribution** — bar chart of label usage across the board
+- **Real-time updates** — `use-realtime-analytics` hook subscribes to `org:{orgId}:analytics:{boardId}` channel
+  - Card create/complete/delete events broadcast to all connected clients instantly
+  - Charts animate to new values without page reload
+- **PDF export** — "Export PDF" button generates a formatted report using jsPDF + AutoTable
+- **Multi-tab view** — Board Overview / User Activity / Sprint Stats / Label Stats each on separate tabs
+- Board-scoped — analytics shown are for the currently open board only
+
+---
+
+### Realtime Activity Feed
+
+![Realtime Activity](Web-screenshort/Realtime%20Activity.png)
+
+- Organisation-wide activity feed at `/activity`
+- Shows every audited action across all boards the user has access to
+- **Each entry shows:**
+  - User avatar + name
+  - Action description (e.g., "created card 'Fix login bug' in Sprint 4")
+  - Board name and list name as breadcrumb links
+  - Relative timestamp (e.g., "3 minutes ago")
+  - IP address and browser agent (visible to org admins)
+  - Before/after diff for update operations (previous value → new value)
+- **Filters:** filter by action type, board, user, or date range
+- **Real-time** — new audit log entries appear instantly via Supabase `org:{orgId}:activity` channel
+  - ARIA live region announces new entries for screen readers
+- **Pagination** — infinite scroll loads older entries
+- Powered by the `getAuditLogs` server action, scoped strictly to `orgId`
+- Useful for compliance tracking, debugging, and onboarding reviews
+
+---
+
+### Billing
+
+![Billing](Web-screenshort/Billing.png)
+
+- Billing management page at `/billing`
+- **Plan overview card:**
+  - Current plan badge (FREE or PRO)
+  - Board usage meter for FREE plan (`X of 50 boards`)
+  - PRO plan benefits listed: unlimited boards, priority support
+- **Upgrade to PRO section:**
+  - Monthly (£9/month) and yearly (£90/year) plan options
+  - "Upgrade" button → creates Stripe Checkout Session → redirects to Stripe-hosted checkout
+  - Promotion code input field
+- **Active subscription card (PRO users):**
+  - Current billing period start/end dates
+  - Next billing date
+  - "Manage Billing" button → creates Stripe Customer Portal Session → self-service portal
+  - Cancel subscription option (handled by Stripe portal)
+- **Webhook lifecycle** — all Stripe events processed by `app/api/webhook/stripe/route.ts`:
+  - Plan activates immediately on `checkout.session.completed`
+  - `invoice.payment_failed` → shows "Past Due" warning banner
+  - `customer.subscription.deleted` → resets to FREE silently
+- UK VAT and Tax ID collection enabled in Stripe configuration
+- `ProUpgradeModal` component shown contextually when FREE plan limits are hit elsewhere in the app
+
+---
+
+### Settings
+
+![Settings](Web-screenshort/Settings.png)
+
+- Organisation settings hub at `/settings`
+- **Main settings page tabs:**
+  - **General** — org name, slug, region, logo upload
+  - **Members** — invite members, view roles, suspend/remove members
+  - **API Keys** (`/settings/api-keys`) — create, view, revoke API keys with scope selection
+    - Keys are prefixed `nxk_`; hashed with SHA-256 before storage; plaintext shown only once
+    - Each key has an optional expiry date and a list of scopes (`boards:read`, `cards:write`, etc.)
+    - Usage stats (last used, total requests)
+  - **Automations** (`/settings/automations`) — visual rule builder
+    - Trigger: card created / moved / due date approaching / label added / priority changed
+    - Conditions: filter by list, assignee, priority, label
+    - Actions: move card, assign member, add label, send notification, call webhook
+    - Up to 3-level nesting; each automation has enable/disable toggle and run log
+  - **Webhooks** (`/settings/webhooks`) — register outbound HTTP endpoints
+    - HMAC-SHA256 signing with per-webhook secret
+    - Event selection (card.created, card.updated, card.moved, etc.)
+    - Delivery log with HTTP status, payload preview, retry option
+    - SSRF protection blocks private IP ranges
+  - **Integrations** (`/settings/integrations`) — GitHub and Slack
+    - GitHub: maps push events and PR events to card status changes
+    - Slack: posts card activity notifications to a Slack channel via incoming webhook URL
+  - **GDPR** (`/settings/gdpr`) — data portability tools
+    - "Export My Data" — downloads a ZIP of all user data (GDPR Art. 20)
+    - "Request Account Deletion" — initiates soft delete workflow (GDPR Art. 17)
+    - Audit log of all GDPR requests
+- All settings pages are protected; only OWNER / ADMIN roles can access most sections
+
+---
+
+### Light Mode
+
+![Light Mode](Web-screenshort/Light%20Mode.png)
+
+- The entire application supports both dark and light themes
+- **Theme toggle** — sun/moon icon button in the top navigation bar
+- Persisted in `localStorage` and applied via a `class` on the `<html>` element (no flash of wrong theme on reload)
+- System preference detection — defaults to OS-level `prefers-color-scheme` on first visit
+- Light mode uses a warm off-white (`#F4F1ED`) background and soft shadows
+- Dark mode uses a deep indigo-charcoal (`#0D0C14`) with purple-tinted glows
+- All Tailwind utility classes use `dark:` prefix variants — no CSS variable swapping
+- `useTheme` hook from `components/theme-provider.tsx` exposes `resolvedTheme` to all components
+- `useSyncExternalStore` used for hydration-safe mount detection — prevents theme flash on SSR
+
+---
+
+## Pages Deep-Dive
+
+### `/` — Landing / Home
+
+- Root route — auto-redirects to `/dashboard` for authenticated users (handled in `proxy.ts` middleware before page render)
+- Shows a minimal marketing page for unauthenticated visitors with CTA to sign up
+- No data fetching; pure static render
+
+---
+
+### `/sign-in` — Sign In
+
+- Clerk-managed authentication at `[[...sign-in]]` catch-all route
+- Renders `<SignIn />` component from `@clerk/nextjs`
+- Supports: Email/password, magic link, Google OAuth, GitHub OAuth
+- On success: redirects to `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` (defaults to `/`)
+- `getTenantContext()` auto-heals missing User/OrganizationUser rows on first login
+
+---
+
+### `/sign-up` — Sign Up
+
+- Clerk-managed registration at `[[...sign-up]]` catch-all route
+- Renders `<SignUp />` component from `@clerk/nextjs`
+- Email verification step (OTP or magic link)
+- After successful registration: redirects to `/`, then `select-org` if no org exists
+- New users provisioned automatically in DB on first `getTenantContext()` call
+
+---
+
+### `/select-org` — Organisation Selector
+
+- Displayed when a user is authenticated but has no active organisation context
+- Renders Clerk `<OrganizationList />` — shows orgs the user belongs to with create option
+- Selecting or creating an org sets the active org JWT claim and redirects to `/dashboard`
+
+---
+
+### `/onboarding` — Onboarding
+
+- Shown to new organisations that haven't completed initial setup
+- Step-by-step wizard: org name → first board → invite teammates → choose template
+- Guards redirect to here if `org.onboardingComplete` is false
+
+---
+
+### `/dashboard` — Dashboard
+
+- **Protected:** requires active Clerk session + valid `orgId` JWT claim
+- Server Component — fetches board list via `dal.boards.findMany()` scoped to `orgId`
+- Rendered features:
+  - Board grid with cards (image thumbnail, title, member count)
+  - Create Board dialog — title, Unsplash picker, optional template
+  - Board limit meter (FREE plan)
+  - Sidebar with nav links, org switcher, user avatar
+  - Online presence indicators
+- Real-time: `org:{orgId}:boards` Supabase channel updates board list on create/delete
+
+---
+
+### `/board/[boardId]` — Board View
+
+- **Protected:** requires valid `BoardMember` row (dual-gate check)
+- Server Component shell; drag-and-drop and realtime are client-only
+- Five tabs:
+  - **Board (Kanban)** — lists + cards with full drag-and-drop
+  - **Calendar** — month/week/day view of cards by `dueDate`
+  - **Table** — sortable spreadsheet of all cards across all lists
+  - **Gantt** — horizontal timeline bars colored by priority; zoom levels; today line
+  - **Workload** — per-assignee capacity chart showing card distribution
+- Card query includes: `assignee`, `labels`, `checklists.items` (progress bar), `_count.dependencies`, `_count.attachments`
+- **Filter bar** — multi-criteria: assignee, label, priority, due date, search text
+- **Sprint panel** (slide-out) — sprint CRUD, backlog assignment, burndown stats
+- **Board settings** — accessible from header ⚙️ menu; redirects to `/board/[boardId]/settings`
+
+---
+
+### `/board/[boardId]/settings` — Board Settings
+
+- Board-level config accessible to ADMIN and OWNER roles
+- Sections:
+  - **General** — board title, visibility (public/private), background image
+  - **Members** — add/remove board members, change roles (OWNER/ADMIN/MEMBER/VIEWER)
+  - **Permissions** — create/apply custom permission schemes; override role defaults
+  - **Sharing** — generate public share links with optional password, expiry, and view limit
+  - **Danger Zone** — delete board (cascades to all lists, cards, attachments)
+
+---
+
+### `/billing` — Billing
+
+- Shows current plan (FREE / PRO), usage metrics, and upgrade options
+- FREE → PRO: Stripe Checkout Session (GBP, `subscription` mode)
+- PRO: Stripe Customer Portal for self-service changes, cancellation
+- Webhook-driven plan sync — no page refresh needed after payment
+
+---
+
+### `/activity` — Activity Feed
+
+- Organisation-wide audit log feed
+- Real-time new entries via Supabase broadcast
+- Each entry: user, action, entity, board, list, timestamp, IP, before/after values
+- Filterable by action type, board, user, date range
+- Infinite scroll pagination
+- Admin-only fields (IP, user agent) hidden from MEMBER/VIEWER roles
+
+---
+
+### `/roadmap` — Roadmap
+
+- Org-level roadmap view of Initiatives and Epics
+- **Initiatives** — top-level goals (e.g., "Q2 Product Launch")
+  - Each initiative contains multiple Epics
+- **Epics** — milestone groupings of cards across boards
+  - Shows progress bar (completed cards / total cards)
+  - Due date, assignee, priority
+- Create Initiative / Create Epic dialogs with date range pickers
+- Gantt-style timeline visualization with swimlanes per initiative
+
+---
+
+### `/search` — Global Search
+
+- Full-text search across all cards in all boards the user has access to
+- Query sent to `GET /api/cards/search?q=...`
+- Results grouped by board and list
+- Each result shows: card title, list, board, assignee avatar, priority badge, due date
+- Keyboard shortcut `Ctrl+K` / `Cmd+K` opens the command palette (includes search)
+- Debounced input — waits 300ms after last keypress before firing search request
+
+---
+
+### `/settings` — Organisation Settings
+
+- Hub for all org-level configuration
+- **General** — org name, slug, region
+- **Members** — list, invite (email), role assignment, suspension
+- **API Keys** — create/revoke API keys with scoped permissions and expiry
+- **Automations** — visual trigger/action rule builder with enable/disable toggle
+- **Webhooks** — HMAC-signed outbound webhooks with delivery logs and retry
+- **Integrations** — GitHub and Slack webhook configurations
+- **GDPR** — data export and deletion request tools
+
+---
+
+### `/shared/[token]` — Public Shared Board
+
+- Public route — no authentication required
+- Accessible via a tokenized URL generated in Board Settings → Sharing
+- Optional password prompt before content is shown
+- Optional view count limit (board becomes inaccessible after N views)
+- Optional expiry date
+- Read-only view — no mutations allowed (demo mode protection active)
+- Guest users see the Kanban view only; no settings, no member list
+
+---
+
+### `/pending-approval` — Pending Membership Approval
+
+- Shown when a user has submitted a membership request to an org or board and is awaiting approval
+- Displays status of all pending requests (org-level and board-level)
+- Refreshes automatically when a request is approved or rejected via real-time broadcast
+- "Cancel request" button available
+
+---
+
+### `/request-board-access` — Board Access Request
+
+- Shown when a user tries to navigate to a board they aren't a member of
+- Submits a `MembershipRequest` record to the board owner/admin for approval
+- User can add an optional message to their request
+- After submission → redirects to `/pending-approval`
+
+---
+
+### `/privacy` — Privacy Policy
+
+- Static legal page — no auth required, no data fetching
+- Outlines data collection, processing, and retention policies
+
+---
+
+### `/terms` — Terms of Service
+
+- Static legal page — no auth required, no data fetching
+- Outlines acceptable use, subscription terms, and service limits
+
+---
+
+### `error.tsx` — Error Boundary
+
+- Next.js App Router root error boundary
+- Catches unhandled errors in the render tree
+- Shows a user-friendly "Something went wrong" UI with a "Try again" button
+- Errors reported to Sentry automatically via `lib/logger.ts`
+
+---
+
+### `not-found.tsx` — 404 Page
+
+- Shown when a route isn't matched or `notFound()` is called in a server component
+- Custom branded 404 UI with navigation back to dashboard
 
 ---
 
@@ -139,7 +577,7 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 - Due dates with smart date picker and priority-aware styling
 - Labels with custom colors (organization-scoped)
 - Checklists with progress tracking and AI-generated items
-- File attachments via Supabase Storage (10 MB limit)
+- File attachments via Supabase Storage (100 MB per file)
 - Card cover images and colors
 - Custom fields: Text, Number, Date, Checkbox, Select, Multi-Select, URL, Email, Phone
 - Card dependencies: Blocks, Relates To, Duplicates
