@@ -330,6 +330,23 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ---
 
+### Command Palette (⌘ K / Ctrl K)
+
+![Command Palette](Web-screenshort/Command%20Pallete%20(ctrl%20+%20K).png)
+
+- Global command palette triggered anywhere in the app with `Ctrl+K` (Windows/Linux) or `⌘K` (macOS)
+- **Search bar** — fuzzy-search across commands, boards, cards, and navigation links in real time
+- **Quick navigation** — jump directly to any board, settings page, or route without using the sidebar
+- **Card actions** — find and open any card by title; actions like assign, change priority, and move list are accessible without opening the card modal
+- **Board actions** — create board, archive board, manage members — all surfaced as palette commands
+- **Keyboard-driven** — arrow keys navigate results, `Enter` executes, `Esc` dismisses
+- Built on `cmdk` (Command Menu) with Radix UI Dialog as the overlay container
+- Results are grouped by category: Navigation, Boards, Cards, Actions
+- Accessible — ARIA roles `combobox` / `listbox`, focus trap inside the dialog, screen-reader announcements for result count
+- Available on every page — mounted at the root layout level so it never unmounts between navigations
+
+---
+
 ## Pages Deep-Dive
 
 ### `/` — Landing / Home
