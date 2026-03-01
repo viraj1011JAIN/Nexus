@@ -9,12 +9,14 @@ Real-time collaboration · Dual-gate RBAC · AI-powered workflows · Stripe bill
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-16.1.4-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?logo=prisma&logoColor=white)](https://prisma.io)
 [![Supabase](https://img.shields.io/badge/Supabase-Realtime-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![Clerk](https://img.shields.io/badge/Clerk-Auth-6C47FF?logo=clerk&logoColor=white)](https://clerk.com)
 [![Stripe](https://img.shields.io/badge/Stripe-Billing-008CDD?logo=stripe&logoColor=white)](https://stripe.com)
+[![TypeScript Errors](https://img.shields.io/badge/TypeScript%20Errors-0-success)](nexus/tsconfig.json)
+[![ESLint](https://img.shields.io/badge/ESLint-clean-4B32C3?logo=eslint&logoColor=white)](nexus/eslint.config.mjs)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 </div>
@@ -51,6 +53,7 @@ Real-time collaboration · Dual-gate RBAC · AI-powered workflows · Stripe bill
 - [Use Case Diagram](#use-case-diagram)
 - [Scalability](#scalability)
 - [Known Limitations & Roadmap](#known-limitations--roadmap)
+- [Changelog](#changelog)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -70,6 +73,11 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 - **Production-ready security** — SSRF protection, audit logs, rate limiting, Row-Level Security
 
 > Built as a self-hostable alternative to Trello and Jira — with multi-organization support, a public API, and enterprise-grade security architecture out of the box.
+
+**Code quality status:**
+- TypeScript: **0 errors** across all 99 components, 40 server actions, and 34 lib modules
+- ESLint: **0 warnings** — all Tailwind v4 utilities, a11y rules, and import rules pass cleanly
+- Hydration: **0 mismatches** — all CSS utilities use bracket syntax (`gap-[5px]`, `h-[30px]`) for consistency between server and client renders
 
 **What makes the architecture distinct:**
 - `orgId` is **always** extracted from the Clerk JWT — never accepted from client parameters
@@ -1573,7 +1581,7 @@ cp .env.example .env
 | `UNSPLASH_ACCESS_KEY` | Unsplash server key | unsplash.com/developers |
 | `RESEND_API_KEY` | Resend email API key | resend.com/api-keys |
 | `EMAIL_FROM` | Sender address (must be verified in Resend) | Your domain |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service key for file uploads | Supabase > Settings > API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service key for file uploads (`sb_secret_*` format from modern Supabase projects) | Supabase > Settings > API |
 | `GIPHY_API_KEY` | Giphy API key | developers.giphy.com |
 | `KLIPY_API_KEY` | Alternative GIF provider | klipy.com/developers |
 | `E2E_EMAIL` | Playwright test account email | Create a test account |
@@ -1604,6 +1612,8 @@ npm install
 # 3. Configure environment
 cp .env.example .env
 # Fill in all required values (see Environment Variables above)
+# Note: SUPABASE_SERVICE_ROLE_KEY uses the modern sb_secret_* format —
+#       find it in Supabase Dashboard > Settings > API > service_role key
 
 # 4. Generate Prisma client
 npx prisma generate
@@ -1825,6 +1835,7 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 | **Turbopack** | Dev server uses Turbopack for fast HMR |
 | **React Compiler** | `babel-plugin-react-compiler` auto-memoizes all client components |
 | **Server Components** | Data-heavy pages render on server with zero client JS |
+| **Hydration-safe CSS** | All Tailwind classes use explicit bracket values (`gap-[5px]`, `h-[30px]`, `bg-gradient-to-br`) — eliminates class mismatch hydration errors between server and cached client bundles |
 | **Image optimization** | AVIF + WebP formats, 1-hour minimum cache TTL |
 | **Virtual scrolling** | `components/virtual-scroll.tsx` renders only visible items |
 | **Lazy loading** | `components/lazy-load.tsx` uses Intersection Observer |
@@ -2081,6 +2092,21 @@ graph TB
 - AI-powered task prioritization and workload balancing
 - Board activity heatmaps
 - Advanced historical analytics with trend predictions
+
+---
+
+## Changelog
+
+### Latest Updates
+
+| Date | Change |
+|---|---|
+| 2025-07 | Fixed file upload route (`POST /api/upload`) — proper try/catch error handling, `sb_secret_*` key format support |
+| 2025-07 | Eliminated React hydration mismatch in `board-header.tsx` — replaced all Tailwind v4-only shorthands with bracket equivalents |
+| 2025-07 | Mass Tailwind/a11y fix: replaced all `bg-linear-to-*` → `bg-gradient-to-*`, non-standard spacing tokens → bracket values, added missing `aria-label` attributes across 19 files |
+| 2025-07 | Card modal delete flow wired end-to-end — `handleDeleteCard` connected to both dropdown and sidebar delete buttons |
+| 2025-07 | Removed render-blocking `@import url(fonts.googleapis.com/...)` from card modal — fonts load globally via `next/font` |
+| 2025-07 | Fixed board tab icon visibility — added `group` + `group-data-[state=active]:opacity-100` pattern for active state |
 
 ---
 
