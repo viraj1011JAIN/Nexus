@@ -239,7 +239,7 @@ function MemberRow({ member }: { member: WorkloadMember }) {
             className="h-9 w-9 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-sm"
           />
         ) : (
-          <div className="h-9 w-9 rounded-full bg-linear-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm ring-2 ring-white dark:ring-slate-700">
+          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm ring-2 ring-white dark:ring-slate-700">
             {member.name[0]?.toUpperCase()}
           </div>
         )}

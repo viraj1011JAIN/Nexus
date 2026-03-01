@@ -56,7 +56,7 @@ export const Sidebar = () => {
         <div className="flex items-center gap-3 mb-5">
           {/* Gradient logo mark with "N" lettermark */}
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-linear-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
           >
             <span className="text-white font-bold text-[17px] leading-none tracking-tight select-none font-display">N</span>
           </div>
@@ -128,7 +128,7 @@ export const Sidebar = () => {
                 {/* Active indicator pill */}
                 {isActive && (
                   <span
-                    className="absolute left-0 top-[18%] bottom-[18%] w-0.75 rounded-r-full bg-linear-to-b from-[#7B2FF7] to-[#C01CC4]"
+                    className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full bg-gradient-to-b from-[#7B2FF7] to-[#C01CC4]"
                   />
                 )}
 
@@ -157,7 +157,7 @@ export const Sidebar = () => {
         </div>
         <div className="h-1 bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full w-[24%] bg-linear-to-r from-[#7B2FF7] to-[#C01CC4]"
+            className="h-full rounded-full w-[24%] bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4]"
           />
         </div>
       </div>

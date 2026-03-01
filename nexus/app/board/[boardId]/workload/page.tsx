@@ -79,7 +79,7 @@ export default async function WorkloadPage({ params }: WorkloadPageProps) {
   if (!board) notFound();
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50">
       {/* Back navigation */}
       <div className="px-6 py-4 border-b bg-white/70 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto flex items-center gap-4">

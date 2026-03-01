@@ -273,6 +273,7 @@ const CardItemInner = ({
               variant="ghost"
               size="icon"
               className="h-6 w-6 rounded-lg text-[#9A8F85] dark:text-white/35 hover:text-[#1A1714] dark:hover:text-white hover:bg-black/6 dark:hover:bg-white/10 transition-all"
+              aria-label="Card options"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="h-3.5 w-3.5" />

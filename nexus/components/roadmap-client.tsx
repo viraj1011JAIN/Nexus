@@ -196,7 +196,7 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
           Initiative / Epic
         </div>
         {/* Month columns */}
-        <div className="flex-1 relative flex min-w-150">
+        <div className="flex-1 relative flex min-w-[600px]">
           {months.map((m) => {
             const leftPct = toPct(m);
             const nextMonth = addMonths(m, 1);
@@ -277,7 +277,7 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
                         {epicStatus.label}
                       </Badge>
                     </div>
-                    <div className="flex-1 relative h-full flex items-center min-w-150 px-1">
+                    <div className="flex-1 relative h-full flex items-center min-w-[600px] px-1">
                       {epicHasRange && (
                         <div
                           className="absolute h-4 rounded-full"

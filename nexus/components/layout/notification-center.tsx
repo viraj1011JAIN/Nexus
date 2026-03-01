@@ -274,7 +274,7 @@ export function NotificationCenter() {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-95 p-0"
+        className="w-[380px] p-0"
         align="end"
         sideOffset={8}
       >
@@ -302,7 +302,7 @@ export function NotificationCenter() {
         <Separator />
 
         {/* ── Notification list ─────────────────────────────────────────── */}
-        <ScrollArea className="max-h-120">
+        <ScrollArea className="max-h-[480px]">
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

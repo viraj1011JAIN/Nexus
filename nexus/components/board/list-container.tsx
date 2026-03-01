@@ -370,7 +370,7 @@ export const ListContainer = ({
               {/* Add List button */}
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl border-none bg-linear-to-br from-[#7B2FF7] to-[#C01CC4] text-white text-[13px] font-semibold font-sans flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_6px_24px_rgba(123,47,247,0.42)] transition-shadow duration-200"
+                className="w-full py-2.5 rounded-xl border-none bg-gradient-to-br from-[#7B2FF7] to-[#C01CC4] text-white text-[13px] font-semibold font-sans flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_6px_24px_rgba(123,47,247,0.42)] transition-shadow duration-200"
               >
                 + Add List
               </button>

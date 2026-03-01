@@ -9,7 +9,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 // --- Dynamic imports for all components that import server actions ---------
 // Static imports create a frozen reference to Turbopack's server-action stub
 // chunk (content-hashed ID). When any file changes during HMR the stub gets a
-// new hash; the old ID no longer has a registered factory ? runtime crash.
+// new hash; the old ID no longer has a registered factory → runtime crash.
 // dynamic() integrates with the Turbopack HMR system so after each update the
 // next render re-fetches the latest chunk, always getting a live factory.
 const ListContainer = dynamic(() =>
@@ -322,10 +322,10 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
                   key={value}
                   value={value}
                   data-value={value}
-                  className="gap-1.5 text-[12.5px] rounded-[7px] px-3 py-1.5 data-[state=active]:shadow-none font-sans transition-all duration-180 text-[#9A8F85] dark:text-white/38 data-[state=active]:text-[#7B2FF7] dark:data-[state=active]:text-[#C084FC] data-[state=active]:bg-[rgba(123,47,247,0.08)] dark:data-[state=active]:bg-[rgba(123,47,247,0.15)] data-[state=active]:font-semibold"
+                  className="group gap-1.5 text-[12.5px] rounded-[7px] px-3 py-1.5 data-[state=active]:shadow-none font-sans transition-all duration-180 text-[#9A8F85] dark:text-white/38 data-[state=active]:text-[#7B2FF7] dark:data-[state=active]:text-[#C084FC] data-[state=active]:bg-[rgba(123,47,247,0.08)] dark:data-[state=active]:bg-[rgba(123,47,247,0.15)] data-[state=active]:font-semibold"
                   title={`${label} (${i + 1})`}
                 >
-                  <Icon className="h-3.5 w-3.5 data-[state=active]:opacity-100" />
+                  <Icon className="h-3.5 w-3.5 opacity-60 group-data-[state=active]:opacity-100" />
                   {label}
                 </TabsTrigger>
               ))}

@@ -316,7 +316,7 @@ const ListItemInner = ({
                 onChange={handleCardTitleChange}
                 ref={cardInputRef}
                 required
-                className="flex-1 px-3 py-1.75 rounded-[10px] outline-none text-[12.5px] font-medium transition-colors duration-150 bg-black/4 dark:bg-white/5 text-[#1A1714] dark:text-[#E8E4F0] border border-black/8 dark:border-white/8 placeholder:text-black/25 dark:placeholder:text-white/25"
+                className="flex-1 px-3 py-[7px] rounded-[10px] outline-none text-[12.5px] font-medium transition-colors duration-150 bg-black/4 dark:bg-white/5 text-[#1A1714] dark:text-[#E8E4F0] border border-black/8 dark:border-white/8 placeholder:text-black/25 dark:placeholder:text-white/25"
                 onFocus={e => (e.currentTarget.style.borderColor = `${listColor}70`)}
                 onBlur={e => (e.currentTarget.style.borderColor = "")}
               />

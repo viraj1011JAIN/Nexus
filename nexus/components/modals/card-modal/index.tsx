@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import NextImage from "next/image";
 import dynamic from "next/dynamic";
 import { Card, AuditLog, List, Label, Priority } from "@prisma/client";
@@ -92,6 +92,7 @@ import {
   removeReaction 
 } from "@/actions/phase3-actions";
 import { generateCardDescription } from "@/actions/ai-actions";
+import { deleteCard } from "@/actions/delete-card";
 import { ErrorBoundary } from "@/components/error-boundary-realtime";
 import type { CardLabel } from "@/hooks/use-optimistic-card";
 
@@ -107,6 +108,7 @@ type CardWithRelations = Card & {
 
 export const CardModal = () => {
   const params = useParams();
+  const router = useRouter();
   
   const organizationId = params.organizationId as string;
   const boardId = params.boardId as string;
@@ -395,6 +397,18 @@ export const CardModal = () => {
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
+  const handleDeleteCard = async () => {
+    if (!cardData) return;
+    try {
+      await deleteCard(cardData.id, boardId);
+      toast.success("Card deleted");
+      onClose();
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete card");
+    }
+  };
+
   const handleAddReaction = async (commentId: string, emoji: string) => {
     if (!cardData || !user) return;
 
@@ -540,7 +554,9 @@ export const CardModal = () => {
         className="p-0 gap-0 border-none overflow-hidden"
       >
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
+          /* Fonts (DM Sans + Playfair Display) are loaded globally via next/font
+             in app/layout.tsx and exposed as --font-dm-sans / --font-playfair.
+             No @import needed here. */
 
           /* ── Theme tokens ──────────────────────────────── */
           [data-cm-modal] {
@@ -894,7 +910,7 @@ export const CardModal = () => {
                           <Copy className="h-4 w-4 mr-2" /> Copy link
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 cursor-pointer">
+                        <DropdownMenuItem onClick={handleDeleteCard} className="text-red-600 cursor-pointer">
                           <Trash2 className="h-4 w-4 mr-2" /> Delete card
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -1233,7 +1249,7 @@ export const CardModal = () => {
                     <Copy className="h-3 w-3" /> Copy link
                   </button>
 
-                  <button className="cm-delete-btn">
+                  <button className="cm-delete-btn" onClick={handleDeleteCard}>
                     <Trash2 className="h-3 w-3" /> Delete card
                   </button>
 

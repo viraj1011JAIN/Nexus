@@ -228,7 +228,7 @@ export function UnsplashPicker({ onSelect, onClear, selectedId }: UnsplashPicker
                           </div>
                         )}
                         {/* Attribution overlay */}
-                        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <p className="text-white text-[10px] truncate">{photo.userName}</p>
                         </div>
                       </button>

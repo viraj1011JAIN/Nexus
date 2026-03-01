@@ -47,7 +47,7 @@ export const MobileNav = () => {
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center bg-linear-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
           >
             <span className="text-white font-bold text-[17px] leading-none select-none font-display">N</span>
           </div>
@@ -140,7 +140,7 @@ export const MobileNav = () => {
                         >
                           {route.active && (
                             <span
-                              className="absolute left-0 top-[18%] bottom-[18%] w-0.75 rounded-r-full bg-linear-to-b from-[#7B2FF7] to-[#C01CC4]"
+                              className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full bg-gradient-to-b from-[#7B2FF7] to-[#C01CC4]"
                             />
                           )}
                           <Icon className="h-5 w-5 shrink-0" />

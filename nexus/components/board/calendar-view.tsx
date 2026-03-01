@@ -377,7 +377,7 @@ export function CalendarView({ cards, boardId, onCardUpdate }: CalendarViewProps
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-150 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+      <div className="flex h-full min-h-[600px] overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         {/* Main area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
