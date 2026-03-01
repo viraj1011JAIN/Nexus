@@ -37,18 +37,14 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   const { orgId } = ctx;
 
   try {
-    // Get or create organization
-    let organization = await db.organization.findUnique({
-      where: { id: orgId },
+    // Get or create organization — upsert avoids a race condition where two
+    // concurrent first-time requests both find no row and both try to create one.
+    const organization = await db.organization.upsert({
+      where:  { id: orgId },
+      update: {},
+      create: { id: orgId, name: "My Organization", slug: orgId.toLowerCase() },
       include: { boards: true },
     });
-
-    if (!organization) {
-      organization = await db.organization.create({
-        data: { id: orgId, name: "My Organization", slug: orgId.toLowerCase() },
-        include: { boards: true },
-      });
-    }
 
     const currentBoardCount = organization.boards.length;
     const boardLimit = STRIPE_CONFIG.limits[organization.subscriptionPlan as "FREE" | "PRO"]?.boards || STRIPE_CONFIG.limits.FREE.boards;

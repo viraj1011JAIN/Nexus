@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { startOfToday, startOfDay, endOfDay } from "date-fns";
 import dynamic from "next/dynamic";
@@ -78,8 +78,7 @@ interface BoardTabsProps {
 
 function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: externalFilterOpen, onFilterBarChange }: BoardTabsProps) {
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const isDark = mounted && resolvedTheme === "dark";
   const [activeTab, setActiveTab] = useState<TabValue>("board");
   const [filters, setFilters] = useState<BoardFilterState>({

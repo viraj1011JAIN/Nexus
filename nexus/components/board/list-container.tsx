@@ -1,7 +1,7 @@
 "use client";
 
 import { List, Card } from "@prisma/client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import {
@@ -307,8 +307,7 @@ export const ListContainer = ({
   }, [boardId]);
 
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const isDark = mounted && resolvedTheme === "dark";
 
   if (!isMounted) return null;

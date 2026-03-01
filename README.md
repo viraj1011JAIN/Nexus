@@ -1,24 +1,21 @@
-﻿<div align="center">
+<div align="center">
 
-#  NEXUS
+<img src="Web-screenshort/Dashboard.png" alt="NEXUS Dashboard" width="100%" style="border-radius: 12px;" />
 
-### Enterprise-Grade SaaS Project Management Platform
+# NEXUS
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.1.4-black?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-5.22.0-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io/)
-[![Stripe](https://img.shields.io/badge/Stripe-v20.2.0-635BFF?style=flat-square&logo=stripe&logoColor=white)](https://stripe.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-2.91.1-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-gpt--4o--mini-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com/)
-[![Tests](https://img.shields.io/badge/Unit_Tests-122_Passing-brightgreen?style=flat-square&logo=jest&logoColor=white)](https://jestjs.io/)
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/viraj1011JAIN/Nexus/actions)
-[![CodeRabbit](https://img.shields.io/badge/CodeRabbit-AI_Code_Review-orange?style=flat-square)](https://coderabbit.ai)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+**A production-grade, multi-tenant project management platform.**  
+Real-time collaboration · Dual-gate RBAC · AI-powered workflows · Stripe billing
 
-**A full-featured, production-ready SaaS project management tool built entirely solo — Kanban boards, real-time collaboration, AI-powered card assistance, sprints, epics, roadmapping, automation engine, outbound webhooks, public REST API, analytics, file attachments, GitHub/Slack integrations, Stripe billing, and more.**
-
-[Quick Start](#quick-start)  [Tech Stack](#tech-stack)  [Architecture](#architecture)  [API Reference](#api-reference)  [Testing](#testing)  [Code Review](#code-review-with-coderabbit)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?logo=prisma&logoColor=white)](https://prisma.io)
+[![Supabase](https://img.shields.io/badge/Supabase-Realtime-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![Clerk](https://img.shields.io/badge/Clerk-Auth-6C47FF?logo=clerk&logoColor=white)](https://clerk.com)
+[![Stripe](https://img.shields.io/badge/Stripe-Billing-008CDD?logo=stripe&logoColor=white)](https://stripe.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 </div>
 
@@ -26,1246 +23,1695 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [What Makes This Different](#what-makes-this-different)
-- [Complete Feature Set](#complete-feature-set)
+- [About](#about)
+- [Screenshots](#screenshots)
 - [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Database Schema](#database-schema)
-- [Project Structure](#project-structure)
+- [Feature List](#feature-list)
+- [System Architecture](#system-architecture)
+- [Multi-Tenant System & RBAC](#multi-tenant-system--rbac)
+- [Authentication Flow](#authentication-flow)
+- [Database Architecture](#database-architecture)
+- [Drag & Drop System](#drag--drop-system)
+- [Real-Time System](#real-time-system)
+- [Payments & Billing](#payments--billing)
 - [API Reference](#api-reference)
-- [Core Engine Deep Dives](#core-engine-deep-dives)
-- [Integrations](#integrations)
-- [Quick Start](#quick-start)
+- [Server Actions](#server-actions)
+- [Custom Hooks](#custom-hooks)
+- [Component Library](#component-library)
+- [Email Templates](#email-templates)
+- [File System Structure](#file-system-structure)
 - [Environment Variables](#environment-variables)
+- [Getting Started](#getting-started)
 - [Available Scripts](#available-scripts)
 - [Testing](#testing)
-- [CI/CD Pipeline](#cicd-pipeline)
-- [Code Review with CodeRabbit](#code-review-with-coderabbit)
-- [Deployment](#deployment)
-- [Security Model](#security-model)
+- [Security](#security)
 - [Performance Optimizations](#performance-optimizations)
+- [Deployment](#deployment)
+- [Workflow Diagrams](#workflow-diagrams)
+- [Use Case Diagram](#use-case-diagram)
+- [Scalability](#scalability)
+- [Known Limitations & Roadmap](#known-limitations--roadmap)
 - [Contributing](#contributing)
 - [License](#license)
 
 ---
 
-## Overview
+## About
 
-Nexus is a multi-tenant SaaS project management platform built on the **Next.js 16 App Router**. It targets the quality bar of tools like Jira, Linear, and Trello — combining Kanban boards, sprint management, roadmapping, epics, AI-powered card assistance, a no-code automation engine, outbound webhooks, a public REST API, real-time presence and board sync, Supabase Storage file attachments, a Recharts analytics dashboard with PDF export, Stripe subscription billing, and a full notification system — all built and shipped production-ready.
+Nexus is a full-stack, multi-tenant project management platform built for teams that need more than a basic Kanban board.
 
-**Scale of the codebase:**
-- **37 tracked feature tasks**, 32+ fully implemented
-- **953-line Prisma schema** with 30+ models
-- **35 server action files** covering every domain
-- **20 API route directories** including REST v1, webhooks, integrations
-- **122 unit tests** + **19 integration tests** + Playwright E2E suite
-- Latest commit: **42+ files changed**, 4,286 insertions
+- **5 board views** — Kanban, Calendar, Gantt, Table, Workload
+- **Dual-gate RBAC** — Organization-level + board-level access control with 28 granular permissions
+- **Real-time collaboration** — Live board updates, cursor presence, card edit locking via Supabase WebSockets
+- **AI-powered workflows** — Checklist generation, card suggestions, and content summaries via OpenAI
+- **Stripe billing** — FREE and PRO plans with full webhook lifecycle management
+- **Public REST API** — API key authentication with per-scope permissions
+- **GDPR compliant** — Data export and deletion endpoints built in
+- **Production-ready security** — SSRF protection, audit logs, rate limiting, Row-Level Security
 
----
+> Built as a self-hostable alternative to Trello and Jira — with multi-organization support, a public API, and enterprise-grade security architecture out of the box.
 
-## What Makes This Different
-
-| Concern | Approach |
-|---|---|
-| **Card ordering** | LexoRank strings — no integer rebalancing, survives unlimited reorders |
-| **Real-time sync** | Supabase `postgres_changes` — whole board repatches on every remote mutation |
-| **Presence + locking** | Supabase Presence per board; card-level optimistic lock shown to peers |
-| **Auth + tenancy** | Clerk v6 `getTenantContext()` — orgId always from signed JWT, auto-provisions rows, deduplicated per request via React `cache()` |
-| **AI assistance** | OpenAI gpt-4o-mini: priority suggestion on create, description generation, checklist suggestions — 50 calls/org/day rate-limited with DB-backed counter |
-| **Automation engine** | Event-driven, fire-and-forget, depth-guarded (MAX 3) to prevent infinite loops |
-| **Webhook security** | HMAC-SHA256 signatures (`X-Nexus-Signature-256`) + full SSRF protection with CIDR blocklist |
-| **REST API** | Scoped API keys (SHA-256 hashed, prefix stored); `boards:read/write`, `cards:read/write` |
-| **Billing** | Stripe Checkout + Customer Portal + webhook lifecycle; FREE plan board limit enforced server-side |
-| **Race conditions** | `db.$transaction` in template creation; serializable transaction on upload; `latestResolve` pattern in @mention suggestion |
-| **GitHub integration** | Verifies `X-Hub-Signature-256`; auto-moves cards to Done on PR merge by card ID in commit messages |
+**What makes the architecture distinct:**
+- `orgId` is **always** extracted from the Clerk JWT — never accepted from client parameters
+- Even organization owners need an explicit `BoardMember` row to access a board (dual-gate model)
+- Supabase is used **exclusively** for WebSocket events — all DB reads/writes go through Prisma
+- RLS enforces tenant boundaries at the database level, even if application checks are bypassed
 
 ---
 
-## Complete Feature Set
+## Screenshots
 
-### Authentication & Multi-Tenancy
+> All screenshots are located in the `Web-screenshort/` folder.
 
-- Clerk v6 sign-in, sign-up, org creation and switching
-- `getTenantContext()` — extracts `userId`, `orgId`, `orgRole` and membership in one deduplicated call per request (React `cache()`); auto-provisions missing `User` and `OrganizationUser` rows on first access
-- `requireRole()` — minimum-role enforcement (OWNER > ADMIN > MEMBER > GUEST) on every mutating server action
-- Demo-mode guard (`isDemoOrganization`, `protectDemoMode`) — read-only sandbox that silently blocks writes
-- Per-user in-memory sliding-window rate limiting on board creation
-- Middleware protecting all `/dashboard`, `/board`, `/settings`, `/billing`, `/activity` routes
+### Dashboard
 
-### Board Management
-
-- Create, rename and delete boards — org-scoped, role-checked; FREE plan limit versus live Stripe subscription
-- **Unsplash background picker** — 500 ms debounced search, 6 quick-tag pills, 3-column photo grid, load-more pagination, attribution footer; `imageFullUrl` renders as full-page background with dark overlay
-- **Board templates** — 6 built-in: Kanban Board, Sprint Planning, Marketing Campaign, Product Roadmap, Design System, Hiring Pipeline; all creation wrapped in `db.$transaction`
-- Template picker UI — category filter tabs, colour-coded badges, list/card counts
-- Soft-delete support on `Organization` model
-
-### List & Card Management
-
-- Create, rename and delete lists and cards; drag-and-drop within and across lists via `@dnd-kit/core`
-- LexoRank ordering persisted via `updateListOrder` and `updateCardOrder`
-- **Card modal** with full detail view:
-  - Rich-text description — TipTap v3 (StarterKit, Underline, Link, TaskList, TaskItem, Placeholder, CharacterCount 10 000 chars, TextAlign, Highlight, CodeBlockLowlight)
-  - Auto-save (500 ms debounce) with `Idle / Saving / Saved / Error` visual states
-  - Priority selector — LOW / MEDIUM / HIGH / URGENT
-  - Smart due date — countdown, green/amber/red colour states, quick presets, shake animation on overdue
-  - Assignee picker — org member list with avatars, optimistic UI with rollback
-  - Label manager — org-scoped labels, colour picker, optimistic UI
-  - Threaded comments — TipTap editor, `parentId` nesting, emoji reactions (unique per user/emoji/comment)
-  - Emoji picker and GIF picker (Giphy API / Klipy fallback)
-  - Per-card activity log tab
-  - Read-only mode when card is locked by a peer
-
-### AI-Powered Card Assistance (TASK-022)
-
-Three entry points powered by OpenAI `gpt-4o-mini`:
-
-**Entry Point 1 — Priority Suggestion (card create form):**
-Fires when the user stops typing in the card title (debounced). Returns `{ priority: "HIGH", confidence: 0.87 }`. Displayed as a coloured suggestion chip; clicking it pre-fills the priority on the new card.
-
-**Entry Point 2 — Description Generation (card modal Description tab):**
-" Generate description" button triggers `generateCardDescription(cardTitle)`. Result inserted into TipTap editor via `editor.commands.setContent()`.
-
-**Entry Point 3 — Checklist Suggestions (card modal Checklists tab):**
-" AI Suggest Items" button calls `suggestChecklists(cardTitle)`. Returns 3–7 actionable items previewed as checkboxes; user accepts individually or all at once.
-
-**Rate limiting:** 50 AI calls per org per day. `Organization.aiCallsToday` incremented atomically; `aiCallsResetAt` triggers midnight reset. Over-limit requests return a user-friendly error without crashing the UI.
-
-### Checklists (TASK-009)
-
-- Multiple checklists per card, each with `title` and LexoRank `order`
-- Items: `isComplete`, `order`, optional `assigneeId` and `dueDate`, `completedAt` timestamp
-- Progress bar showing completion percentage; AI suggestion integration
-
-### Sprints (TASK-013)
-
-- Board-scoped sprints: `PLANNING / ACTIVE / COMPLETED` status enum
-- Fields: `name`, `goal` (text), `startDate`, `endDate`, `completedAt`
-- Cards linked via `sprintId` FK + `storyPoints` field
-- `sprint-actions.ts` — create, start, complete, archive
-
-### Card Dependencies (TASK-014)
-
-- Three types: `BLOCKS`, `RELATES_TO`, `DUPLICATES`
-- Bidirectional `blocker` / `blocked` FKs on `Card`; unique constraint `(blockerId, blockedId)`
-- `dependency-actions.ts` — add/remove/list dependencies
-
-### Custom Fields (TASK-018)
-
-- Nine field types: `TEXT`, `NUMBER`, `DATE`, `CHECKBOX`, `SELECT`, `MULTI_SELECT`, `URL`, `EMAIL`, `PHONE`
-- Scoped to org or specific board; `isRequired` and `order` per field
-- Values in `CustomFieldValue` with typed columns: `valueText`, `valueNumber`, `valueDate`, `valueBoolean`, `valueOptions` (String[])
-
-### Automation Engine (TASK-019)
-
-See [deep dive](#automation-engine) below.
-
-**10 trigger types:** `CARD_CREATED`, `CARD_MOVED`, `CARD_DELETED`, `CARD_DUE_SOON`, `CARD_OVERDUE`, `LABEL_ADDED`, `CHECKLIST_COMPLETED`, `MEMBER_ASSIGNED`, `PRIORITY_CHANGED`, `CARD_TITLE_CONTAINS`
-
-**9 action types:** `MOVE_CARD`, `SET_PRIORITY`, `ASSIGN_MEMBER`, `ADD_LABEL`, `REMOVE_LABEL`, `SET_DUE_DATE_OFFSET`, `POST_COMMENT`, `SEND_NOTIFICATION`, `COMPLETE_CHECKLIST`
-
-Safety: `MAX_AUTOMATION_DEPTH = 3`. Every execution logged to `AutomationLog`.
-
-### Outbound Webhooks (TASK-020)
-
-- Org-scoped, configurable URL + event filter + HMAC secret
-- `X-Nexus-Signature-256` (HMAC-SHA256, same pattern as GitHub)
-- Full SSRF protection: DNS resolution validated against private CIDR blocklist
-- Every attempt logged in `WebhookDelivery` with `statusCode`, `success`, `duration`
-
-### Public REST API (TASK-021)
-
-Scoped API key auth. Keys SHA-256 hashed; only prefix stored plaintext. Full endpoint reference in [API Reference](#rest-api-v1).
-
-### Time Tracking (TASK-025)
-
-- `TimeLog`: `cardId`, `userId`, `orgId`, `minutes`, `description`, `loggedAt`
-- Log, edit, delete time entries per card; total time displayed on card modal
-
-### Roadmap — Initiatives & Epics (TASK-023)
-
-- **Initiative** — top-level strategic objective with timeline, color, status
-- **Epic** — mid-level grouping under initiative, scoped to board, contains `Card[]`
-- Cards linked via `epicId` FK; roadmap view at `/roadmap`
-
-### Board Sharing & Guest Access (TASK-030)
-
-- `BoardShare`: unique `token`, `allowComments`, `passwordHash`, `expiresAt`, `viewCount`
-- Public board view at `/shared/[token]` — no auth required
-
-### Saved Views / Filters (TASK-012)
-
-- `SavedView`: `filters` (JSON), `viewType` (kanban/list), `isShared`, org or board scoped
-
-### In-App Notifications (TASK-006/032)
-
-Eight types: `MENTIONED`, `ASSIGNED`, `CARD_DUE_SOON`, `CARD_OVERDUE`, `COMMENT_ON_ASSIGNED_CARD`, `BOARD_SHARED`, `SPRINT_STARTED`, `DEPENDENCY_RESOLVED`
-
-- Notification bell with unread badge
-- Web Push notifications via `web-push` v3.6.7; `User.pushSubscription` persisted
-
-### Real-Time Collaboration
-
-- `useRealtimeBoard` — Supabase `postgres_changes` per board; auto-reconnects; remote-change toast
-- `usePresence` — stacked avatar strip with 8-colour palette, "joined X ago" tooltip, multi-tab dedup
-- `useCardLock` — Presence-based lock; all inputs disabled when another user is editing
-- `useRealtimeAnalytics` — Supabase broadcast refreshes analytics charts on card events
-
-### @Mention System
-
-- TipTap `extension-mention`; keyboard-navigable dropdown with member avatars
-- `createMentionSuggestion()` factory — `latestResolve` closure prevents leaked Promises
-- Backed by `/api/members`; triggers `sendMentionEmail()` fire-and-forget on comment save
-
-### File Attachments
-
-- Supabase Storage `card-attachments` bucket; 10 MB limit; SVG excluded from MIME allowlist
-- Org ownership verified before write; uploader-only delete
-- `npm run setup:storage` — idempotent bucket provisioner
-
-### GitHub Integration (TASK-027)
-
-- Verifies `X-Hub-Signature-256`; extracts card IDs from commit messages
-- **PR merged**  moves referenced cards to Done list automatically
-- `push` + `pull_request` events  `AuditLog` entries
-
-### Slack Integration (TASK-027)
-
-- Slash command handler at `/api/integrations/slack`
-- Create cards, query board status, receive summaries in Slack
-
-### Analytics Dashboard
-
-- Velocity chart (14-day), priority pie chart, top contributors bar chart, overview metrics
-- All charts loaded client-side via `next/dynamic` with `ssr: false`
-- PDF export — jsPDF v4 + jspdf-autotable; timestamped filename
-
-### Email Notifications
-
-- Resend v6.9.2; XSS-safe HTML templates
-- Vercel Cron daily reminders + Monday digest
-
-### Audit Logs & Activity
-
-- `AuditLog` on every BOARD/LIST/CARD CREATE/UPDATE/DELETE — IP, user agent stored
-- Org activity feed at `/activity`; per-card activity tab
-
-### Billing & Subscriptions
-
-- Stripe Checkout + Customer Portal; FREE (board limit) and PRO (unlimited)
-- Webhook handles full subscription lifecycle
-
-### Bulk Card Operations (TASK-026)
-
-- Move, assign, set priority, add label, delete — multiple cards in one action
-
-### Import / Export (TASK-029)
-
-- JSON/CSV board export; Trello/Asana JSON import
-
-### GDPR / Data Deletion (TASK-033)
-
-- Deletion request queue at `/api/gdpr/delete-request/`
-- Cookie consent on `UserPreference.cookieConsent`
-
-### Command Palette
-
-- `Ctrl+K` / `Cmd+K` — searches boards and cards (50 results each), Quick Actions, Recent Items
-
-### Progressive Web App
-
-- `manifest.json` with App Shortcuts; `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`
-
-### Performance Utilities
-
-- `LazyLoad` (Intersection Observer), `VirtualScroll` (windowed), `PerformanceWrapper`
-- Turbopack in dev; charts/PDF code-split; `optimizePackageImports`, `serverExternalPackages`
+![Nexus Dashboard](Web-screenshort/Dashboard.png)
+> Organization boards overview — sidebar navigation, board cards, dark mode, and real-time presence indicators.
 
 ---
 
 ## Tech Stack
 
-| Category | Package | Version |
-|---|---|---|
-| Framework | `next` | 16.1.4 |
-| UI library | `react` / `react-dom` | 19.2.3 |
-| Language | `typescript` | ^5 |
-| ORM | `prisma` / `@prisma/client` | 5.22.0 |
-| Auth | `@clerk/nextjs` | 6.36.10 |
-| Realtime + Storage | `@supabase/supabase-js` | 2.91.1 |
-| AI | `openai` | ^4.104.0 |
-| Payments (server) | `stripe` | 20.2.0 |
-| Payments (client) | `@stripe/stripe-js` | 8.6.4 |
-| Error tracking | `@sentry/nextjs` | 10.36.0 |
-| Rich text | `@tiptap/react` | 3.17.1 |
-| Drag and drop | `@dnd-kit/core` / `@dnd-kit/sortable` | 6.3.1 / 10.0.0 |
-| Validation | `zod` | 4.3.6 |
-| UI state | `zustand` | 5.0.10 |
-| Animation | `framer-motion` | 12.29.0 |
-| Charts | `recharts` | 3.7.0 |
-| PDF export | `jspdf` + `jspdf-autotable` | 4.1.0 / 5.0.7 |
-| Dates | `date-fns` | 4.1.0 |
-| Email | `resend` | 6.9.2 |
-| Push notifications | `web-push` | ^3.6.7 |
-| Toasts | `sonner` | 2.0.7 |
-| Tooltips | `tippy.js` / `@tippyjs/react` | 6.3.7 |
-| Icons | `lucide-react` | 0.563.0 |
-| UI primitives | Radix UI (via shadcn/ui) | various |
-| Styling | `tailwindcss` | ^4 |
-| Theming | `next-themes` | 0.4.6 |
-| Unsplash | `unsplash-js` | 7.0.20 |
-| Emoji picker | `emoji-picker-react` | 4.17.3 |
-| Unit testing | `jest` | 30.2.0 |
-| E2E testing | `@playwright/test` | 1.58.2 |
-| Test utilities | `@testing-library/react` | 16.3.2 |
-| Dev server | Turbopack | (built into Next.js 16) |
+| Layer | Technology | Version | Purpose |
+|---|---|---|---|
+| Framework | Next.js (App Router) | 16.1.4 | Server Components, Server Actions, Turbopack |
+| Runtime | React | 19.2.3 | UI rendering with React Compiler auto-memoization |
+| Language | TypeScript | 5 | Strict-mode type-safe codebase |
+| Database | PostgreSQL | — | Primary data store (Supabase-hosted) |
+| ORM | Prisma | 5.22+ | Type-safe queries, migrations, schema |
+| Auth | Clerk | 6.36+ | Multi-org auth, JWT, managed sign-in UI |
+| Payments | Stripe SDK | v20 | Subscriptions, checkout, billing portal |
+| Real-time | Supabase Realtime | 2.91+ | WebSocket subscriptions, presence, broadcast |
+| Styling | Tailwind CSS | 4 | Utility-first CSS, class-based dark mode |
+| UI Components | shadcn/ui (Radix UI) | — | Accessible, composable component primitives |
+| Drag & Drop | @dnd-kit | 6.3+ | Card and list drag-and-drop |
+| Ordering | LexoRank | Custom | String-based O(1) ordering |
+| State | Zustand | 5.0+ | Client-side modal state |
+| Rich Text | TipTap | 3.17+ | WYSIWYG editor, mentions, links |
+| Charts | Recharts | 3.7+ | Analytics dashboards and metrics |
+| Animations | Framer Motion | 12.29+ | Page transitions, micro-interactions |
+| Validation | Zod | 4.3+ | Schema validation for actions and API input |
+| Email | Resend | 6.9+ | Transactional email delivery |
+| AI | OpenAI | 4.104+ | Card suggestions, checklist generation, summaries |
+| Push | Web Push (VAPID) | — | Browser push notifications via Service Worker |
+| PDF Export | jsPDF + AutoTable | 4.1+ | Board analytics PDF generation |
+| Error Tracking | Sentry | 10.36+ | Error capture and performance monitoring |
+| Testing | Jest | 30.2+ | Unit and integration tests |
+| E2E Testing | Playwright | 1.58+ | End-to-end browser testing |
+| Bundle Analysis | @next/bundle-analyzer | 16.1+ | Production bundle size analysis |
+| Deployment | Vercel | — | Edge network, serverless functions, cron jobs |
 
 ---
 
-## Architecture
+## Feature List
 
-### System Overview
+### Board Views
 
-```
+- **Kanban** — Drag-and-drop cards across lists with live updates
+- **Calendar** — Cards laid out by due date in month/week/day grid
+- **Gantt** — Timeline chart with priority-colored bars, today line, zoom levels
+- **Table** — Spreadsheet-style sortable view of all cards
+- **Workload** — Team capacity visualization showing card distribution per member
 
-                       CLIENT LAYER                           
-           Browser (desktop + mobile)  PWA install           
+### Card & Task Management
 
-                          HTTPS
+- Priority levels: Low, Medium, High, Urgent
+- Due dates with smart date picker and priority-aware styling
+- Labels with custom colors (organization-scoped)
+- Checklists with progress tracking and AI-generated items
+- File attachments via Supabase Storage (10 MB limit)
+- Card cover images and colors
+- Custom fields: Text, Number, Date, Checkbox, Select, Multi-Select, URL, Email, Phone
+- Card dependencies: Blocks, Relates To, Duplicates
+- Time tracking with minute-level logging and estimates
+- Story points for agile estimation
+- Threaded comments with rich text, mentions, and emoji reactions
+- @mention support in comments and descriptions
+- Card assignment to organization members
+- Bulk card selection and batch operations (move, delete, assign, label, priority)
 
-                  VERCEL EDGE NETWORK                         
-           Global CDN  Next.js Middleware auth guard         
+### Board Management
 
-                         
+- Unsplash background image picker
+- Board templates with pre-configured lists and cards
+- Saved views with custom filters
+- Sprint management: Planning, Active, Completed with burndown stats
+- Epics and initiatives for roadmap planning
+- Board-level settings and configuration
+- Public/private board toggle
 
-               NEXT.JS 16 APP ROUTER                          
-                                                              
-       
-   Server Components          Server Actions              
-    (zero client JS)     (Zod-validated mutations,        
-       getTenantContext on every)       
-       
-  Client Components       
-   (optimistic UI,             API Routes                  
-    realtime hooks)      (webhooks, upload, search,        
-       cron, REST v1, integrations)     
-                           
+### Authentication & Multi-Tenant
 
-                                             
-    
-Supabase Clerk   Stripe   Resend  OpenAI  
-Postgres Auth/  Billing   Email   gpt-4o- 
-Realtime Orgs   Webhooks Delivery mini    
-Storage                                   
-    
-```
+- Clerk-managed sign-in/sign-up flows
+- Multi-organization support with org switching
+- Dual-gate RBAC: organization membership + board membership
+- 4 board roles: Owner, Admin, Member, Viewer
+- 28 granular board permissions
+- Customizable permission schemes per board or per member
+- Membership request system (org-level and board-level)
+- Guest board access via tokenized links
+- Password-protected shared boards
+- Expiring share links with view count tracking
 
-### Mutating Request Lifecycle
+### Payments & Billing
 
-Every server action and mutating API route follows this exact path:
+- Stripe Checkout for subscription upgrades
+- Stripe Customer Portal for self-service billing management
+- FREE plan (£0, 50 board limit) and PRO plan (£9/month or £90/year, unlimited)
+- Automatic webhook-driven subscription lifecycle management
+- Promotion code support
+- UK VAT / Tax ID collection
 
-```
-1. getTenantContext()    Validates Clerk session (React cache()  runs once per request)
-                        Auto-provisions User + OrganizationUser rows if absent
-                        orgId ALWAYS from JWT — never from params or client input
+### Real-Time & Collaboration
 
-2. requireRole()        Asserts minimum role for the operation
-                        Throws TenantError("FORBIDDEN") if insufficient
+- Live board updates via Supabase WebSockets (cards, lists, comments, reactions)
+- Online user presence indicators (colored avatars)
+- Card edit locking — prevents two users editing the same card simultaneously
+- Real-time analytics broadcast
+- Organization-wide activity feed
 
-3. Zod schema.parse()   Rejects malformed input before any DB access
+### API & Integrations
 
-4. DAL query            orgId injected on every query
-                        IDOR checks on ownership-sensitive access
+- Public REST API (v1) with API key authentication and scoped permissions
+- Outbound webhooks with HMAC-SHA256 signing and SSRF protection
+- GitHub integration webhook
+- Slack integration webhook
+- Unsplash image search
+- GIF picker (Tenor)
 
-5. createAuditLog()     Records action, entityType, entityTitle, IP, userAgent
+### AI Features
 
-6. revalidatePath()     Invalidates Next.js cache for affected pages
+- AI-powered card suggestions
+- Automatic checklist generation from card descriptions
+- Content summaries for cards and boards
+- Daily AI call quota tracking per organization
 
-7. return { data }      Client applies optimistic update; rolls back on error
-```
+### Notifications
 
-### Real-Time Data Flow
+- Web Push notifications (VAPID-based, via Service Worker)
+- Email notifications via Resend
+- In-app notification center with real-time unread badge
+- Daily digest email reports (cron job at 9 AM UTC)
+- Configurable notification preferences per user
 
-```
-Supabase postgres_changes
-   useRealtimeBoard
-         Patches local React state (INSERT / UPDATE / DELETE)
-         Shows toast for remote changes (not own changes)
-         Auto-reconnects on channel failure
+### Analytics & Reporting
 
-Supabase Presence
-   usePresence  stacked avatar strip (8-colour palette)
-   useCardLock  lock acquired on modal open, released on close
-                   all inputs disabled when locked by peer
+- Board analytics: total cards, completed, overdue, active members
+- User activity analytics: cards created/completed, comments, active minutes
+- Weekly trend tracking with JSON snapshots
+- Priority distribution charts
+- Burndown and velocity charts
+- Activity timeline snapshots
+- PDF export for analytics reports
 
-Supabase Broadcast
-   useRealtimeAnalytics  refreshes charts on card events
-```
+### Security & Compliance
 
-### Multi-Tenancy Security Model
+- Sliding-window rate limiting per action (in-memory)
+- Audit logs with IP address and User-Agent forensics
+- Before/after value snapshots in audit trail
+- SSRF protection on all outbound webhook deliveries
+- GDPR data export endpoint
+- GDPR account deletion endpoint
+- Demo mode read-only protection
 
-```
-Clerk JWT
-    
-    
-getTenantContext()             React cache() — runs ONCE per request
-    
-     userId + orgId extracted from signed JWT
-     User row healed on first access (handles webhook delays + race conditions)
-     OrganizationUser.isActive verified
-     Returns { userId, orgId, orgRole, membership }
-              
-              
-    requireRole(ctx, "MEMBER")
-              
-              
-    DAL query: WHERE orgId = ctx.orgId AND ...
-              
-               No cross-org data leakage possible
-```
+### UI/UX
+
+- Dark and light mode (class-based toggle with system preference detection)
+- Command palette (Cmd+K / Ctrl+K) for quick navigation
+- Keyboard shortcuts with modifier key support
+- Smooth scrolling with GPU acceleration
+- Virtual scrolling for large lists
+- Lazy-loaded components via Intersection Observer
+- Loading skeletons
+- Global and realtime-specific error boundaries
+- Accessibility support (ARIA live regions)
+- PWA manifest with app icons
 
 ---
 
-## Database Schema
+## System Architecture
 
-### Entity Relationship Diagram
+### High-Level Overview
+
+```
+Browser Client (React 19 + RSC)
+        │
+        ├──── HTTP ──────────────────────────────────────────────────────────────────┐
+        │                                                                            │
+        │                         Next.js App Router (Server Components)            │
+        │                                  │                                         │
+        │                    ┌─────────────┴─────────────┐                          │
+        │                    │                           │                           │
+        │          Server Actions                  API Routes                        │
+        │       (createSafeAction + Zod)     (REST v1 + Internal)                   │
+        │                    │                           │                           │
+        │          getTenantContext()            authenticateApiKey()                │
+        │          (Clerk JWT → orgId)            (SHA-256 + Scopes)                │
+        │                    │                           │                           │
+        │                 Prisma ORM ◄──────────────────┘                           │
+        │                    │                                                       │
+        │              PostgreSQL (Supabase-hosted)                                 │
+        │                                                                            │
+        │  Server Actions also emit:                                                 │
+        │       emitCardEvent() → AutomationEngine + WebhookDelivery (HMAC-SHA256) │
+        │                                                                            │
+        └──── WebSocket ──────────────────────────────────────────────────────────┐ │
+                                                                                  │ │
+                         Supabase Realtime (WebSocket only)                       │ │
+                         Channels: org:{orgId}:board:{boardId}                    │ │
+                                                                                  │ │
+External Services:  Stripe · OpenAI · Resend · Sentry · Unsplash · Tenor        │ │
+```
+
+### Architecture Decision Records
+
+**Next.js App Router over Pages Router**
+- React Server Components render data-heavy pages with zero client-side JS
+- Server Actions co-locate mutations with UI — type-safe, Zod-validated, no custom API routes needed
+- Built-in `cache()` deduplicates DB calls within a single request
+
+**Supabase + Prisma together (not one or the other)**
+- Prisma handles 100% of all read/write queries with full TypeScript type safety
+- Supabase is used exclusively for its Realtime engine — `postgres_changes`, `presence`, `broadcast`
+- The database connection goes through Prisma via PgBouncer (port 6543)
+- The Supabase client never writes to the database directly
+
+**Clerk over NextAuth**
+- Built-in multi-organization support with org-scoped JWTs
+- The `orgId` JWT claim is the foundation of the entire tenant isolation model
+- Webhook-driven user provisioning with auto-healing on first sign-in
+
+**LexoRank over integer or fractional ordering**
+- String-based ordering: O(1) insertions, only one DB row updated per move
+- No floating-point degradation after many insertions (unlike fractional indexing)
+- Built-in rebalancing when strings grow too long
+
+**Server vs Client Component split**
+- Server: data fetching, layout shells, board pages, settings pages
+- Client: drag-and-drop, real-time subscriptions, modals, command palette, presence
+- React Compiler (`babel-plugin-react-compiler`) provides automatic memoization — no manual `useMemo`/`useCallback` needed
+
+---
+
+## Multi-Tenant System & RBAC
+
+### How Tenant Isolation Works
+
+Every request follows this exact path:
+
+1. `auth()` from `@clerk/nextjs/server` reads the session cookie and extracts signed JWT claims: `userId`, `orgId`, `orgRole`
+2. `orgId` is **never** accepted from query parameters, request bodies, or URL paths — this is enforced in `lib/tenant-context.ts`
+3. `getTenantContext()` resolves the internal `User` UUID from the Clerk user ID
+4. If the user row doesn't exist (first sign-in), it creates one automatically — the "healing" path
+5. The function loads the `OrganizationUser` membership record. If missing but the Clerk org exists, it auto-creates the membership
+6. Users with `isActive=false` or `status=SUSPENDED` are rejected immediately with a `TenantError`
+7. The entire function is wrapped in React's `cache()` — one DB call maximum per request
+
+### Dual-Gate Access Control
+
+```
+Incoming Request
+       │
+       ▼
+Clerk JWT Extraction
+       │
+       ▼
+Gate 1: Organization Membership
+       │
+       ├── No OrganizationUser row OR status=SUSPENDED ──► 403 Forbidden
+       │
+       └── Active membership (OWNER/ADMIN/MEMBER/GUEST)
+                    │
+                    ▼
+           Gate 2: Board Membership
+                    │
+                    ├── No BoardMember row ──► Zero Permissions (board invisible)
+                    │
+                    └── BoardMember exists
+                                 │
+                                 ▼
+                    Resolve Permissions
+                                 │
+                    ┌────────────┴────────────┐
+                    │                         │
+             Custom Scheme?             Default Matrix
+                    │                         │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+                    28 Granular Permissions Checked Per Action
+```
+
+### Role Hierarchy
+
+**Organization Level**
+
+| Role | Capabilities |
+|---|---|
+| OWNER | Full org control, billing, member management, all boards |
+| ADMIN | Member management, create boards, org settings |
+| MEMBER | Participate in boards they're added to |
+| GUEST | Limited access, read-only by default |
+
+**Board Level**
+
+| Role | Capabilities |
+|---|---|
+| OWNER | All board operations, delete board, manage members |
+| ADMIN | Edit settings, manage members, configure permissions |
+| MEMBER | Create/edit/move cards, comment, upload files, track time |
+| VIEWER | Read-only access to board and cards |
+
+### Permission Schemes
+
+- Each board can have a custom `PermissionScheme` that overrides the default role-to-permission matrix
+- Individual `BoardMember` records can also have their own `PermissionScheme` for member-level customization
+- 28 granular permissions cover every action: `CREATE_CARD`, `DELETE_CARD`, `MOVE_CARD`, `MANAGE_MEMBERS`, `CHANGE_PERMISSIONS`, and more
+
+### Realtime Channel Isolation
+
+- Every Supabase channel name includes `orgId`: `org:{orgId}:board:{boardId}`
+- `lib/realtime-channels.ts` validates that `orgId` does not contain the `:` delimiter before constructing channel names
+- This prevents injection attacks and ensures WebSocket events never leak across tenants
+
+### Database-Level RLS
+
+- The Prisma client sets `app.current_org_id` as a PostgreSQL session variable on every connection
+- Row-Level Security policies filter all queries by this variable at the database engine level
+- Even if application-level RBAC checks are bypassed, data from other organizations cannot be read
+- A separate `systemDb` Prisma client bypasses RLS for trusted system operations (Stripe webhooks, cron jobs)
+
+---
+
+## Authentication Flow
+
+### Full Request Authentication Sequence
+
+```
+Browser                Next.js Server          Clerk            PostgreSQL
+   │                         │                    │                  │
+   │── GET /dashboard ───────►│                    │                  │
+   │                         │── auth() ──────────►│                  │
+   │                         │◄── {userId, orgId} ─│                  │
+   │                         │                    │                  │
+   │                         │── getTenantContext() ──────────────────►│
+   │                         │   (React cache() — max 1 DB call)       │
+   │                         │                                         │
+   │                         │   ┌─ Find User by clerkUserId           │
+   │                         │   │  If not found → CREATE User         │
+   │                         │   │  (first sign-in healing)            │
+   │                         │   │                                     │
+   │                         │   └─ Find OrganizationUser(userId,orgId)│
+   │                         │      If not found → CREATE membership   │
+   │                         │      If SUSPENDED → return TenantError  │
+   │                         │◄── TenantContext {userId, orgId, role} ─│
+   │                         │                                         │
+   │                         │── Fetch page data (scoped by orgId) ───►│
+   │◄── Rendered page ───────│◄────────────────────────────────────────│
+```
+
+### Route Protection Strategy
+
+There is no `middleware.ts` file. Auth is enforced at the action/route level:
+
+- **Security headers** applied via `next.config.ts` for all routes
+- **Server Actions** call `getTenantContext()` as the first operation
+- **API routes** call `authenticateApiKey()` for public v1 endpoints, or `getTenantContext()` for internal endpoints
+
+**Public routes (no auth):**
+- `/sign-in`, `/sign-up` — Clerk managed
+- `/shared/[token]` — Guest board access via share token
+- `/privacy`, `/terms` — Legal pages
+- `/api/health` — Health check
+- `/api/webhook/stripe` — HMAC-verified Stripe webhooks
+
+---
+
+## Database Architecture
+
+### Schema Overview
+
+- **34 models** and **13 enums** in `prisma/schema.prisma`
+- All primary keys are CUID strings (not integers)
+- Connection via PgBouncer pooler on port 6543 for app queries
+- Direct connection on port 5432 for migrations only
+
+### Core Entity Relationship Diagram
 
 ```mermaid
 erDiagram
-    Organization ||--o{ OrganizationUser : "members"
-    Organization ||--o{ Board : "owns"
-    Organization ||--o{ Label : "owns"
-    Organization ||--o{ Automation : "owns"
-    Organization ||--o{ Webhook : "owns"
-    Organization ||--o{ ApiKey : "owns"
-    Organization ||--o{ SavedView : "owns"
-    Organization ||--o{ CustomField : "owns"
-    Organization ||--o{ Initiative : "owns"
-    Organization ||--o{ Notification : "receives"
+    Organization ||--o{ Board : "contains"
+    Organization ||--o{ OrganizationUser : "has members"
+    Organization ||--o{ Label : "defines"
+    Organization ||--o{ Automation : "configures"
+    Organization ||--o{ Webhook : "registers"
+    Organization ||--o{ ApiKey : "issues"
+    Organization ||--o{ PermissionScheme : "defines"
+    Organization ||--o{ MembershipRequest : "receives"
+    Organization ||--o{ Initiative : "plans"
+    Organization ||--o{ Notification : "sends"
+
+    User ||--o{ OrganizationUser : "belongs to"
+    User ||--o{ BoardMember : "participates in"
+    User ||--o{ Card : "assigned to"
+    User ||--o{ TimeLog : "logs time"
+    User ||--o{ ApiKey : "owns"
+    User ||--|| UserPreference : "has"
 
     Board ||--o{ List : "contains"
-    Board ||--o{ Sprint : "tracks"
-    Board ||--o{ Epic : "groups"
+    Board ||--o{ BoardMember : "has members"
+    Board ||--o{ Sprint : "plans"
     Board ||--o{ BoardShare : "shared via"
-    Board ||--o{ BoardAnalytics : "measured by"
-    Board ||--o{ Automation : "governed by"
+    Board ||--o{ Epic : "tracks"
+    Board ||--o{ SavedView : "saves"
+    Board ||--o{ MembershipRequest : "receives"
+    Board }o--o| PermissionScheme : "uses"
 
     List ||--o{ Card : "contains"
 
-    Card ||--o{ Comment : "discussed in"
+    Card ||--o{ Comment : "has"
     Card ||--o{ Attachment : "has"
-    Card ||--o{ Checklist : "tracked by"
-    Card ||--o{ TimeLog : "time logged"
-    Card ||--o{ CardLabelAssignment : "labelled"
-    Card }|--o| Sprint : "belongs to"
-    Card }|--o| Epic : "grouped in"
-    Card }|--o| User : "assigned to"
+    Card ||--o{ Checklist : "has"
+    Card ||--o{ CardLabelAssignment : "labeled with"
+    Card ||--o{ TimeLog : "tracks"
+    Card ||--o{ CardDependency : "depends on"
+    Card }o--o| Sprint : "in sprint"
+    Card }o--o| Epic : "in epic"
 
-    Checklist ||--o{ ChecklistItem : "items"
-    Comment ||--o{ CommentReaction : "reacted"
-    Label ||--o{ CardLabelAssignment : "assigned via"
-    Webhook ||--o{ WebhookDelivery : "delivered via"
-    Automation ||--o{ AutomationLog : "logged"
-    CustomField ||--o{ CustomFieldValue : "values"
+    Label ||--o{ CardLabelAssignment : "applied to"
+    Checklist ||--o{ ChecklistItem : "contains"
+    Comment ||--o{ CommentReaction : "reacted with"
+    Comment ||--o{ Comment : "replies"
+    PermissionScheme ||--o{ PermissionSchemeEntry : "defines"
+    Automation ||--o{ AutomationLog : "logs"
+    Webhook ||--o{ WebhookDelivery : "delivers"
     Initiative ||--o{ Epic : "contains"
-    User ||--|| UserPreference : "has"
-    User ||--o{ TimeLog : "logs"
-    User ||--o{ Notification : "receives"
-    User ||--o{ ApiKey : "owns"
 ```
 
-### Model Reference
+### Key Model Fields
 
-| Model | Purpose | Key Fields |
-|---|---|---|
-| `Organization` | Top-level tenant | `slug`, `region`, `deletedAt`, 6 Stripe fields, `aiCallsToday`, `aiCallsResetAt` |
-| `User` | Auth identity | `clerkUserId`, `email`, `name`, `imageUrl`, `pushSubscription` |
-| `OrganizationUser` | Role per tenant | `role` (OWNER/ADMIN/MEMBER/GUEST), `isActive`, `invitedById`, `joinedAt` |
-| `Board` | Kanban board | `title`, `orgId`, 5 Unsplash image fields |
-| `List` | Column | `title`, `order` (LexoRank), `boardId` |
-| `Card` | Work item | `title`, `description`, `dueDate`, `priority`, `assigneeId`, `order` (LexoRank), `coverColor`, `coverImage`, `storyPoints`, `estimatedMinutes`, `epicId`, `sprintId` |
-| `Label` | Org-scoped tag | `name`, `color`, unique `(orgId, name)` |
-| `CardLabelAssignment` | M:N join | unique `(cardId, labelId)` |
-| `Comment` | Threaded comment | `text` (HTML), `parentId`, `mentions` (String[]), `isDraft` |
-| `CommentReaction` | Emoji per comment | unique `(commentId, userId, emoji)` |
-| `Attachment` | File on card | `fileName`, `fileSize`, `mimeType`, `url`, `storagePath` |
-| `Checklist` | Task list | `title`, `order`, `items[]` |
-| `ChecklistItem` | Task item | `isComplete`, `order`, `assigneeId`, `dueDate`, `completedAt` |
-| `Sprint` | Agile sprint | `name`, `goal`, `status` (PLANNING/ACTIVE/COMPLETED), `startDate`, `endDate` |
-| `Epic` | Card grouping | `title`, `status`, `initiativeId`, `boardId`, `dueDate` |
-| `Initiative` | Strategic goal | `title`, `status`, `startDate`, `endDate`, `color`, `epics[]` |
-| `CardDependency` | Blocking relation | `type` (BLOCKS/RELATES_TO/DUPLICATES), unique `(blockerId, blockedId)` |
-| `CustomField` | Dynamic field | `name`, `type` (9 variants), `options` (JSON), `isRequired` |
-| `CustomFieldValue` | Value per card | `valueText/Number/Date/Boolean/Options`, unique `(fieldId, cardId)` |
-| `Automation` | No-code rule | `trigger` (JSON), `conditions` (JSON), `actions` (JSON), `runCount`, `lastRunAt` |
-| `AutomationLog` | Execution record | `automationId`, `cardId`, `success`, `error` |
-| `Webhook` | Outbound hook | `url`, `secret`, `events` (String[]), `isEnabled` |
-| `WebhookDelivery` | Delivery attempt | `event`, `payload`, `statusCode`, `success`, `duration` |
-| `ApiKey` | REST API key | `keyHash` (SHA-256), `keyPrefix`, `scopes`, `expiresAt`, `revokedAt` |
-| `TimeLog` | Time entry | `cardId`, `userId`, `minutes`, `description`, `loggedAt` |
-| `Notification` | In-app alert | 8-variant `NotificationType`, `entityId/Type/Title`, `isRead` |
-| `SavedView` | Filter preset | `filters` (JSON), `viewType`, `isShared` |
-| `BoardShare` | Public link | `token` (unique), `allowComments`, `passwordHash`, `expiresAt`, `viewCount` |
-| `BoardAnalytics` | Board metrics | `totalCards`, `completedCards`, `weeklyTrends` (JSON), `priorityDistribution` (JSON) |
-| `UserAnalytics` | Per-user daily | `cardsCreated`, `cardsCompleted`, `commentsAdded`, `activeMinutes` per date |
-| `ActivitySnapshot` | Org timeline | aggregate counters per `timestamp` |
-| `UserPreference` | User settings | 9 boolean flags, `onboardingStep`, `cookieConsent` |
-| `BoardTemplate` | Reusable board | `title`, `category`, `orgId` (null = global), `lists[]` |
-| `AuditLog` | Security trail | `orgId`, `action`, `entityType/Id/Title`, `userId`, `ipAddress`, `userAgent` |
+```
+Organization
+  id                String   (CUID)
+  name              String
+  slug              String   (unique)
+  region            String
+  subscriptionPlan  String   (FREE / PRO)
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  aiCallsToday      Int
+
+User
+  id          String   (CUID)
+  clerkUserId String   (unique)
+  email       String   (unique)
+  name        String
+  imageUrl    String
+
+Board
+  id                  String   (CUID)
+  orgId               String   (FK → Organization)
+  title               String
+  isPrivate           Boolean
+  imageThumbUrl       String?
+  permissionSchemeId  String?  (FK → PermissionScheme)
+
+List
+  id       String   (CUID)
+  boardId  String   (FK → Board)
+  title    String
+  order    String   (LexoRank)
+
+Card
+  id           String    (CUID)
+  listId       String    (FK → List)
+  assigneeId   String?   (FK → User)
+  title        String
+  description  String?
+  order        String    (LexoRank)
+  priority     Priority  (LOW/MEDIUM/HIGH/URGENT)
+  dueDate      DateTime?
+  storyPoints  Int?
+  sprintId     String?   (FK → Sprint)
+  epicId       String?   (FK → Epic)
+
+BoardMember
+  id                  String    (CUID)
+  boardId             String    (FK → Board)
+  userId              String    (FK → User)
+  orgId               String
+  role                BoardRole (OWNER/ADMIN/MEMBER/VIEWER)
+  permissionSchemeId  String?   (FK → PermissionScheme)
+
+AuditLog
+  id             String  (CUID)
+  orgId          String  (FK → Organization)
+  boardId        String? (FK → Board)
+  action         ACTION  (enum)
+  entityType     ENTITY_TYPE (enum)
+  entityId       String
+  ipAddress      String
+  userAgent      String
+  previousValues Json
+  newValues      Json
+```
+
+### Database Design Decisions
+
+- **CUID primary keys** — Avoids integer sequence guessing, safe for distributed systems
+- **LexoRank `order` field** — Cards and lists use string ordering (`"m"`, `"n"`, `"o"`) for O(1) reordering
+- **Denormalized user fields** — `Comment` and `AuditLog` store `userName`/`userImage` directly to avoid joins and preserve historical accuracy
+- **JSON columns** — `Automation.trigger/conditions/actions`, `WebhookDelivery.payload`, `AuditLog.previousValues/newValues`, `BoardAnalytics.weeklyTrends` all use JSON for schema-less flexibility
+- **Cascade deletes** — Board deletion cascades to lists → cards → comments/attachments/checklists/members
+- **Organization deletion is NOT cascaded** (intentional safety guard)
 
 ---
 
-## Project Structure
+## Drag & Drop System
+
+### LexoRank Ordering — How It Works
+
+LexoRank is a string-based ordering system. Implementation lives in `lib/lexorank.ts`.
+
+- Items are ordered lexicographically: `"m"` < `"n"` < `"o"`
+- **`generateNextOrder(lastOrder)`** — appends the next character: `"m"` → `"n"` → ... → `"z"` → `"za"` → `"zb"`
+- **`generateMidpointOrder(before, after)`** — calculates a midpoint string for mid-list insertions
+- **`rebalanceOrders(items)`** — resets all items to clean values when strings grow too long
+
+**Why not integer ordering?**
+Moving a card to position 3 in a 100-item list requires updating all items at positions 3–100. LexoRank only updates the moved card.
+
+**Why not fractional indexing?**
+After ~50 moves between the same two positions, floating-point precision degrades and causes ordering bugs. LexoRank strings can always generate a valid midpoint.
+
+### Drag & Drop End-to-End Flow
 
 ```
-nexus/
- app/
-    layout.tsx                  # Root layout — theme, auth, toasts, PWA
-    page.tsx                    # Landing page with animated hero
-    globals.css / editor.css    # Tailwind base + TipTap overrides
-    dashboard/                  # Board list (server component)
-    board/[boardId]/            # Kanban + analytics tabs
-    activity/                   # Org audit log feed
-    billing/                    # Stripe billing page
-    onboarding/                 # Guided onboarding flow
-    roadmap/                    # Initiatives + Epics view
-    settings/                   # User preferences
-    shared/[token]/             # Public board view (no auth)
-    api/
-        v1/boards/ v1/cards/    # REST API (API key auth)
-        upload/                 # Supabase Storage upload + DELETE
-        members/                # Org member search (@mention)
-        stripe/checkout/portal/ # Stripe Checkout + Portal
-        webhook/stripe/         # Stripe webhook handler
-        integrations/github/    # GitHub webhook handler
-        integrations/slack/     # Slack slash command handler
-        cron/daily-reports/     # Vercel Cron: reminders + digest
-        push/                   # Web Push subscribe/unsubscribe
-        export/ import/         # Board export/import
-        gdpr/delete-request/    # GDPR deletion queue
-        health/                 # Health check
-
- actions/                        # 35 Server Action files
-    ai-actions.ts               # suggestPriority, generateCardDescription, suggestChecklists
-    automation-actions.ts       # Automation CRUD + TriggerType/ActionType enums
-    webhook-actions.ts          # Webhook CRUD + test
-    sprint-actions.ts           # Sprint lifecycle
-    roadmap-actions.ts          # Initiatives + Epics CRUD
-    time-tracking-actions.ts    # Time log CRUD
-    custom-field-actions.ts     # Custom field + value CRUD
-    dependency-actions.ts       # Card dependency management
-    bulk-card-actions.ts        # Bulk operations
-    phase3-actions.ts           # Priority, due dates, comments + @mention
-    ...                         # (30 more files — see Project Structure above)
-
- components/
-    modals/card-modal/          # Full card detail modal + all tabs
-    board/                      # List container, card item, unsplash picker
-    analytics/                  # Recharts wrappers
-    editor/                     # @mention autocomplete
-    layout/                     # Navbar, sidebar, org switcher
-    ui/                         # shadcn/ui primitives
-
- hooks/
-    use-realtime-board.ts       # Supabase postgres_changes
-    use-presence.ts             # Supabase Presence
-    use-card-lock.ts            # Presence-based card locking
-    use-realtime-analytics.ts   # Analytics broadcast
-
- lib/
-    tenant-context.ts           # getTenantContext(), requireRole() (252 lines)
-    automation-engine.ts        # Automation event bus (495 lines)
-    webhook-delivery.ts         # Outbound webhooks + SSRF protection (415 lines)
-    lexorank.ts                 # LexoRank ordering
-    email.ts                    # Resend email send functions
-    dal.ts                      # Data Access Layer
-
- prisma/
-    schema.prisma               # 953 lines, 30+ models
-    seed.ts                     # 6 built-in templates seeder
-
- __tests__/
-    unit/                       # 7 suites, 122 tests
-    integration/                # 1 suite, 19 tests
-
- e2e/                            # Playwright specs
-     auth.setup.ts
-     boards.spec.ts
-     cards.spec.ts
+1. User starts dragging a card (via @dnd-kit DragOverlay)
+        │
+2. Optimistic UI update fires immediately
+   └── use-optimistic-card hook updates local state before server responds
+        │
+3. User drops card in new position
+        │
+4. LexoRank calculates new order string based on neighbors
+        │
+5. Server Action fires: update-card-order
+   └── Validates input (Zod)
+   └── getTenantContext() checks auth + permissions
+   └── Prisma updates Card.order in DB (one row)
+        │
+6. emitCardEvent() fires
+   └── Automation engine evaluates matching rules
+   └── Webhooks fire (HMAC-signed)
+        │
+7. Supabase postgres_changes broadcasts update to all connected clients
+        │
+8. Other users see the card move in real time via use-realtime-board hook
 ```
+
+---
+
+## Real-Time System
+
+### Architecture
+
+Supabase is used **exclusively** for its Realtime WebSocket engine. All database reads and writes go through Prisma only.
+
+### Channel Map
+
+| Channel Pattern | Purpose | Hook |
+|---|---|---|
+| `org:{orgId}:board:{boardId}` | Card/list CRUD events | `use-realtime-board` |
+| `org:{orgId}:presence:{boardId}` | Online user tracking | `use-presence` |
+| `org:{orgId}:analytics:{boardId}` | Live metrics broadcast | `use-realtime-analytics` |
+| `org:{orgId}:boards` | Org-wide board list updates | — |
+| `org:{orgId}:activity` | Audit log feed | — |
+
+### Card Edit Locking Flow
+
+```
+User A opens card for editing
+        │
+        ├── Broadcasts presence on board channel with cardId
+        │
+User B views same card
+        │
+        ├── Receives presence event: "Card locked by User A"
+        ├── Edit button disabled
+        │
+User A closes card
+        │
+        ├── Presence removed (or disconnects)
+        ├── Lock released
+        │
+User B can now edit
+```
+
+A `cancelled` flag in the async setup prevents race conditions during rapid open/close cycles.
+
+### Optimistic Updates
+
+```
+User performs action (e.g., adds label)
+        │
+        ├── useOptimistic updates UI immediately (0ms delay)
+        │
+Server Action runs in background
+        │
+        ├── Success → Supabase broadcast confirms the change
+        │
+        └── Failure → UI rolls back to previous state
+```
+
+---
+
+## Payments & Billing
+
+### Plans
+
+| Feature | FREE | PRO |
+|---|---|---|
+| Price | £0/month | £9/month or £90/year |
+| Board limit | 50 | Unlimited |
+| All core features | ✓ | ✓ |
+| Priority support | — | ✓ |
+
+### Stripe Integration Flow
+
+```
+User clicks "Upgrade to Pro"
+        │
+App creates Stripe Checkout Session (GBP, subscription mode)
+        │
+User redirected to Stripe Checkout
+        │
+User enters payment details
+        │
+Stripe fires: checkout.session.completed
+        │
+Webhook handler (app/api/webhook/stripe/route.ts)
+        ├── Verifies stripe-signature header (HMAC)
+        ├── Uses systemDb (bypasses RLS)
+        ├── Sets subscriptionPlan = PRO
+        └── Saves stripeCustomerId + stripeSubscriptionId
+        │
+Monthly/Yearly:
+        ├── invoice.payment_succeeded → Update currentPeriodEnd
+        ├── invoice.payment_failed → Set status = past_due
+        └── customer.subscription.deleted → Reset to FREE plan
+```
+
+### Webhook Events Handled
+
+| Event | Action |
+|---|---|
+| `checkout.session.completed` | Set PRO plan, store Stripe IDs |
+| `invoice.payment_succeeded` | Update subscription period end |
+| `invoice.payment_failed` | Set status to `past_due` |
+| `customer.subscription.updated` | Sync status changes |
+| `customer.subscription.deleted` | Reset to FREE plan |
 
 ---
 
 ## API Reference
 
-### REST API v1
+### Public REST API (v1)
 
-Base URL: `https://yourdomain.com/api/v1`
+All v1 endpoints require `Authorization: Bearer nxk_your_api_key` with the correct scope.
 
-**Authentication:** `Authorization: Bearer <api_key>`
-
-All keys are managed from `/settings`  API Keys. Keys are SHA-256 hashed in the database — only the prefix (`nx_live_...`) is displayed after creation.
-
-**Scopes:** `boards:read`, `boards:write`, `cards:read`, `cards:write`
-
-#### `GET /api/v1/boards`
-
-Returns all boards for the authenticated org.
-
-```json
-{
-  "data": [
-    { "id": "uuid", "title": "My Board", "orgId": "org_...", "imageThumbUrl": "...", "createdAt": "..." }
-  ],
-  "meta": { "total": 5 }
-}
+```bash
+curl -H "Authorization: Bearer nxk_your_api_key_here" \
+  https://your-nexus-instance.com/api/v1/boards
 ```
 
-#### `POST /api/v1/boards` _(requires `boards:write`)_
+API keys are:
+- Hashed with SHA-256 before storage
+- Prefixed with `nxk_` for identification
+- Scoped per permission (e.g., `boards:read`, `cards:write`)
+- Optionally set to expire by date
 
-```json
-// Request body
-{ "title": "Engineering", "imageId": "unsplash-id" }
-```
-
-#### `GET /api/v1/boards/:id`
-
-Returns board with full list and card tree.
-
-#### `GET /api/v1/cards`
-
-Query params: `boardId`, `listId`, `assigneeId`, `priority`
-
-#### `GET /api/v1/cards/:id`
-
-Returns card with comments, attachments, labels, checklists.
-
-#### `PATCH /api/v1/cards/:id` _(requires `cards:write`)_
-
-Updates any card fields.
-
-#### API Key Management (UI)
-
-From Settings  API Keys:
-- Create named keys with scopes
-- Full key shown once on creation; only prefix stored
-- Revoke instantly via `revokeApiKey(keyId)`
-
-### Server Actions
-
-All actions in `nexus/actions/`; called directly from Client Components using React `"use server"`.
-
-Every action:
-1. Calls `getTenantContext()`  resolves `userId` + `orgId` from Clerk JWT
-2. Calls `requireRole(ctx, "MEMBER")` (or higher) for mutations
-3. Parses input with Zod before any DB access
-4. Writes an `AuditLog` entry after every successful mutation
-5. Calls `revalidatePath()` to bust stale cache
-
-Key signatures:
-
-```typescript
-// AI
-suggestPriority(cardTitle: string): Promise<{ priority: Priority; confidence: number }>
-generateCardDescription(cardTitle: string): Promise<{ description: string }>
-suggestChecklists(cardTitle: string): Promise<{ items: string[] }>
-
-// Boards & Cards
-createBoard(data: { title: string; imageId?: string }): Promise<{ data: Board }>
-updateCard(cardId: string, values: Partial<Card>): Promise<{ data: Card }>
-updateCardOrder(items: { id: string; order: string; listId: string }[]): Promise<void>
-
-// Automation
-createAutomation(data: { name; trigger; conditions; actions; boardId? }): Promise<Automation>
-
-// Sprint
-createSprint(data: { boardId; name; goal?; startDate?; endDate? }): Promise<Sprint>
-startSprint(sprintId: string): Promise<Sprint>
-completeSprint(sprintId: string): Promise<Sprint>
-
-// Time
-logTime(data: { cardId; minutes; description? }): Promise<TimeLog>
-
-// Webhooks
-createWebhook(data: { url; secret; events }): Promise<Webhook>
-```
+| Method | Endpoint | Scope | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/boards` | `boards:read` | List all boards in the organization |
+| `POST` | `/api/v1/boards` | `boards:write` | Create a new board |
+| `GET` | `/api/v1/boards/[boardId]` | `boards:read` | Get board details with lists |
+| `GET` | `/api/v1/cards` | `cards:read` | List cards (filter by boardId, listId, assigneeId, priority) |
+| `POST` | `/api/v1/cards` | `cards:write` | Create a card in a list |
+| `GET` | `/api/v1/cards/[cardId]` | `cards:read` | Get full card details |
+| `DELETE` | `/api/v1/cards/[cardId]` | `cards:write` | Delete a card |
 
 ### Internal API Routes
 
-| Route | Method | Purpose |
+All internal routes use Clerk session (cookie) authentication.
+
+| Method | Endpoint | Description |
 |---|---|---|
-| `/api/upload` | POST/DELETE | Supabase Storage upload; uploader-only DELETE |
-| `/api/members` | GET | Org member search for @mention (10 results) |
-| `/api/unsplash` | GET | Proxied Unsplash photo search |
-| `/api/tenor` | GET | GIF proxy (Giphy  Klipy fallback) |
-| `/api/push/subscribe` | POST | Register Web Push subscription |
-| `/api/stripe/checkout` | POST | Create Checkout Session |
-| `/api/stripe/portal` | POST | Create Customer Portal session |
-| `/api/webhook/stripe` | POST | Stripe webhook handler (signature verified) |
-| `/api/cron/daily-reports` | GET | Due-date reminders + Monday digest (Vercel Cron) |
-| `/api/admin/seed-templates` | POST | Idempotent template seeder (CRON_SECRET protected) |
-| `/api/export` | GET | Board JSON/CSV export |
-| `/api/import` | POST | Trello/Asana import |
-| `/api/health` | GET | Health check |
-| `/api/gdpr/delete-request` | POST | Queue org data deletion |
-| `/api/integrations/github` | POST | GitHub webhook (HMAC verified) |
-| `/api/integrations/slack` | POST | Slack slash command handler |
+| `GET` | `/api/health` | Health check: DB connectivity, build info, response time |
+| `POST` | `/api/ai` | AI completion and analysis |
+| `POST` | `/api/import` | Board/card import |
+| `GET` | `/api/export/[boardId]` | Board export (JSON/CSV) |
+| `GET` | `/api/audit-logs` | Fetch audit trail |
+| `POST` | `/api/upload` | File upload to Supabase Storage |
+| `DELETE` | `/api/upload` | File deletion |
+| `GET` | `/api/attachment` | Attachment retrieval |
+| `GET` | `/api/boards` | List organization boards |
+| `GET` | `/api/boards/requestable` | Boards available for access request |
+| `POST` | `/api/members` | Invite organization members |
+| `GET` | `/api/members` | List organization members |
+| `POST` | `/api/membership-requests` | Create org/board access request |
+| `GET` | `/api/membership-requests/mine` | Current user's pending requests |
+| `GET` | `/api/cards/search` | Full-text card search |
+| `GET` | `/api/unsplash` | Unsplash image search proxy |
+| `GET` | `/api/tenor/featured` | Featured GIFs |
+| `GET` | `/api/tenor/search` | GIF search |
+| `POST` | `/api/integrations/github` | GitHub integration webhook |
+| `POST` | `/api/integrations/slack` | Slack integration webhook |
+| `POST` | `/api/stripe/checkout` | Create Stripe Checkout session |
+| `POST` | `/api/stripe/portal` | Create Stripe Customer Portal session |
+| `POST` | `/api/webhook/stripe` | Stripe webhook receiver (HMAC-verified) |
+| `POST` | `/api/push/subscribe` | Register push notification subscription |
+| `POST` | `/api/push/send` | Send push notification |
+| `POST` | `/api/gdpr/export` | Export user data (GDPR Article 20) |
+| `POST` | `/api/gdpr/delete-request` | Request account deletion (GDPR Article 17) |
+| `POST` | `/api/admin/seed-templates` | Seed board templates (admin only) |
+| `POST` | `/api/cron/daily-reports` | Daily report generation (Vercel Cron, 9 AM UTC) |
 
 ---
 
-## Core Engine Deep Dives
+## Server Actions
 
-### Automation Engine
+All server actions follow the `createSafeAction` pattern from `lib/create-safe-action.ts`:
+1. Input validated by Zod schema
+2. `getTenantContext()` resolves auth and tenant
+3. Permission check against RBAC matrix
+4. Database mutation (Prisma, scoped to `orgId`)
+5. `emitCardEvent()` triggers automations and webhooks
+6. `createAuditLog()` records the action
 
-`lib/automation-engine.ts` — 495 lines
+**40 server actions across these domains:**
 
-```
-Server Action (e.g. updateCard, moveCard)
-       
-        triggerAutomationEvent({
-               type: "CARD_MOVED",
-               orgId, boardId, cardId,
-               depth: 0,
-               context: { fromListId, toListId, assigneeId, labelId, priority, ... }
-             })
-                  
-                  
-       Load automations WHERE boardId AND isEnabled
-                  
-                  
-       For each automation (parallel):
-         1. Match trigger.type
-         2. Evaluate conditions (AND logic on card state)
-         3. Execute each action in order
-         4. depth++  if depth < 3, recurse for triggered actions
-         5. Write AutomationLog (success or error)
-```
-
-**Infinite loop prevention:** `MAX_AUTOMATION_DEPTH = 3`. Each recursive call increments `depth`. When `depth >= 3`, engine stops and logs a warning. Prevents ABA cycles.
-
-**Action execution examples:**
-- `MOVE_CARD` — calls `updateCardOrder` with target `listId`
-- `SET_PRIORITY` — calls `updateCard({ priority })`
-- `POST_COMMENT` — calls `createComment` with automation bot message
-- `SEND_NOTIFICATION` — creates `Notification` record for assigned user
-
-### AI Features
-
-`actions/ai-actions.ts`
-
-```
-Request (e.g. suggestPriority("Fix critical login bug"))
-  
-   getTenantContext()  orgId
-  
-   db.organization.findUnique({ aiCallsToday, aiCallsResetAt })
-       If aiCallsResetAt < now   reset aiCallsToday = 0
-       If aiCallsToday >= 50    return { error: "Daily AI limit reached" }
-  
-   openai.chat.completions.create({
-       model: "gpt-4o-mini",
-       messages: [{ role: "user", content: "..." }],
-       temperature: 0.3
-     })
-  
-   db.organization.update({ aiCallsToday: { increment: 1 } })
-  
-   Return parsed result
-```
-
-### Webhook Delivery Engine
-
-`lib/webhook-delivery.ts` — 415 lines
-
-```
-deliverWebhookEvent(orgId, "card.created", payload)
-  
-   Load enabled Webhooks WHERE orgId AND "card.created" in events[]
-  
-   For each webhook (parallel, fire-and-forget):
-        
-         SSRF check:
-             hostname in BLOCKED_HOSTNAMES?  reject
-             dns.resolve(hostname)  get IPs
-             isPrivateIPv4(ip): 10/8, 172.16/12, 192.168/16, 127/8, 169.254/16, 100.64/10
-             isPrivateIPv6(ip): ::1, fc00::/7, ULA, IPv4-mapped
-             Any private IP  reject with logged warning
-        
-         Sign: HMAC-SHA256(JSON.stringify(payload), webhook.secret)
-                 Header: X-Nexus-Signature-256: sha256=<hex>
-        
-         POST webhook.url (10 s timeout)
-        
-         db.webhookDelivery.create({ statusCode, success, duration })
-```
-
-### LexoRank Ordering
-
-`lib/lexorank.ts`
-
-LexoRank represents sort order as strings rather than integers, enabling O(1) reorders with no adjacent-row updates.
-
-```
-Initial positions:    "a"     "m"     "z"
-Insert between a/m:   "a" "g" "m"     "z"      midpoint
-Insert between a/g:   "a" "d" "g" "m" "z"
-Insert before "a":    "U"  (by prepending in alphabet space)
-Insert after "z":     "zz" (by extending the string)
-
-Strings grow in length only when the space between two adjacent
-keys is exhausted — this is extremely rare in practice.
-```
-
-This is the ordering strategy used by Linear and Jira. It eliminates bulk `ORDER BY` index updates on drag-and-drop — only the moved item's row is written.
-
-### Tenant Context & Security
-
-`lib/tenant-context.ts` — 252 lines
-
-```typescript
-// THE canonical security entry point
-export const getTenantContext = cache(async (): Promise<TenantContext> => {
-  const { userId, orgId, orgRole } = await auth();  // Clerk JWT — server-only
-
-  // cache() from React deduplicates this across the entire request tree
-  // Multiple server actions calling getTenantContext() in the same request
-  // pay the cost exactly once.
-
-  // orgId ALWAYS from JWT — never passed as a parameter
-  // Prevents parameter injection attacks entirely
-
-  // User row healing: auto-creates on first access
-  // Handles: first sign-in, local dev (no webhook tunnel),
-  //          delayed webhook delivery in production
-  // Race condition: catch block re-fetches; if still null  throws UNAUTHENTICATED
-
-  // Verifies OrganizationUser membership + isActive
-  // Throws TenantError("FORBIDDEN") — typed error class, cannot be silently ignored
-});
-
-// ROLE_HIERARCHY: { OWNER: 4, ADMIN: 3, MEMBER: 2, GUEST: 1 }
-export function requireRole(ctx: TenantContext, minimum: TenantRole) {
-  if (ROLE_HIERARCHY[ctx.membership.role] < ROLE_HIERARCHY[minimum]) {
-    throw new TenantError("FORBIDDEN", "Insufficient role");
-  }
-}
-```
+| Domain | Action Files |
+|---|---|
+| Board | `create-board.ts`, `update-board.ts`, `delete-board.ts` |
+| Card | `create-card.ts`, `update-card.ts`, `delete-card.ts`, `update-card-order.ts` |
+| List | `create-list.ts`, `update-list.ts`, `delete-list.ts`, `update-list-order.ts` |
+| Members | `board-member-actions.ts` |
+| Permissions | `permission-scheme-actions.ts` |
+| Membership | `membership-request-actions.ts` |
+| Sharing | `board-share-actions.ts` |
+| Automations | `automation-actions.ts` |
+| AI | `ai-actions.ts` |
+| Sprints | `sprint-actions.ts` |
+| Roadmap | `roadmap-actions.ts` |
+| Time Tracking | `time-tracking-actions.ts` |
+| Custom Fields | `custom-field-actions.ts` |
+| Webhooks | `webhook-actions.ts` |
+| API Keys | `api-key-actions.ts` |
+| Notifications | `notification-actions.ts` |
+| Bulk Operations | `phase3-bulk-actions.ts` |
+| Import/Export | `import-export-actions.ts` |
+| Templates | `template-actions.ts` |
+| Saved Views | `saved-view-actions.ts` |
 
 ---
 
-## Integrations
+## Custom Hooks
 
-| Integration | How it connects | What it does |
-|---|---|---|
-| **Supabase** | `@supabase/supabase-js`; `NEXT_PUBLIC_SUPABASE_*` | PostgreSQL, Realtime channels, Storage buckets |
-| **Clerk** | `@clerk/nextjs`; `NEXT_PUBLIC_CLERK_*` + `CLERK_SECRET_KEY` | Auth, organization management, JWT signing |
-| **Stripe** | `stripe` server + `@stripe/stripe-js` client | Checkout, Customer Portal, subscription lifecycle webhook |
-| **OpenAI** | `openai` v4; `OPENAI_API_KEY` | gpt-4o-mini for priority suggestion, description gen, checklist gen |
-| **Resend** | `resend` v6; `RESEND_API_KEY` | Transactional email: @mention, due-date reminder, weekly digest |
-| **Sentry** | `@sentry/nextjs` v10; `NEXT_PUBLIC_SENTRY_DSN` | Error tracking, session replay, performance monitoring |
-| **Unsplash** | `unsplash-js`; `UNSPLASH_ACCESS_KEY` | Board background photo search (proxied server-side) |
-| **Giphy / Klipy** | `GIPHY_API_KEY` (optional) | GIF picker in card comments; falls back to Klipy |
-| **Web Push** | `web-push`; VAPID keys | Desktop push notifications for card events |
-| **GitHub** | Webhook POST `/api/integrations/github`; `GITHUB_WEBHOOK_SECRET` | Auto-link commits to cards; move cards on PR merge |
-| **Slack** | Slash command POST `/api/integrations/slack` | Create cards, query board status from Slack |
+| Hook | Purpose |
+|---|---|
+| `use-realtime-board` | Supabase WebSocket subscription — live card/list/comment/reaction updates |
+| `use-presence` | Online user tracking on a board — avatar colors, join/leave events |
+| `use-card-lock` | Prevents concurrent card edits — broadcasts lock state via presence channel |
+| `use-card-modal` | Zustand store — centralized card modal open/close/view/edit mode state |
+| `use-keyboard-shortcuts` | Global keyboard listener — modifier key support, ignores input field focus |
+| `use-debounce` | Debounces a value or callback — used for auto-save and search inputs |
+| `use-optimistic-card` | React `useOptimistic` wrapper for instant label add/remove on cards |
+| `use-push-notifications` | Web Push registration via Service Worker and PushManager API |
+| `use-realtime-analytics` | Live analytics via Supabase broadcast — card created/completed/deleted events |
+| `use-demo-mode` | Guest demo mode detection, read-only enforcement, session tracking |
 
 ---
 
-## Quick Start
+## Component Library
 
-### Prerequisites
+### Board Components (28 files)
 
-- **Node.js 20+**
-- **Supabase** project (PostgreSQL + Realtime + Storage)
-- **Clerk** application with Organizations enabled
-- **Stripe** account (test mode fine)
-- **Unsplash** developer application
-- **Resend** account
-- **OpenAI** API key
+| Component | Description |
+|---|---|
+| `board-header.tsx` | Title bar, back navigation, share dialog, settings dropdown |
+| `board-tabs.tsx` | Main tabbed view switcher (Board/Calendar/Table/Gantt/Workload) |
+| `list-container.tsx` | DnD context container managing drag-and-drop of lists and cards |
+| `list-item.tsx` | Individual sortable list column with card creation and AI suggestions |
+| `card-item.tsx` | Draggable card with priority badge, due date, bulk selection |
+| `calendar-view.tsx` | Month/week/day calendar displaying cards by due date |
+| `gantt-view.tsx` | Timeline chart with priority bars, today line, zoom levels |
+| `table-view.tsx` | Sortable spreadsheet view of all cards |
+| `workload-view.tsx` | Team workload visualization per assignee |
+| `filter-bar.tsx` | Multi-criteria filter (assignee, label, priority, date, search) |
+| `sprint-panel.tsx` | Sprint management with create/start/complete and burndown |
+| `share-board-dialog.tsx` | Public share links with expiry, password, view count |
+| `checklist-panel.tsx` | Checklist management with AI-suggested items |
+| `custom-fields-panel.tsx` | Custom field types: text, number, date, checkbox, select, URL, email, phone |
+| `dependency-panel.tsx` | Card dependencies (blocks/blocked-by/related) |
+| `time-tracking-panel.tsx` | Time logs, estimates, progress visualization |
+| `bulk-action-bar.tsx` | Floating bar for batch operations on selected cards |
+| `online-users.tsx` | Avatar row of currently online board members |
 
-### Installation
+### Card Modal (6 sub-components)
 
-```bash
-git clone https://github.com/viraj1011JAIN/Nexus.git
-cd Nexus/nexus
+| Component | Description |
+|---|---|
+| `card-modal/index.tsx` | Main card detail view/edit modal |
+| `card-modal/activity.tsx` | Audit log and activity timeline |
+| `card-modal/attachments.tsx` | File attachments tab |
+| `card-modal/checklists.tsx` | Checklists with AI item generation |
+| `card-modal/cover.tsx` | Cover image/color picker |
+| `card-modal/dependencies.tsx` | Card dependency management |
 
-npm install
+### Editor Components (7 files)
 
-# Copy the env template and fill in all values
-cp .env.example .env.local
+| Component | Description |
+|---|---|
+| `editor-toolbar.tsx` | Rich-text formatting toolbar |
+| `emoji-picker.tsx` | Emoji picker popover |
+| `gif-picker.tsx` | Tenor GIF search and insertion |
+| `link-popover.tsx` | Hyperlink insert/edit/remove |
+| `mention-list.tsx` | @mention dropdown for TipTap |
+| `mention-suggestion.ts` | Mention suggestion factory |
+| `toolbar-button.tsx` | Reusable toolbar button with tooltip |
 
-# Generate Prisma client
-npx prisma generate
+### Analytics Components (3 files)
 
-# Push schema to database
-npx prisma db push
+| Component | Description |
+|---|---|
+| `analytics-dashboard.tsx` | Board metrics with real-time updates and charts |
+| `advanced-analytics.tsx` | Burndown, velocity, label distribution, multi-tab view |
+| `export-pdf.tsx` | PDF export using jsPDF + autoTable |
 
-# Seed 6 built-in board templates
-npx prisma db seed
+### Settings Components (3 files)
 
-# Provision Supabase Storage bucket (once)
-npm run setup:storage
+| Component | Description |
+|---|---|
+| `api-keys-settings.tsx` | API key CRUD — create, revoke, copy, view usage |
+| `automation-builder.tsx` | Visual automation rule builder with trigger/action config |
+| `webhooks-settings.tsx` | Webhook endpoint management with delivery logs |
 
-# Start development server (Turbopack)
-npm run dev
+### UI Primitives (shadcn/ui — 24 components)
+
+`alert-dialog`, `avatar`, `badge`, `button`, `card`, `checkbox`, `collapsible`, `command`, `dialog`, `dropdown-menu`, `input`, `label`, `popover`, `progress`, `scroll-area`, `select`, `separator`, `skeleton`, `switch`, `tabs`, `textarea`, `toaster`, `tooltip`, `visually-hidden`
+
+---
+
+## Email Templates
+
+Located in `nexus/emails/`:
+
+| Template | Description |
+|---|---|
+| `_base.ts` | Base layout and shared styles |
+| `assigned.ts` | You've been assigned to a card |
+| `digest.ts` | Daily/weekly activity digest |
+| `due-soon.ts` | Due date approaching reminder |
+| `invite.ts` | Board or org invitation |
+| `mention.ts` | @mention in a comment or description |
+
+---
+
+## File System Structure
+
+```
+nexus/
+├── actions/                         # 40 server actions (createSafeAction pattern)
+│   ├── create-board.ts
+│   ├── create-card.ts
+│   ├── create-list.ts
+│   ├── update-card-order.ts         # LexoRank reordering
+│   ├── board-member-actions.ts
+│   ├── permission-scheme-actions.ts
+│   ├── membership-request-actions.ts
+│   ├── board-share-actions.ts
+│   ├── automation-actions.ts
+│   ├── ai-actions.ts
+│   ├── sprint-actions.ts
+│   ├── roadmap-actions.ts
+│   ├── time-tracking-actions.ts
+│   ├── custom-field-actions.ts
+│   ├── webhook-actions.ts
+│   ├── api-key-actions.ts
+│   ├── schema.ts                    # Shared Zod validation schemas
+│   └── ...                          # 20+ more
+│
+├── app/
+│   ├── api/
+│   │   ├── v1/                      # Public REST API (API key auth)
+│   │   │   ├── boards/
+│   │   │   └── cards/
+│   │   ├── stripe/                  # Checkout + portal
+│   │   ├── webhook/stripe/          # Stripe webhook handler
+│   │   ├── health/
+│   │   ├── ai/
+│   │   ├── audit-logs/
+│   │   ├── integrations/            # GitHub + Slack
+│   │   ├── gdpr/                    # Export + deletion
+│   │   ├── cron/                    # Scheduled jobs
+│   │   └── ...                      # Upload, search, push, media
+│   │
+│   ├── board/[boardId]/             # Board views
+│   │   └── settings/
+│   ├── dashboard/
+│   ├── onboarding/
+│   ├── settings/
+│   │   ├── api-keys/
+│   │   ├── automations/
+│   │   ├── gdpr/
+│   │   ├── integrations/
+│   │   └── webhooks/
+│   ├── billing/
+│   ├── activity/
+│   ├── roadmap/
+│   ├── search/
+│   ├── shared/[token]/              # Public guest view
+│   ├── sign-in/[[...sign-in]]/
+│   ├── sign-up/[[...sign-up]]/
+│   ├── select-org/
+│   ├── privacy/
+│   ├── terms/
+│   ├── layout.tsx
+│   └── error.tsx
+│
+├── components/
+│   ├── board/                       # 28 board UI components
+│   ├── modals/
+│   │   ├── card-modal/              # 6 sub-components
+│   │   └── pro-upgrade-modal.tsx
+│   ├── ui/                          # 24 shadcn/ui primitives
+│   ├── layout/                      # Sidebar, mobile nav, notifications
+│   ├── editor/                      # 7 rich text components
+│   ├── settings/                    # 3 settings components
+│   ├── analytics/                   # 3 chart components
+│   ├── providers/                   # Clerk, modals, toast
+│   ├── accessibility/               # ARIA live regions
+│   └── ...                          # Theme, billing, command palette, etc.
+│
+├── hooks/                           # 10 custom React hooks
+│   ├── use-realtime-board.ts
+│   ├── use-presence.ts
+│   ├── use-card-lock.ts
+│   ├── use-card-modal.ts
+│   ├── use-keyboard-shortcuts.ts
+│   ├── use-debounce.ts
+│   ├── use-optimistic-card.ts
+│   ├── use-push-notifications.ts
+│   ├── use-realtime-analytics.ts
+│   └── use-demo-mode.ts
+│
+├── lib/                             # 34 utility modules
+│   ├── db.ts                        # Prisma client (db + systemDb)
+│   ├── tenant-context.ts            # Multi-tenant auth resolution
+│   ├── board-permissions.ts         # RBAC permission matrix
+│   ├── action-protection.ts         # Rate limiting + demo guard
+│   ├── create-safe-action.ts        # Server action wrapper
+│   ├── create-audit-log.ts          # Audit trail
+│   ├── event-bus.ts                 # Card event emission
+│   ├── automation-engine.ts         # Automation rule evaluation
+│   ├── webhook-delivery.ts          # Outbound webhooks + SSRF protection
+│   ├── lexorank.ts                  # String-based ordering
+│   ├── api-key-auth.ts              # API key validation
+│   ├── realtime-channels.ts         # Tenant-isolated channel names
+│   ├── stripe.ts                    # Stripe client + config
+│   ├── logger.ts                    # Structured logging + Sentry
+│   ├── request-context.ts           # IP + User-Agent extraction
+│   ├── supabase/client.ts           # Supabase client factory
+│   └── ...                          # DAL, email, utils, design tokens, etc.
+│
+├── prisma/
+│   ├── schema.prisma                # 34 models, 13 enums
+│   ├── seed.ts
+│   └── migrations/
+│
+├── __tests__/
+│   ├── unit/                        # 41 unit test files
+│   ├── integration/                 # 1 integration test file
+│   └── a11y/                        # 1 accessibility test file
+│
+├── e2e/                             # 6 Playwright E2E specs
+│   ├── auth.setup.ts
+│   ├── auth-user-b.setup.ts
+│   ├── boards.spec.ts
+│   ├── cards.spec.ts
+│   ├── tenant-isolation.spec.ts
+│   └── user-journeys.spec.ts
+│
+├── emails/                          # 6 Resend email templates
+├── scripts/                         # 4 utility scripts
+├── types/                           # TypeScript type definitions
+├── public/
+│   ├── manifest.json                # PWA manifest
+│   ├── sw.js                        # Service Worker
+│   ├── icon-192.png
+│   └── icon-512.png
+│
+├── next.config.ts
+├── tailwind.config.ts
+├── jest.config.ts
+├── playwright.config.ts
+├── vercel.json
+├── components.json
+├── eslint.config.mjs
+└── package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+**Codebase summary:**
+
+| Section | Count |
+|---|---|
+| Components | 99 files |
+| Custom Hooks | 10 files |
+| Pages | 24 pages |
+| API Routes | 31 routes |
+| Server Actions | 40 files |
+| Lib Modules | 34 files |
+| Test Files | 43 files |
+| E2E Specs | 7 files |
+| Email Templates | 6 files |
 
 ---
 
 ## Environment Variables
 
-Create `nexus/.env.local`:
-
 ```bash
-#  Database (Supabase) 
-DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres.<ref>:<password>@db.<ref>.supabase.co:5432/postgres"
-
-#  Authentication (Clerk) 
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
-CLERK_SECRET_KEY="sk_test_..."
-NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
-NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/dashboard"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/dashboard"
-
-#  Supabase 
-NEXT_PUBLIC_SUPABASE_URL="https://<project-ref>.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
-SUPABASE_SERVICE_ROLE_KEY="eyJ..."  # Server-only; never sent to client
-
-#  Payments (Stripe) 
-STRIPE_API_KEY="sk_test_..."
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID="price_..."
-
-#  AI 
-OPENAI_API_KEY="sk-..."
-
-#  External APIs 
-UNSPLASH_ACCESS_KEY="..."
-RESEND_API_KEY="re_..."
-GIPHY_API_KEY="..."          # Optional — falls back to Klipy
-
-#  Integrations 
-GITHUB_WEBHOOK_SECRET="..."  # For GitHub integration (optional)
-
-#  Email 
-EMAIL_FROM="Nexus <noreply@yourdomain.com>"
-
-#  Application 
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-
-#  Demo mode 
-DEMO_ORG_ID=""               # Clerk org ID for read-only sandbox (optional)
-
-#  Security 
-CRON_SECRET="..."            # Random string — matches vercel.json Authorization header
-
-#  Web Push 
-NEXT_PUBLIC_VAPID_PUBLIC_KEY="..."
-VAPID_PRIVATE_KEY="..."
-VAPID_SUBJECT="mailto:admin@yourdomain.com"
-
-#  Monitoring 
-NEXT_PUBLIC_SENTRY_DSN="https://..."
-SENTRY_AUTH_TOKEN="..."
-SENTRY_ORG="..."
-SENTRY_PROJECT="..."
+cp .env.example .env
 ```
 
-| Key | Source |
-|---|---|
-| `DATABASE_URL` | Supabase  Settings  Database  Connection string (Transaction mode) |
-| `DIRECT_URL` | Supabase  Settings  Database  Connection string (Direct mode) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase  Settings  API  Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase  Settings  API  `anon` public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase  Settings  API  `service_role` secret key |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk Dashboard  API Keys |
-| `CLERK_SECRET_KEY` | Clerk Dashboard  API Keys |
-| `OPENAI_API_KEY` | platform.openai.com  API Keys |
-| `STRIPE_API_KEY` | Stripe Dashboard  Developers  API keys |
-| `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard  Webhooks  Signing secret |
-| `UNSPLASH_ACCESS_KEY` | unsplash.com/developers  Your app |
-| `RESEND_API_KEY` | resend.com  API Keys |
-| `VAPID_*` | Run `npx web-push generate-vapid-keys` |
+### Required
 
-### Supabase Realtime JWT (one-time setup)
+| Variable | Description | Source |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL via PgBouncer (port 6543) | Supabase > Settings > Database |
+| `DIRECT_URL` | Direct PostgreSQL (port 5432, migrations only) | Supabase > Settings > Database |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk frontend key | Clerk Dashboard > API Keys |
+| `CLERK_SECRET_KEY` | Clerk server key | Clerk Dashboard > API Keys |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Set to `/sign-in` | — |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Set to `/sign-up` | — |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | Set to `/` | — |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | Set to `/` | — |
+| `STRIPE_SECRET_KEY` | Stripe server key | Stripe > Developers > API Keys |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | Stripe > Webhooks |
+| `NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID` | Monthly plan Price ID (browser) | Stripe > Products |
+| `STRIPE_PRO_MONTHLY_PRICE_ID` | Monthly plan Price ID (server) | Stripe > Products |
+| `STRIPE_PRO_YEARLY_PRICE_ID` | Yearly plan Price ID (server) | Stripe > Products |
+| `NEXT_PUBLIC_APP_URL` | App base URL (`http://localhost:3001` locally) | — |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Supabase > Settings > API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Supabase > Settings > API |
+| `CRON_SECRET` | Cron job auth secret | `openssl rand -base64 32` |
 
-1. Clerk Dashboard  JWT Templates  New template
-2. Name: **`supabase`** (case-sensitive)
-3. Signing algorithm: `HS256`; signing key: Supabase JWT Secret (Supabase  Settings  API)
-4. Template body: `{ "org_id": "{{org.id}}" }`
+### Optional
+
+| Variable | Description | Source |
+|---|---|---|
+| `SENTRY_DSN` | Sentry error tracking DSN | Sentry > Project > DSN |
+| `NEXT_PUBLIC_UNSPLASH_ACCESS_KEY` | Unsplash client key | unsplash.com/developers |
+| `UNSPLASH_ACCESS_KEY` | Unsplash server key | unsplash.com/developers |
+| `RESEND_API_KEY` | Resend email API key | resend.com/api-keys |
+| `EMAIL_FROM` | Sender address (must be verified in Resend) | Your domain |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service key for file uploads | Supabase > Settings > API |
+| `GIPHY_API_KEY` | Giphy API key | developers.giphy.com |
+| `KLIPY_API_KEY` | Alternative GIF provider | klipy.com/developers |
+| `E2E_EMAIL` | Playwright test account email | Create a test account |
+| `E2E_PASSWORD` | Playwright test account password | — |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ (LTS)
+- npm (bundled with Node.js)
+- Supabase account — [supabase.com](https://supabase.com) (free tier works)
+- Clerk account — [clerk.com](https://clerk.com) (free tier works)
+- Stripe account — [stripe.com](https://stripe.com) (test mode)
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/nexus.git
+cd nexus/nexus
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment
+cp .env.example .env
+# Fill in all required values (see Environment Variables above)
+
+# 4. Generate Prisma client
+npx prisma generate
+
+# 5. Push schema to database
+npx prisma db push
+
+# 6. (Optional) Seed demo data
+npm run db:seed
+
+# 7. Configure Supabase storage buckets
+npm run setup:storage
+
+# 8. Start development server
+npm run dev
+```
+
+App runs at: `http://localhost:3001`
+
+### Stripe Local Webhook Setup
+
+```bash
+# Install Stripe CLI (macOS)
+brew install stripe/stripe-cli/stripe
+
+# Install Stripe CLI (Windows)
+scoop install stripe
+
+# Log in
+stripe login
+
+# Forward webhooks to local server
+stripe listen --forward-to localhost:3001/api/webhook/stripe
+
+# Copy the displayed whsec_... secret into STRIPE_WEBHOOK_SECRET in .env
+```
+
+### Clerk Setup
+
+1. Create a new application at [dashboard.clerk.com](https://dashboard.clerk.com)
+2. Enable **Organizations** under the Configure menu
+3. Copy Publishable Key and Secret Key to `.env`
+4. Set redirect URLs:
+   - Sign-in: `/sign-in`
+   - Sign-up: `/sign-up`
+   - After sign-in: `/`
+   - After sign-up: `/`
 
 ---
 
 ## Available Scripts
 
-```bash
-# Development
-npm run dev              # Turbopack dev server at http://localhost:3000
-npm run build            # Production build
-npm run start            # Serve production build
-npm run lint             # ESLint (zero-warning policy in CI)
-
-# Database
-npx prisma generate      # Regenerate Prisma client after schema changes
-npx prisma db push       # Push schema changes to database
-npx prisma db seed       # Seed 6 built-in board templates
-npx prisma studio        # Prisma Studio at http://localhost:5555
-npm run db:seed          # Seed demo workspace (scripts/seed-demo.ts)
-
-# Storage
-npm run setup:storage    # Provision card-attachments Supabase Storage bucket (idempotent)
-
-# Tests
-npm test                 # Jest in watch mode
-npm run test:ci          # Jest with coverage report (CI mode)
-npm run test:unit        # Unit suites only
-npm run test:integration # Integration suite
-
-# E2E
-npx playwright test      # Full suite (requires dev server running)
-npx playwright test --ui # Interactive UI mode
-npx playwright codegen   # Record new test interactions
-```
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server with Turbopack |
+| `npm run build` | Create production build |
+| `npm run start` | Start production server |
+| `npm run analyze` | Production build with bundle size analysis |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run Jest in watch mode |
+| `npm run test:ci` | Run all tests with coverage (CI mode) |
+| `npm run test:unit` | Run unit tests only |
+| `npm run test:integration` | Run integration tests only |
+| `npm run db:seed` | Seed database with demo data |
+| `npm run setup:storage` | Configure Supabase Storage buckets |
+| `npx prisma generate` | Regenerate Prisma client after schema changes |
+| `npx prisma db push` | Push schema changes to database (dev) |
+| `npx prisma migrate deploy` | Apply migrations (production) |
+| `npx prisma studio` | Open Prisma Studio database browser |
 
 ---
 
 ## Testing
 
-### Unit Tests — Jest 30
+### Test Metrics
 
-**7 suites  122 tests  all passing**
+| Metric | Value |
+|---|---|
+| Unit test files | 43 |
+| E2E test specs | 6 |
+| Files with coverage | 241 |
+| Statement coverage | ~19.5% |
+| Test runner | Jest 30 + ts-jest |
+| E2E runner | Playwright 1.58 |
+
+> Coverage is intentionally focused on critical business logic paths — security, auth, billing, and data integrity — rather than chasing UI component coverage numbers.
+
+### What Is Tested
+
+**Security & Authentication**
+- `tenant-context.test.ts` — Multi-tenant context resolution and healing paths
+- `action-protection.test.ts` — Rate limiting and demo mode protection
+- `auth/auth-session.test.ts` — Session management
+- `auth/role-permissions.test.ts` — RBAC permission enforcement
+- `security/security-injection.test.ts` — SQL injection, channel name injection prevention
+- `api-keys/api-key-auth.test.ts` — API key hashing and scope validation
+
+**Billing**
+- `billing/stripe-checkout.test.ts` — Checkout session creation
+- `billing/stripe-webhook.test.ts` — All webhook event handlers
+- `billing/stripe-config.test.ts` — Stripe configuration validation
+- `billing/billing-client.test.tsx` — Billing UI component behavior
+
+**Core Server Actions**
+- AI actions, automations, attachments, board sharing, bulk operations
+- Custom fields, dependencies, notifications, sprints, templates
+- Time tracking, webhooks, API key CRUD
+
+**Data Layer**
+- `lexorank/lexorank.test.ts` — String ordering: insertions, midpoints, rebalancing
+- `dal.test.ts` — Data access layer queries
+- `schema.test.ts` — Zod schema validation rules
+- `search/search.test.ts` — Full-text search functionality
+- `import-export/` — Board import and export operations
+
+**Real-Time**
+- `realtime/realtime-presence.test.ts` — Supabase presence tracking
+
+**E2E (Playwright)**
+- `boards.spec.ts` — Board creation, navigation, management
+- `cards.spec.ts` — Card CRUD and interactions
+- `tenant-isolation.spec.ts` — Multi-tenant data isolation (two users, two orgs)
+- `user-journeys.spec.ts` — Full end-to-end user workflows
+
+### Running Tests
 
 ```bash
-npm run test:unit
-```
+# All tests in watch mode
+npm test
 
-| Suite | Tests | What it covers |
-|---|---|---|
-| `action-protection.test.ts` | 19 | `protectDemoMode`, `isDemoOrganization`, `checkRateLimit`, `RATE_LIMITS` |
-| `tenant-context.test.ts` | 5 | `getTenantContext()`, `requireRole()`, `isDemoContext()` |
-| `rate-limit.test.ts` | 4 | In-memory sliding-window with `jest.useFakeTimers()` |
-| `email.test.ts` | 16 | All 4 email functions — Resend client fully mocked |
-| `template-actions.test.ts` | 30 | `createBoardFromTemplate`, `seedBuiltInTemplates`; `db.$transaction` mock; `CRON_SECRET` guard |
-| `attachment-actions.test.ts` | 15 | `getCardAttachments` IDOR + org-boundary security; `deleteAttachment` ownership |
-| `schema.test.ts` | 32 | All Zod schemas, boundary conditions, error message quality |
-
-### Integration Tests — Jest 30
-
-**1 suite  19 tests** — `__tests__/integration/server-actions.test.ts`
-
-End-to-end server action flows with a real test database instance.
-
-### Coverage
-
-```bash
+# All tests with coverage report
 npm run test:ci
-# HTML report: nexus/coverage/lcov-report/index.html
-```
 
-### E2E Tests — Playwright 1.58
+# Unit tests only
+npm run test:unit
 
-**Browsers:** Chromium, Firefox, Mobile Chrome
+# Integration tests only
+npm run test:integration
 
-```bash
-# Requires dev server
-npm run dev &
+# Single file
+npx jest --testPathPattern=tenant-context
+
+# E2E tests (requires dev server running)
 npx playwright test
 
-# E2E environment variables
-E2E_EMAIL=your-test-clerk-email@example.com
-E2E_PASSWORD=your-test-clerk-password
-```
+# E2E with browser UI
+npx playwright test --ui
 
-| Spec | Scenarios |
-|---|---|
-| `e2e/auth.setup.ts` | Clerk sign-in; saves auth state for reuse across specs |
-| `e2e/boards.spec.ts` | Board creation, URL assertion, Unsplash picker, template picker |
-| `e2e/cards.spec.ts` | Card creation, modal open, Files tab, @mention dropdown, file upload, file type rejection |
+# E2E specific spec
+npx playwright test boards.spec.ts
+```
 
 ---
 
-## CI/CD Pipeline
+## Security
 
-GitHub Actions at `.github/workflows/ci.yml` — four jobs in sequence:
+### Tenant Isolation
+
+- `orgId` is **never** accepted from client input — always from the signed Clerk JWT
+- **Row-Level Security (RLS)** — Prisma sets `app.current_org_id` as a PostgreSQL session variable. RLS policies filter at the DB engine level
+- **Dual-gate RBAC** — Organization membership and board membership verified independently. No implicit access even for org admins
+- **Realtime channel isolation** — All channels include `orgId`. Names are validated before subscription to prevent injection
+
+### Rate Limiting
+
+Implementation in `lib/action-protection.ts`:
+
+- Sliding-window limiter using in-memory `Map<string, number[]>` with 60-second windows
+- Per-action limits:
+  - Card creation: 60 requests/minute
+  - Card reorder: 120 requests/minute
+  - Default: 30 requests/minute
+- Returns `{ allowed, remaining, retryAfter }` for client-side handling
+
+### Webhook Security
+
+- **Inbound (Stripe)** — HMAC signature verification via `stripe-signature` header before any processing
+- **Outbound (user webhooks)** — HMAC-SHA256 signing with per-webhook secrets, delivered as `X-Nexus-Signature-256`
+- **SSRF protection** — Outbound webhooks block:
+  - Private IPv4 ranges: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`
+  - IPv6 private/loopback/link-local ranges
+  - Cloud metadata endpoints: `metadata.google.internal`, `169.254.169.254`
+
+### Audit Logging
+
+Every mutation captured via `createAuditLog()`:
+
+- **Who** — userId, userName, userImage
+- **What** — action enum, entityType, entityId, entityTitle
+- **When** — createdAt timestamp
+- **Where** — ipAddress, userAgent (from request headers)
+- **Before/after** — previousValues and newValues as JSON snapshots
+
+Failures captured in Sentry — never silently swallowed.
+
+### Security Headers
+
+Configured in `next.config.ts` for all routes:
 
 ```
-Push to main / PR against main
-           
-           
-    1. typecheck    npx tsc --noEmit
-           
-           
-    2. lint         eslint (zero-warning policy)
-           
-           
-    3. test         jest --ci --coverage  artifact uploaded
-           
-           
-    4. build        next build (only if all three pass)
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
 ```
 
-Merges to `main` are blocked unless every job is green.
+### Input Validation
 
----
-
-## Code Review with CodeRabbit
-
-This repository uses **[CodeRabbit](https://coderabbit.ai)** — an AI-powered automated code review service that runs on every pull request.
-
-### What CodeRabbit does on every PR
-
-- **Line-by-line review** — flags logic errors, security vulnerabilities, missing null-checks, type inconsistencies, performance anti-patterns
-- **PR summary** — writes a plain-English walkthrough of the change for reviewers
-- **Security audit** — highlights IDOR risks, missing auth checks, input validation gaps, SSRF vectors
-- **Pattern consistency** — ensures new code follows established patterns (e.g., always calling `getTenantContext()`, always using Zod before DB access, always writing `AuditLog`)
-- **Test coverage suggestions** — identifies untested paths and suggests concrete test cases
-- **Incremental re-review** — re-analyses only changed files on each new commit to a PR
-
-### How it works
-
-1. Open a pull request against `main`
-2. CodeRabbit posts a review within a few minutes as a PR comment
-3. Inline comments appear on the diff with specific, actionable suggestions
-4. Resolve or dismiss each comment; CodeRabbit updates its review on new commits
-
-### Why it matters for this codebase
-
-With 35 server action files all following the same `getTenantContext  requireRole  Zod  DB  AuditLog` pattern, CodeRabbit can catch any deviation from the security contract — e.g., a new action that skips `requireRole`, passes `orgId` as a parameter, or forgets Zod validation before the DB call.
-
-[![CodeRabbit](https://img.shields.io/badge/CodeRabbit-AI_Code_Review-orange?style=flat-square)](https://coderabbit.ai)
-
----
-
-## Deployment
-
-### Vercel (recommended)
-
-1. Connect the GitHub repository to Vercel
-2. Set **Root Directory** to `nexus`
-3. Add all [environment variables](#environment-variables) in Vercel project settings
-4. Deploy
-
-**Post-deployment webhook configuration:**
-
-**Stripe:**
-- Dashboard  Webhooks  Add endpoint: `https://yourdomain.com/api/webhook/stripe`
-- Events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
-
-**GitHub (optional):**
-- Repo  Settings  Webhooks  Add: `https://yourdomain.com/api/integrations/github`
-- Content type: `application/json`; Secret: `GITHUB_WEBHOOK_SECRET`
-- Events: Pushes, Pull requests
-
-**Vercel Cron** is pre-configured in `nexus/vercel.json`:
-```json
-{
-  "crons": [{ "path": "/api/cron/daily-reports", "schedule": "0 9 * * *" }]
-}
-```
-
-### Post-Deploy Checklist
-
-- [ ] `npx prisma db push` against production database
-- [ ] `npx prisma db seed` to seed 6 built-in templates
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` set; run `npm run setup:storage` once
-- [ ] Stripe webhook live mode delivering to `/api/webhook/stripe`
-- [ ] Clerk JWT template `supabase` configured
-- [ ] `CRON_SECRET` set in Vercel env
-- [ ] `OPENAI_API_KEY` set for AI features
-- [ ] VAPID keys generated and set for Web Push
-- [ ] Sentry DSN set; confirm a test error in Sentry dashboard
-
----
-
-## Security Model
-
-All items verified from source — no aspirational claims.
-
-| Concern | Implementation |
-|---|---|
-| Authentication | Clerk v6 — session verified on every server action and API route |
-| Authorization | `requireRole()` before every mutation; OWNER/ADMIN/MEMBER/GUEST hierarchy |
-| Multi-tenant isolation | `orgId` always from Clerk JWT; injected on all DAL queries; IDOR checks in every attachment action |
-| Input validation | Zod schema parse before any database write |
-| SQL injection | Prisma ORM with parameterized queries |
-| XSS in emails | `escHtml()` wraps all `allowUrl()` calls in `lib/email.ts` |
-| XSS in API responses | Optional-chaining with string defaults on Unsplash API fields |
-| Upload safety | SVG excluded from MIME allowlist; 10 MB hard limit; org ownership verified |
-| Stripe webhook | Signature verified by Stripe SDK before any state change |
-| GitHub webhook | `X-Hub-Signature-256` HMAC verified before processing any event |
-| Nexus webhook SSRF | DNS  IP  private CIDR blocklist check before every outbound POST |
-| API key security | SHA-256 hashed in DB; only `keyPrefix` stored plaintext; scope-checked per request |
-| Error leakage | Sentry captures all; raw errors never sent to the browser |
-| Rate limiting | Per-user in-memory sliding-window (board creation); 50 AI calls/org/day (DB-backed) |
-| Demo mode | `protectDemoMode()` blocks all writes silently |
-| Promise hygiene | `latestResolve` pattern in @mention suggestion prevents unresolved Promise accumulation |
-| Race conditions | `db.$transaction` in template creation; user row creation race caught and re-fetched |
+- All Server Actions validate input via Zod schemas before any processing
+- Prisma uses parameterized queries throughout — SQL injection is not possible
+- `TenantError` messages are mapped to generic client-safe strings — internal IDs and stack traces never reach the client
 
 ---
 
 ## Performance Optimizations
 
-| Optimization | Detail |
+| Optimization | Implementation |
 |---|---|
-| **Dev server** | Turbopack (`next dev --turbo`) — eliminates Webpack cold-start overhead |
-| **Package bundling** | `optimizePackageImports` for lucide-react, recharts, framer-motion, date-fns |
-| **Prisma isolation** | `serverExternalPackages: ["@prisma/client", "prisma"]` — prevents Prisma from being bundled |
-| **Charts** | Loaded via `next/dynamic + ssr: false` — no SSR hydration overhead |
-| **PDF export** | Code-split via `next/dynamic` — not in initial bundle |
-| **Sentry replay** | 10% sample rate in production; guarded off in development |
-| **Mention suggestions** | `latestResolve` closure discards stale API calls on rapid typing |
-| **Board re-renders** | `useMemo` / `useCallback` throughout list container and chart components |
-| **Off-screen content** | `LazyLoad` — Intersection Observer deferred rendering |
-| **Long lists** | `VirtualScroll` — windowed rendering |
-| **Fonts** | Inter with `display: swap` and CSS variable |
-| **Tenant context** | React `cache()` deduplicates Clerk + DB call across the entire request |
+| **Turbopack** | Dev server uses Turbopack for fast HMR |
+| **React Compiler** | `babel-plugin-react-compiler` auto-memoizes all client components |
+| **Server Components** | Data-heavy pages render on server with zero client JS |
+| **Image optimization** | AVIF + WebP formats, 1-hour minimum cache TTL |
+| **Virtual scrolling** | `components/virtual-scroll.tsx` renders only visible items |
+| **Lazy loading** | `components/lazy-load.tsx` uses Intersection Observer |
+| **LexoRank** | Card/list reorder updates exactly 1 DB row regardless of list size |
+| **React `cache()`** | `getTenantContext()` deduplicated to 1 DB call per request |
+| **Optimistic updates** | Card mutations apply to UI before server responds |
+| **Bundle analysis** | `npm run analyze` via `@next/bundle-analyzer` |
+| **Tree-shaking** | `optimizePackageImports` for lucide-react, framer-motion, TipTap, Radix, @dnd-kit, Recharts |
+| **Static caching** | `/_next/static/*` cached 1 year (immutable) |
+| **API no-cache** | `/api/*` routes set `Cache-Control: no-store, no-cache, must-revalidate` |
+| **Parallel compilation** | Enabled in `next.config.ts` |
+| **PgBouncer** | Connection pooling via port 6543 for all app queries |
+
+---
+
+## Deployment
+
+### Vercel (Recommended)
+
+```bash
+# Install CLI
+npm i -g vercel
+
+# Deploy to preview
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+### Production Setup Checklist
+
+```bash
+# 1. Run database migrations
+npx prisma migrate deploy
+
+# 2. Set environment variables in Vercel Dashboard
+#    Project > Settings > Environment Variables
+#    (All NEXT_PUBLIC_ vars are exposed to the browser)
+
+# 3. Configure Stripe webhook
+#    Endpoint: https://your-domain.com/api/webhook/stripe
+#    Events: checkout.session.completed, invoice.payment_succeeded,
+#            invoice.payment_failed, customer.subscription.updated,
+#            customer.subscription.deleted
+
+# 4. Update Clerk redirect URLs to production domain
+
+# 5. Set CRON_SECRET for cron job authentication
+```
+
+**Vercel cron job** (configured in `vercel.json`):
+```json
+{ "crons": [{ "path": "/api/cron/daily-reports", "schedule": "0 9 * * *" }] }
+```
+
+### Pre-Deploy Checklist
+
+- [ ] All required environment variables set in Vercel
+- [ ] `npx prisma migrate deploy` run against production DB
+- [ ] Stripe webhook endpoint configured for production URL
+- [ ] Clerk redirect URLs updated to production domain
+- [ ] `CRON_SECRET` set
+- [ ] Custom domain configured (if applicable)
+- [ ] Sentry DSN set (recommended)
+- [ ] Supabase storage buckets configured (`npm run setup:storage`)
+
+---
+
+## Workflow Diagrams
+
+### User Onboarding Flow
+
+```mermaid
+flowchart TD
+    A["User visits Nexus"] --> B{"Has account?"}
+    B -->|No| C["Sign Up via Clerk"]
+    B -->|Yes| D["Sign In via Clerk"]
+    C --> E["Clerk creates user"]
+    E --> F["getTenantContext() heals:<br/>Creates User + OrganizationUser rows"]
+    F --> G["Redirect to Dashboard"]
+    D --> G
+    G --> H{"Has organization?"}
+    H -->|No| I["Create or join organization"]
+    H -->|Yes| J{"Has boards?"}
+    I --> J
+    J -->|No| K["Create first board (or use template)"]
+    J -->|Yes| L["Show board list"]
+    K --> L
+```
+
+### Card Lifecycle
+
+```mermaid
+flowchart LR
+    Create["Create Card"] --> Assign["Assign Member"]
+    Assign --> Labels["Add Labels + Priority"]
+    Labels --> Track["Track Time"]
+    Track --> Move["Move Between Lists (Drag & Drop)"]
+    Move --> Complete["Mark Complete"]
+    Complete --> Archive["Archive"]
+
+    subgraph "Throughout Lifecycle"
+        Comment["Add Comments"]
+        Attach["Upload Files"]
+        Checklist["Update Checklists"]
+        Deps["Link Dependencies"]
+    end
+```
+
+### Server Action Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant Client as Browser
+    participant SA as Server Action
+    participant CSA as createSafeAction
+    participant TC as getTenantContext
+    participant DB as PostgreSQL
+    participant EB as Event Bus
+
+    Client->>SA: Invoke server action
+    SA->>CSA: Validate input (Zod schema)
+    alt Validation fails
+        CSA-->>Client: { fieldErrors }
+    end
+    CSA->>TC: getTenantContext()
+    TC-->>CSA: { userId, orgId, role }
+    CSA->>DB: Execute mutation (scoped by orgId)
+    DB-->>CSA: Result
+    CSA->>EB: emitCardEvent()
+    par Parallel
+        EB->>EB: runAutomations()
+        EB->>EB: fireWebhooks()
+    end
+    CSA-->>Client: { data: result }
+    Note over Client: Supabase broadcast updates all connected clients
+```
+
+---
+
+## Use Case Diagram
+
+```mermaid
+graph TB
+    subgraph Roles
+        Guest["Guest (shared link)"]
+        Viewer["Board Viewer"]
+        Member["Board Member"]
+        Admin["Board Admin"]
+        Owner["Org Owner"]
+    end
+
+    subgraph Board Interaction
+        ViewBoard["View Board"]
+        ViewCards["View Cards"]
+        CreateCard["Create Cards"]
+        EditCard["Edit Cards"]
+        DeleteCard["Delete Cards"]
+        MoveCard["Drag & Drop Cards"]
+        Comment["Add Comments"]
+        Attach["Upload Files"]
+        Track["Track Time"]
+    end
+
+    subgraph Board Management
+        CreateBoard["Create Board"]
+        EditSettings["Edit Board Settings"]
+        ManageMembers["Manage Board Members"]
+        ConfigPerms["Configure Permissions"]
+        ShareBoard["Share Board (Public Link)"]
+        DeleteBoard["Delete Board"]
+    end
+
+    subgraph Organisation
+        ManageOrg["Manage Org Members"]
+        ManageBilling["Manage Billing"]
+        ViewAnalytics["View Analytics"]
+        ExportData["Export Data / PDF"]
+        ConfigAuto["Configure Automations"]
+        ManageWebhooks["Manage Webhooks"]
+        ManageAPIKeys["Manage API Keys"]
+    end
+
+    Guest --> ViewBoard
+    Guest --> ViewCards
+    Viewer --> ViewBoard
+    Viewer --> ViewCards
+    Member --> CreateCard
+    Member --> EditCard
+    Member --> MoveCard
+    Member --> Comment
+    Member --> Attach
+    Member --> Track
+    Admin --> DeleteCard
+    Admin --> EditSettings
+    Admin --> ManageMembers
+    Admin --> ConfigPerms
+    Admin --> ShareBoard
+    Owner --> CreateBoard
+    Owner --> DeleteBoard
+    Owner --> ManageOrg
+    Owner --> ManageBilling
+    Owner --> ViewAnalytics
+    Owner --> ExportData
+    Owner --> ConfigAuto
+    Owner --> ManageWebhooks
+    Owner --> ManageAPIKeys
+```
+
+---
+
+## Scalability
+
+### Current Design
+
+- **Stateless API** — All state lives in PostgreSQL. Any Vercel serverless function can handle any request
+- **PgBouncer** — Pools DB connections on port 6543. Prisma connects through the pooler; direct connection on port 5432 for migrations only
+- **O(1) ordering** — LexoRank insertions touch exactly one DB row regardless of list size
+- **Request deduplication** — `getTenantContext()` wrapped in `cache()` — one auth + DB call per request maximum
+- **Edge network** — Vercel global edge for all static assets cached with 1-year immutable headers
+- **Event fan-out** — `emitCardEvent()` uses `Promise.allSettled()` — automations and webhooks run in parallel without blocking the HTTP response
+
+### Scaling Considerations
+
+| Concern | Current | Production Scale Path |
+|---|---|---|
+| Rate limiting | In-memory `Map` (single instance) | Replace with Redis/Upstash for distributed limiting |
+| DB connections | Supabase free tier limits | Scale Supabase plan, monitor PgBouncer utilization |
+| Realtime connections | Per-project Supabase limits | Shard by organization at high concurrency |
+| File storage | Supabase Storage | Add CDN in front of storage bucket |
+| Automation engine | Max depth 3, synchronous | Move to background job queue (e.g., BullMQ + Redis) |
+| AI quota | Per-org daily counter | Already implemented — extend with per-user limits |
+
+---
+
+## Known Limitations & Roadmap
+
+### Current Limitations
+
+- **Rate limiting is in-memory** — Single-instance only. Multi-instance deployments require Redis
+- **Test coverage is ~19.5%** — Core paths (auth, billing, RBAC) are covered; UI components are not
+- **No offline support** — Service Worker handles push notifications only, not offline caching
+- **No native mobile app** — Web UI is responsive, but no iOS/Android app exists
+- **No SSO/SAML** — Enterprise authentication not yet implemented
+
+### Potential Roadmap Items
+
+- Redis-backed distributed rate limiting (Upstash)
+- Offline-first support with background sync
+- Native mobile application (React Native or enhanced PWA)
+- SSO/SAML for enterprise authentication
+- Google Calendar and Outlook integration
+- AI-powered task prioritization and workload balancing
+- Board activity heatmaps
+- Advanced historical analytics with trend predictions
 
 ---
 
 ## Contributing
 
 ```bash
-# 1. Fork and branch
-git checkout -b feat/your-feature-name
+# 1. Fork the repository
 
-# 2. Make changes and write tests
+# 2. Create a feature branch
+git checkout -b feature/your-feature-name
 
-# 3. Verify TypeScript
-npx tsc --noEmit
+# 3. Make your changes and write tests
 
-# 4. Verify lint
-npm run lint
+# 4. Verify everything passes
+npx tsc --noEmit        # TypeScript type check
+npm run lint            # ESLint
+npm test                # Jest
 
-# 5. Run tests
-npm run test:ci
+# 5. Commit with conventional format
+git commit -m "feat: add your feature description"
 
-# 6. Conventional commit
-git commit -m "feat(board): add card duplication action"
-# Types: feat | fix | docs | test | refactor | perf | chore
-
-# 7. Push and open PR against main
-# CodeRabbit will review automatically; all 4 CI jobs must be green
+# 6. Push and open a Pull Request
+git push origin feature/your-feature-name
 ```
+
+### Commit Convention
+
+| Prefix | Use For |
+|---|---|
+| `feat:` | New feature |
+| `fix:` | Bug fix |
+| `chore:` | Maintenance, dependency updates |
+| `docs:` | Documentation changes |
+| `test:` | Adding or updating tests |
+| `refactor:` | Code restructuring, no behavior change |
+| `perf:` | Performance improvement |
+| `security:` | Security fix or hardening |
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT License — Copyright (c) 2026 Viraj Pankaj Jain
+
+See [LICENSE](LICENSE) for the full license text.
+
+---
+
+## Acknowledgements
+
+- [Next.js](https://nextjs.org) — App Router, Server Components, Server Actions
+- [React](https://react.dev) — UI library with React Compiler
+- [Prisma](https://prisma.io) — Type-safe ORM and migration tooling
+- [Clerk](https://clerk.com) — Multi-organization authentication
+- [Stripe](https://stripe.com) — Payment processing and billing
+- [Supabase](https://supabase.com) — Realtime WebSockets and PostgreSQL hosting
+- [Tailwind CSS](https://tailwindcss.com) — Utility-first CSS
+- [shadcn/ui](https://ui.shadcn.com) — Accessible UI primitives
+- [@dnd-kit](https://dndkit.com) — Drag-and-drop toolkit
+- [TipTap](https://tiptap.dev) — Rich text editor
+- [Recharts](https://recharts.org) — Charting library
+- [Framer Motion](https://www.framer.com/motion) — Animation library
+- [Zod](https://zod.dev) — Schema validation
+- [Sentry](https://sentry.io) — Error tracking and performance monitoring
+- [Resend](https://resend.com) — Transactional email
+- [OpenAI](https://openai.com) — AI features
 
 ---
 
 <div align="center">
-
-Built with [Next.js](https://nextjs.org)  [Supabase](https://supabase.com)  [Clerk](https://clerk.com)  [Stripe](https://stripe.com)  [OpenAI](https://openai.com)  [Resend](https://resend.com)  [Sentry](https://sentry.io)
-
-[GitHub Repository](https://github.com/viraj1011JAIN/Nexus/issues)  [Report a Bug](https://github.com/viraj1011JAIN/Nexus/issues)  [Request a Feature](https://github.com/viraj1011JAIN/Nexus/issues)
-
+  <sub>Built with precision. Designed for scale. Documented for clarity.</sub>
 </div>

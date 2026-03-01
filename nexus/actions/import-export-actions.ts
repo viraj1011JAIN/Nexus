@@ -13,6 +13,7 @@ import "server-only";
 
 import { auth }   from "@clerk/nextjs/server";
 import { db }     from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant-context";
 import { revalidatePath } from "next/cache";
 
 // ─── Export: JSON ─────────────────────────────────────────────────────────────
@@ -138,8 +139,8 @@ interface NexusBoardImport { title: string; imageUrl?: string; lists: NexusListI
 interface NexusExport     { __nexusExport: "v1"; board: NexusBoardImport }
 
 export async function importFromJSON(payload: unknown): Promise<{ data?: { boardId: string }; error?: string }> {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  const { orgId, internalUserId } = ctx;
 
   const exp = payload as NexusExport;
   if (exp?.__nexusExport !== "v1" || !exp.board?.title) {
@@ -154,6 +155,11 @@ export async function importFromJSON(payload: unknown): Promise<{ data?: { board
       imageLinkHTML: "",
       imageUserName: "",
     },
+  });
+
+  // Auto-add importer as board OWNER so they can access it under strict isolation
+  await db.boardMember.create({
+    data: { boardId: board.id, userId: internalUserId, orgId, role: "OWNER", invitedAt: new Date(), joinedAt: new Date() },
   });
 
   for (let li = 0; li < exp.board.lists.length; li++) {
@@ -207,8 +213,8 @@ interface TrelloList  { id: string; name: string; closed: boolean }
 interface TrelloBoard { name: string; lists: TrelloList[]; cards: TrelloCard[] }
 
 export async function importFromTrello(payload: unknown): Promise<{ data?: { boardId: string }; error?: string }> {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  const { orgId, internalUserId } = ctx;
 
   const trello = payload as TrelloBoard;
   if (!trello?.name || !Array.isArray(trello.lists)) {
@@ -223,6 +229,11 @@ export async function importFromTrello(payload: unknown): Promise<{ data?: { boa
       imageLinkHTML: "",
       imageUserName: "",
     },
+  });
+
+  // Auto-add importer as board OWNER so they can access it under strict isolation
+  await db.boardMember.create({
+    data: { boardId: board.id, userId: internalUserId, orgId, role: "OWNER", invitedAt: new Date(), joinedAt: new Date() },
   });
 
   const listIdMap: Record<string, string> = {};
@@ -297,8 +308,8 @@ function jiraStatusToList(status: string): string {
 export async function importFromJira(
   xmlString: string,
 ): Promise<{ data?: { boardId: string }; error?: string }> {
-  const { userId, orgId } = await auth();
-  if (!userId || !orgId) return { error: "Unauthorized" };
+  const ctx = await getTenantContext();
+  const { orgId, internalUserId } = ctx;
 
   if (typeof xmlString !== "string") {
     return { error: "Invalid Jira XML export file." };
@@ -336,6 +347,11 @@ export async function importFromJira(
       imageLinkHTML: "",
       imageUserName: "",
     },
+  });
+
+  // Auto-add importer as board OWNER so they can access it under strict isolation
+  await db.boardMember.create({
+    data: { boardId: board.id, userId: internalUserId, orgId, role: "OWNER", invitedAt: new Date(), joinedAt: new Date() },
   });
 
   const listTitles = ["To Do", "In Progress", "Done"];

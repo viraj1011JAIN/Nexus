@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo, useSyncExternalStore } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
@@ -49,8 +49,7 @@ const CardItemInner = ({
   const cardModal = useCardModal();
   const { isBulkMode, selectedIds, toggleCard } = useBulkSelection();
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const isDark = mounted && resolvedTheme === "dark";
   const isSelected = selectedIds.includes(data.id);
 
