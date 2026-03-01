@@ -44,7 +44,7 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
                     items: { select: { id: true, isComplete: true } },
                   },
                 },
-                _count: { select: { dependencies: true } },
+                _count: { select: { dependencies: true, attachments: true } },
               },
             },
           },

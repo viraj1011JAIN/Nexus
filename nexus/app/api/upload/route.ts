@@ -5,8 +5,11 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getTenantContext, TenantError } from "@/lib/tenant-context";
 
-// 10 MB limit
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// 100 MB limit
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
+
+// Allow up to 60 s on Vercel Pro for large file uploads
+export const maxDuration = 60;
 
 const ALLOWED_MIME_TYPES = new Set([
   // Documents
@@ -15,15 +18,34 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "text/plain",
   "text/csv",
+  "text/markdown",
   // Images
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
+  "image/svg+xml",
+  // Video
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  // Audio
+  "audio/mpeg",
+  "audio/wav",
+  "audio/ogg",
   // Archives
   "application/zip",
+  "application/x-zip-compressed",
+  "application/x-rar-compressed",
+  "application/x-7z-compressed",
+  // Code / data
+  "application/json",
+  "application/xml",
+  "text/xml",
 ]);
 
 function getServiceClient() {

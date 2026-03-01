@@ -7,12 +7,13 @@ import { formatDistanceToNow, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { type AttachmentDto } from "@/actions/attachment-actions";
 
-const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 function fileIcon(mimeType: string) {
@@ -52,7 +53,7 @@ export function FileAttachment({ cardId, boardId, initialAttachments = [], onAtt
     if (!file) return;
 
     if (file.size > MAX_SIZE_BYTES) {
-      toast.error("File exceeds 10 MB limit");
+      toast.error("File exceeds 100 MB limit");
       return;
     }
 
@@ -122,7 +123,7 @@ export function FileAttachment({ cardId, boardId, initialAttachments = [], onAtt
             id={`file-upload-${cardId}`}
             className="sr-only"
             onChange={handleFileChange}
-            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+            accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.md,.json,.xml,.zip,.rar,.7z"
             disabled={uploading}
           />
           <Button
@@ -154,7 +155,15 @@ export function FileAttachment({ cardId, boardId, initialAttachments = [], onAtt
             >
               {fileIcon(att.mimeType)}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{att.fileName}</p>
+                <a
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium truncate block hover:text-primary hover:underline transition-colors"
+                  title="Open in new tab"
+                >
+                  {att.fileName}
+                </a>
                 <p className="text-xs text-muted-foreground">
                   {formatBytes(att.fileSize)} · {att.uploadedByName} ·{" "}
                   {isValid(att.createdAt)

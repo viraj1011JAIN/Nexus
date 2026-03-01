@@ -4,7 +4,7 @@ import { memo, useSyncExternalStore } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
-import { Clock, Lock, CheckSquare, Check } from "lucide-react";
+import { Clock, Lock, CheckSquare, Check, Paperclip } from "lucide-react";
 import { useBulkSelection } from "@/lib/bulk-selection-context";
 import { motion } from "framer-motion";
 import { deleteCard } from "@/actions/delete-card";
@@ -34,7 +34,7 @@ const PRIORITY_DOTS: Record<string, { dark: string; light: string }> = {
 interface CardItemProps {
   data: Card & {
     checklists?: Array<{ items: Array<{ id: string; isComplete: boolean }> }>;
-    _count?: { dependencies?: number };
+    _count?: { dependencies?: number; attachments?: number };
   };
   index: number;
   listColor?: string;
@@ -230,6 +230,17 @@ const CardItemInner = ({
             >
               <Lock className="w-3 h-3" />
               <span>{data._count!.dependencies}</span>
+            </div>
+          )}
+
+          {/* Attachment count badge */}
+          {(data._count?.attachments ?? 0) > 0 && (
+            <div
+              title={`${data._count!.attachments} attachment${data._count!.attachments === 1 ? "" : "s"}`}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+            >
+              <Paperclip className="w-3 h-3" />
+              <span>{data._count!.attachments}</span>
             </div>
           )}
         </div>
