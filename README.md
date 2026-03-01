@@ -1157,8 +1157,8 @@ cp .env.example .env
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/nexus.git
-cd nexus/nexus
+git clone https://github.com/viraj1011JAIN/Nexus.git
+cd Nexus/nexus
 
 # 2. Install dependencies
 npm install
