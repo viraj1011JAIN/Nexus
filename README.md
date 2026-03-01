@@ -912,14 +912,77 @@ There is no `middleware.ts` file. Auth is enforced at the action/route level:
 
 ## Database Architecture
 
+### What the Database Is
+
+Nexus uses **PostgreSQL** hosted on **Supabase**. All database access goes through **Prisma ORM** — a type-safe query builder that auto-generates TypeScript types from the schema. The database is never accessed directly from the browser.
+
 ### Schema Overview
 
-- **34 models** and **13 enums** in `prisma/schema.prisma`
-- All primary keys are CUID strings (not integers)
-- Connection via PgBouncer pooler on port 6543 for app queries
-- Direct connection on port 5432 for migrations only
+- **34 models** — every concept in the app (boards, cards, users, labels, sprints, etc.) has its own table
+- **13 enums** — fixed value sets used across the schema: `BoardRole`, `OrgRole`, `Priority`, `ACTION`, `ENTITY_TYPE`, `SubscriptionPlan`, and more
+- **All primary keys are CUID strings** — e.g. `clx1a2b3c4d5e6f7g8h` — not auto-incremented integers
+  - CUIDs are collision-resistant, URL-safe, and do not expose creation order to attackers
+- **Two database connections are configured:**
+  - `DATABASE_URL` → PgBouncer pooler on port **6543** — used by the app for all reads and writes; handles high concurrency efficiently
+  - `DIRECT_URL` → direct PostgreSQL on port **5432** — used only by Prisma Migrate when running schema migrations
+- **Row-Level Security (RLS)** is enabled — the app sets a PostgreSQL session variable `app.current_org_id` on every connection; RLS policies filter all rows by this variable at the database engine level, so even a misconfigured app query cannot read another tenant's data
+- **A separate `systemDb` Prisma client bypasses RLS** — used only for trusted internal operations: Stripe webhooks, cron jobs, and admin seeding
+- **Cascade deletes are configured carefully:**
+  - Deleting a Board cascades to: Lists → Cards → Comments → Attachments → Checklists → ChecklistItems → BoardMembers → Sprints → Epics → SavedViews → MembershipRequests
+  - Deleting an Organization does **not** cascade automatically — this is an intentional safety guard to prevent accidental data loss
+- **JSON columns** are used where flexibility is needed — automation triggers/conditions/actions, webhook payloads, and audit log before/after snapshots are all stored as JSON
+- **Denormalized user fields** — `Comment` and `AuditLog` store `userName` and `userImage` directly in the row so historical records remain accurate even if a user changes their name or profile picture later
 
 ### Core Entity Relationship Diagram
+
+> **How to read this diagram:**
+> - `||--o{` means "one-to-many" — for example one Organization contains many Boards
+> - `||--||` means "one-to-one" — for example one User has exactly one UserPreference
+> - `}o--o|` means "many-to-optional-one" — for example many Boards can optionally use one PermissionScheme
+
+**Plain English walkthrough of every relationship:**
+
+- **Organization → Board** — Every board belongs to exactly one organization. An organization can have many boards (up to 50 on FREE plan, unlimited on PRO).
+- **Organization → OrganizationUser** — This is the membership table. It records which users are members of which organization, and their role (OWNER / ADMIN / MEMBER / GUEST).
+- **Organization → Label** — Labels (coloured tags applied to cards) are defined at the organization level and shared across all boards in that org.
+- **Organization → Automation** — Automation rules ("when X happens, do Y") are set up per organization.
+- **Organization → Webhook** — Outbound HTTP webhooks are registered per organization. When events happen, Nexus sends signed HTTP POST requests to the configured URLs.
+- **Organization → ApiKey** — API keys for the public REST API are issued per organization.
+- **Organization → PermissionScheme** — Custom permission schemes can be created per organization and then applied to individual boards or members.
+- **Organization → MembershipRequest** — When someone requests to join the organization, a record is created here.
+- **Organization → Initiative** — High-level strategic initiatives that group multiple epics together.
+- **Organization → Notification** — In-app notifications sent to org members.
+- **User → OrganizationUser** — A user can be a member of multiple organizations (through multiple OrganizationUser rows).
+- **User → BoardMember** — A user can be a member of multiple boards.
+- **User → Card** — Cards can be assigned to a user (the assignee).
+- **User → TimeLog** — Users log their time spent working on cards.
+- **User → ApiKey** — Each API key is owned by a specific user.
+- **User → UserPreference** — One-to-one settings record per user: theme preference, notification settings, etc.
+- **Board → List** — A board contains multiple lists (Kanban columns like "To Do", "In Progress", "Done").
+- **Board → BoardMember** — Tracks which users have access to a specific board and their role on that board.
+- **Board → Sprint** — Boards can have sprints for Scrum-style time-boxed work.
+- **Board → BoardShare** — Public share links for guest access are stored here with expiry and password.
+- **Board → Epic** — Large features or themes that group related cards together.
+- **Board → SavedView** — Users can save filter combinations (e.g. "My high priority cards") as named views.
+- **Board → MembershipRequest** — Users can request access to a specific board.
+- **Board ↔ PermissionScheme** — A board can optionally be linked to a custom permission scheme that overrides the default role matrix.
+- **List → Card** — Each list contains multiple cards. Cards are ordered by their `order` field (LexoRank string).
+- **Card → Comment** — Cards have threaded comments. Each comment is a rich-text entry made by a user.
+- **Card → Attachment** — Files uploaded to a card are stored in Supabase Storage; the Attachment record holds the URL, filename, size, and uploader.
+- **Card → Checklist** — A card can have multiple named checklists, each containing multiple checkbox items.
+- **Card → CardLabelAssignment** — Labels are applied to cards through this join table (many-to-many between Card and Label).
+- **Card → TimeLog** — Individual time log entries per card per user.
+- **Card → CardDependency** — Links between cards: "this card blocks that card", "this card is blocked by that card", or "related".
+- **Card ↔ Sprint** — A card can optionally be placed inside a sprint.
+- **Card ↔ Epic** — A card can optionally belong to an epic.
+- **Label → CardLabelAssignment** — Each label can be applied to many cards.
+- **Checklist → ChecklistItem** — Each checklist has multiple items; each item has a `completed` boolean.
+- **Comment → CommentReaction** — Emoji reactions on comments (like Slack reactions).
+- **Comment → Comment** — Comments can have replies (self-referential relationship).
+- **PermissionScheme → PermissionSchemeEntry** — Each scheme has multiple entries, each mapping a role to a specific permission.
+- **Automation → AutomationLog** — Every time an automation rule runs, a log entry is created with the result.
+- **Webhook → WebhookDelivery** — Every outbound webhook request is logged with the HTTP status, response body, and timing.
+- **Initiative → Epic** — An initiative groups multiple epics (cross-board strategic planning).
 
 ```mermaid
 erDiagram
@@ -971,82 +1034,323 @@ erDiagram
     Initiative ||--o{ Epic : "contains"
 ```
 
-### Key Model Fields
+### Database Schema — Every Model Explained
 
-```
-Organization
-  id                String   (CUID)
-  name              String
-  slug              String   (unique)
-  region            String
-  subscriptionPlan  String   (FREE / PRO)
-  stripeCustomerId  String?
-  stripeSubscriptionId String?
-  aiCallsToday      Int
+Below is every model in the database with a plain English description of each field and why it exists.
 
-User
-  id          String   (CUID)
-  clerkUserId String   (unique)
-  email       String   (unique)
-  name        String
-  imageUrl    String
+---
 
-Board
-  id                  String   (CUID)
-  orgId               String   (FK → Organization)
-  title               String
-  isPrivate           Boolean
-  imageThumbUrl       String?
-  permissionSchemeId  String?  (FK → PermissionScheme)
+#### `Organization`
+Represents a company or team workspace. Everything in the app is scoped to an organization.
 
-List
-  id       String   (CUID)
-  boardId  String   (FK → Board)
-  title    String
-  order    String   (LexoRank)
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Unique ID, never exposed as a sequential number |
+| `name` | String | Display name shown in the UI (e.g. "Acme Corp") |
+| `slug` | String (unique) | URL-friendly identifier (e.g. `acme-corp`) |
+| `region` | String | Data residency region selected at creation |
+| `subscriptionPlan` | Enum | `FREE` or `PRO` — controls feature limits |
+| `stripeCustomerId` | String? | Stripe's ID for this customer (set after first checkout) |
+| `stripeSubscriptionId` | String? | Active Stripe subscription ID |
+| `currentPeriodEnd` | DateTime? | When the current billing period ends |
+| `aiCallsToday` | Int | Counter reset daily — enforces per-org AI usage limits |
+| `createdAt` | DateTime | When the org was created |
 
-Card
-  id           String    (CUID)
-  listId       String    (FK → List)
-  assigneeId   String?   (FK → User)
-  title        String
-  description  String?
-  order        String    (LexoRank)
-  priority     Priority  (LOW/MEDIUM/HIGH/URGENT)
-  dueDate      DateTime?
-  storyPoints  Int?
-  sprintId     String?   (FK → Sprint)
-  epicId       String?   (FK → Epic)
+---
 
-BoardMember
-  id                  String    (CUID)
-  boardId             String    (FK → Board)
-  userId              String    (FK → User)
-  orgId               String
-  role                BoardRole (OWNER/ADMIN/MEMBER/VIEWER)
-  permissionSchemeId  String?   (FK → PermissionScheme)
+#### `User`
+A real person who has signed in. Created automatically the first time a Clerk user accesses the app.
 
-AuditLog
-  id             String  (CUID)
-  orgId          String  (FK → Organization)
-  boardId        String? (FK → Board)
-  action         ACTION  (enum)
-  entityType     ENTITY_TYPE (enum)
-  entityId       String
-  ipAddress      String
-  userAgent      String
-  previousValues Json
-  newValues      Json
-```
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Internal user ID used for all DB relations |
+| `clerkUserId` | String (unique) | The `userId` from Clerk's JWT — used to link Clerk sessions to this record |
+| `email` | String (unique) | User's email address |
+| `name` | String | Display name |
+| `imageUrl` | String | Profile photo URL (from Clerk / OAuth provider) |
+| `createdAt` | DateTime | When the account was first created in Nexus |
+
+---
+
+#### `OrganizationUser`
+The join table between a User and an Organization. A user can be a member of multiple orgs.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Row ID |
+| `userId` | FK → User | Which user this membership is for |
+| `orgId` | FK → Organization | Which organization this membership is in |
+| `role` | OrgRole | `OWNER` / `ADMIN` / `MEMBER` / `GUEST` |
+| `isActive` | Boolean | `false` = suspended; these users are rejected at the auth gate |
+| `status` | Enum | `ACTIVE` / `SUSPENDED` / `PENDING` |
+| `joinedAt` | DateTime | When they joined |
+
+---
+
+#### `Board`
+A project workspace with multiple lists and cards inside it.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Board ID (used in the URL: `/board/[boardId]`) |
+| `orgId` | FK → Organization | Which org this board belongs to — every query is scoped by this |
+| `title` | String | Board name shown at the top |
+| `isPrivate` | Boolean | If `true`, only explicitly added members can see it — org admins cannot see it unless added |
+| `imageFullUrl` | String? | Full-resolution Unsplash background image |
+| `imageThumbUrl` | String? | Thumbnail used for board cards on the dashboard |
+| `imageUserName` | String? | Unsplash photographer name (attribution requirement) |
+| `permissionSchemeId` | FK? → PermissionScheme | Optional custom permission override for this board |
+| `createdById` | FK → User | Who created this board |
+| `createdAt` | DateTime | Creation timestamp |
+
+---
+
+#### `List`
+A single column in Kanban view (e.g. "To Do", "In Progress", "Done").
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | List ID |
+| `boardId` | FK → Board | Which board this column belongs to |
+| `title` | String | Column name — editable in-place |
+| `order` | String | LexoRank string (e.g. `"m"`) — determines left-to-right column position |
+| `createdAt` | DateTime | Creation timestamp |
+
+---
+
+#### `Card`
+The core work item in the app — equivalent to a Jira issue or Trello card.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Card ID |
+| `listId` | FK → List | Which list/column this card currently lives in |
+| `assigneeId` | FK? → User | The person assigned to work on this card |
+| `title` | String | Short title of the card |
+| `description` | String? | Rich text content (stored as HTML/JSON from TipTap editor) |
+| `order` | String | LexoRank string — determines vertical position within a list |
+| `priority` | Priority enum | `LOW` / `MEDIUM` / `HIGH` / `URGENT` — shown as a coloured accent bar |
+| `dueDate` | DateTime? | Optional deadline — cards turn red when overdue |
+| `storyPoints` | Int? | Effort estimate for sprint planning |
+| `sprintId` | FK? → Sprint | Optional sprint assignment |
+| `epicId` | FK? → Epic | Optional epic assignment |
+| `isArchived` | Boolean | Archived cards are hidden from normal view but not deleted |
+| `coverImage` | String? | URL of a cover photo shown at the top of the card |
+| `coverColor` | String? | Hex color for a solid color cover |
+| `createdAt` | DateTime | Creation timestamp |
+| `updatedAt` | DateTime | Last modified timestamp |
+
+---
+
+#### `BoardMember`
+Gate 2 of access control — explicitly tracks who has access to each board.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Row ID |
+| `boardId` | FK → Board | The board being accessed |
+| `userId` | FK → User | The user who has access |
+| `orgId` | String | Denormalized org ID for fast scoped queries |
+| `role` | BoardRole | `OWNER` / `ADMIN` / `MEMBER` / `VIEWER` |
+| `permissionSchemeId` | FK? → PermissionScheme | Optional per-member custom permissions |
+| `joinedAt` | DateTime | When access was granted |
+
+---
+
+#### `Sprint`
+A time-boxed period of work for Scrum teams.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Sprint ID |
+| `boardId` | FK → Board | Which board this sprint belongs to |
+| `name` | String | Sprint name (e.g. "Sprint 4") |
+| `goal` | String? | Optional sprint goal description |
+| `startDate` | DateTime? | Sprint start date |
+| `endDate` | DateTime? | Sprint end date |
+| `status` | SprintStatus | `PLANNING` / `ACTIVE` / `COMPLETED` |
+| `velocity` | Int? | Story points completed — calculated on completion |
+
+---
+
+#### `Epic`
+A large feature or theme that groups multiple related cards.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Epic ID |
+| `boardId` | FK → Board | Which board this epic lives in |
+| `initiativeId` | FK? → Initiative | Optional link to a higher-level initiative |
+| `title` | String | Epic name |
+| `color` | String | Color used in Gantt and roadmap views |
+| `startDate` | DateTime? | Planned start |
+| `endDate` | DateTime? | Planned end |
+| `status` | EpicStatus | `PLANNED` / `IN_PROGRESS` / `COMPLETED` |
+
+---
+
+#### `Comment`
+Rich-text comment on a card. Supports threading (replies) and emoji reactions.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Comment ID |
+| `cardId` | FK → Card | Which card this comment is on |
+| `userId` | FK → User | Who wrote it |
+| `userName` | String | Denormalized — preserved even if user changes display name |
+| `userImage` | String | Denormalized — preserved even if user changes avatar |
+| `content` | String | Rich-text HTML from TipTap editor |
+| `parentId` | FK? → Comment | If this is a reply, points to the parent comment |
+| `isEdited` | Boolean | Shown as "(edited)" in the UI if `true` |
+| `createdAt` | DateTime | Timestamp |
+
+---
+
+#### `Attachment`
+A file uploaded to a card, stored in Supabase Storage.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Attachment ID |
+| `cardId` | FK → Card | Which card this file belongs to |
+| `uploadedById` | FK → User | Who uploaded it |
+| `name` | String | Original filename |
+| `url` | String | Supabase Storage URL |
+| `size` | Int | File size in bytes |
+| `mimeType` | String | MIME type (e.g. `image/png`, `application/pdf`) |
+| `createdAt` | DateTime | Upload timestamp |
+
+---
+
+#### `Checklist` and `ChecklistItem`
+A named to-do list inside a card.
+
+| Field | Type | Description |
+|---|---|---|
+| `Checklist.title` | String | Name of the checklist (e.g. "Acceptance Criteria") |
+| `ChecklistItem.title` | String | The individual to-do item |
+| `ChecklistItem.completed` | Boolean | Whether the item has been ticked |
+| `ChecklistItem.order` | String | LexoRank ordering within the checklist |
+
+---
+
+#### `Label`
+Coloured tag applied to cards to categorize or filter them.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Label ID |
+| `orgId` | FK → Organization | Labels are shared across all boards in an org |
+| `name` | String | Label text (e.g. "Bug", "Feature") |
+| `color` | String | Hex color (e.g. `#E53E3E`) |
+
+---
+
+#### `AuditLog`
+Immutable record of every significant action taken in the system.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Log entry ID |
+| `orgId` | FK → Organization | Tenant scope |
+| `boardId` | FK? → Board | Board context (nullable for org-level actions) |
+| `userId` | FK → User | Who performed the action |
+| `userName` | String | Denormalized name (preserved historically) |
+| `userImage` | String | Denormalized avatar |
+| `action` | ACTION enum | What happened (e.g. `CARD_CREATED`, `MEMBER_REMOVED`) |
+| `entityType` | ENTITY_TYPE enum | What type of thing was affected (e.g. `CARD`, `BOARD`, `USER`) |
+| `entityId` | String | The ID of the affected thing |
+| `entityTitle` | String | Name/title of the affected thing at time of action |
+| `ipAddress` | String | Client IP address |
+| `userAgent` | String | Browser/client info |
+| `previousValues` | Json | Snapshot of the record before the change |
+| `newValues` | Json | Snapshot of the record after the change |
+| `createdAt` | DateTime | When the action happened |
+
+---
+
+#### `PermissionScheme` and `PermissionSchemeEntry`
+Allows overriding the default role-to-permission mapping per board or per member.
+
+| Field | Type | Description |
+|---|---|---|
+| `PermissionScheme.name` | String | Human-readable name (e.g. "Read-only clients") |
+| `PermissionSchemeEntry.role` | BoardRole | The role this entry applies to |
+| `PermissionSchemeEntry.permission` | Permission enum | The specific permission being granted or denied |
+| `PermissionSchemeEntry.granted` | Boolean | `true` = allow, `false` = deny |
+
+---
+
+#### `Automation` and `AutomationLog`
+If-then rules that run automatically when card events fire.
+
+| Field | Type | Description |
+|---|---|---|
+| `Automation.trigger` | Json | What causes the rule to run (e.g. `{"type": "CARD_MOVED", "listId": "..."}`) |
+| `Automation.conditions` | Json | Optional filters to narrow when the rule applies |
+| `Automation.actions` | Json | What to do when triggered (e.g. assign a member, add a label) |
+| `Automation.isActive` | Boolean | Enable/disable the rule without deleting it |
+| `AutomationLog.status` | String | `SUCCESS` or `FAILED` |
+| `AutomationLog.error` | String? | Error message if the automation failed |
+
+---
+
+#### `Webhook` and `WebhookDelivery`
+Outbound HTTP notifications sent to external URLs when events happen.
+
+| Field | Type | Description |
+|---|---|---|
+| `Webhook.url` | String | The HTTPS endpoint to send events to |
+| `Webhook.secret` | String | Per-webhook HMAC secret for signing each request |
+| `Webhook.events` | String[] | List of event types subscribed to |
+| `Webhook.isActive` | Boolean | Can be paused without deleting |
+| `WebhookDelivery.status` | Int | HTTP response status code |
+| `WebhookDelivery.responseBody` | String | First 2000 chars of the response body |
+| `WebhookDelivery.duration` | Int | Round-trip time in milliseconds |
+| `WebhookDelivery.nextRetryAt` | DateTime? | Set if delivery failed and retry is scheduled |
+
+---
+
+#### `ApiKey`
+Programmatic access tokens for the public REST API.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Key ID |
+| `orgId` | FK → Organization | Which org this key belongs to |
+| `userId` | FK → User | Who created the key |
+| `name` | String | Friendly name (e.g. "CI/CD pipeline") |
+| `keyHash` | String | SHA-256 hash of the actual key — plaintext is never stored |
+| `prefix` | String | First 8 chars of the key (e.g. `nxk_a1b2`) shown in UI for identification |
+| `scopes` | String[] | List of permissions (e.g. `["boards:read", "cards:write"]`) |
+| `expiresAt` | DateTime? | Optional expiry date |
+| `lastUsedAt` | DateTime? | Updated on every API call |
+| `totalRequests` | Int | Lifetime usage counter |
+
+---
+
+#### `UserPreference`
+Per-user settings stored in the database.
+
+| Field | Type | Description |
+|---|---|---|
+| `userId` | FK → User (unique) | One preference record per user |
+| `theme` | String | `"dark"` or `"light"` |
+| `emailNotifications` | Boolean | Whether to receive email summaries |
+| `pushNotifications` | Boolean | Whether browser push is enabled |
+| `digestFrequency` | String | `"daily"` / `"weekly"` / `"never"` |
+
+---
 
 ### Database Design Decisions
 
-- **CUID primary keys** — Avoids integer sequence guessing, safe for distributed systems
-- **LexoRank `order` field** — Cards and lists use string ordering (`"m"`, `"n"`, `"o"`) for O(1) reordering
-- **Denormalized user fields** — `Comment` and `AuditLog` store `userName`/`userImage` directly to avoid joins and preserve historical accuracy
-- **JSON columns** — `Automation.trigger/conditions/actions`, `WebhookDelivery.payload`, `AuditLog.previousValues/newValues`, `BoardAnalytics.weeklyTrends` all use JSON for schema-less flexibility
-- **Cascade deletes** — Board deletion cascades to lists → cards → comments/attachments/checklists/members
-- **Organization deletion is NOT cascaded** (intentional safety guard)
+- **CUID primary keys** — CUIDs look like `clx1a2b3c4d` — they are random enough to be unguessable, safe to expose in URLs, and work in distributed environments without a central sequence counter
+- **LexoRank `order` field** — Cards and lists are sorted by a string like `"m"` or `"nt"` instead of integers. Moving a card only requires updating that one card's `order` string — no other rows are touched regardless of how many items are in the list
+- **Denormalized user fields on Comment + AuditLog** — Storing `userName` and `userImage` directly in those rows means historical records stay accurate even after a user renames themselves or changes avatar. No join required either, which speeds up the activity feed.
+- **JSON columns** — `Automation.trigger/conditions/actions`, `WebhookDelivery.payload`, and `AuditLog.previousValues/newValues` use JSON because their shape varies by use case — using JSON avoids dozens of extra tables for each automation trigger type or action type
+- **Cascade deletes (Board → List → Card → …)** — Deleting a board automatically cleans up all child records so no orphaned data is left behind. The cascade chain is: Board → Lists → Cards → (Comments, Attachments, Checklists, Labels, TimeLogs, Dependencies, BoardMembers, Sprints, Epics, SavedViews)
+- **Organization deletion is NOT cascaded** — Deleting an org is a rare, irreversible action. Nexus requires explicit cleanup to prevent accidental mass data loss from a single API call
+- **Separate `systemDb` for trusted operations** — Stripe webhooks and cron jobs use a Prisma client that bypasses Row-Level Security. This is intentional — these processes need to read/write across tenant boundaries, but they authenticate via HMAC signatures and cron secrets rather than Clerk JWTs
 
 ---
 
@@ -1924,136 +2228,397 @@ npx prisma migrate deploy
 
 ## Workflow Diagrams
 
-### User Onboarding Flow
+> These diagrams show the step-by-step paths that data and users follow through the application. Each one is explained in plain English below the diagram.
+
+---
+
+### 1. User Onboarding Flow
+
+**What this diagram shows:** The path a brand new user takes from first visiting the site to seeing their first board.
+
+**Step by step:**
+- User opens the Nexus URL for the first time
+- If they don't have an account, they click **Sign Up** — Clerk handles the registration form, email verification, and session creation
+- If they already have an account, they click **Sign In** — Clerk validates credentials and issues a signed JWT
+- After sign-in, the app calls `getTenantContext()` — this function reads the Clerk JWT, finds the user's internal database record, and creates it automatically if this is their very first sign-in (the "healing" path)
+- If the user has no organization yet, they are shown a prompt to create one or request to join an existing one
+- Once inside an organization, if no boards exist, they see a prompt to create the first board (or pick from a template)
+- After board creation, they land on the full Kanban view
 
 ```mermaid
 flowchart TD
     A["User visits Nexus"] --> B{"Has account?"}
     B -->|No| C["Sign Up via Clerk"]
     B -->|Yes| D["Sign In via Clerk"]
-    C --> E["Clerk creates user"]
-    E --> F["getTenantContext() heals:<br/>Creates User + OrganizationUser rows"]
+    C --> E["Clerk creates user + sends email verification"]
+    E --> F["getTenantContext() healing path:<br/>Creates User row + OrganizationUser row in DB"]
     F --> G["Redirect to Dashboard"]
     D --> G
     G --> H{"Has organization?"}
-    H -->|No| I["Create or join organization"]
+    H -->|No| I["Create organization OR request to join one"]
     H -->|Yes| J{"Has boards?"}
     I --> J
-    J -->|No| K["Create first board (or use template)"]
-    J -->|Yes| L["Show board list"]
+    J -->|No| K["Create first board (blank or from template)"]
+    J -->|Yes| L["Show board list on Dashboard"]
     K --> L
+    L --> M["Click a board → Full Kanban view"]
 ```
 
-### Card Lifecycle
+---
+
+### 2. Card Lifecycle
+
+**What this diagram shows:** The full journey of a work item (card) from creation to completion.
+
+**Step by step:**
+- A card is created inside a list (column) — either by clicking "Add card" or via AI suggestions
+- A team member is assigned to own the work
+- Labels (e.g. "Bug", "Feature") and a priority level (Low / Medium / High / Urgent) are set
+- Time tracking begins — members log hours spent on the card
+- As work progresses, the card is dragged between lists (e.g. from "In Progress" to "Review")
+- Throughout the entire lifecycle, teammates can add comments, upload files, tick off checklist items, and link dependencies to other cards
+- When work is done, the card is moved to the final "Done" list
+- Completed cards can be archived — they disappear from normal view but remain in the database for reporting
 
 ```mermaid
 flowchart LR
-    Create["Create Card"] --> Assign["Assign Member"]
-    Assign --> Labels["Add Labels + Priority"]
-    Labels --> Track["Track Time"]
-    Track --> Move["Move Between Lists (Drag & Drop)"]
-    Move --> Complete["Mark Complete"]
-    Complete --> Archive["Archive"]
+    Create["Create Card in a List"] --> Assign["Assign to a Team Member"]
+    Assign --> Meta["Set Labels, Priority & Due Date"]
+    Meta --> Sprint["Add to Sprint / Epic"]
+    Sprint --> Track["Log Time & Update Checklists"]
+    Track --> Move["Drag Between Lists as Work Progresses"]
+    Move --> Review["Move to Review / QA List"]
+    Review --> Done["Move to Done List"]
+    Done --> Archive["Archive Card"]
 
-    subgraph "Throughout Lifecycle"
-        Comment["Add Comments"]
-        Attach["Upload Files"]
-        Checklist["Update Checklists"]
-        Deps["Link Dependencies"]
+    subgraph "Happens at any point during lifecycle"
+        Comment["Add Rich-Text Comments"]
+        Attach["Upload Files & Screenshots"]
+        Deps["Link Dependencies (Blocks / Blocked By)"]
+        AI["Generate AI Description or Checklist Items"]
+        Reactions["React to Comments with Emoji"]
     end
 ```
 
-### Server Action Execution Flow
+---
+
+### 3. Drag & Drop Card Reordering Flow
+
+**What this diagram shows:** Exactly what happens in the system when a user picks up a card and drops it somewhere else — including how the UI stays fast and how other users see the update.
+
+**Step by step:**
+- User grabs a card — `@dnd-kit` starts tracking the drag; a ghost copy (`DragOverlay`) follows the cursor
+- The UI updates **immediately** (optimistic update) — the card appears in its new position before any server call is made. This makes the app feel instant.
+- When the user drops the card, `LexoRank` calculates the new `order` string based on the cards above and below the drop position
+- A server action (`update-card-order`) fires — it validates the input, checks the user has permission to move cards on this board, then writes exactly **one row** to the database (just the moved card's `order` field)
+- The event bus fires — it checks if any automation rules match (e.g. "when a card is moved to Done, assign the owner") and sends outbound webhooks
+- Supabase detects the database change via `postgres_changes` and broadcasts it over the WebSocket channel for this board
+- Every other user who has this board open receives the event and their UI updates in real time — they see the card move without refreshing
+- If the server action fails, the optimistic update is rolled back and the card snaps back to its original position
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant DND as @dnd-kit
+    participant OPT as Optimistic UI
+    participant SA as Server Action
+    participant DB as PostgreSQL
+    participant EB as Event Bus
+    participant RT as Supabase Realtime
+    participant Other as Other Users
+
+    U->>DND: Starts dragging card
+    DND->>OPT: Show DragOverlay ghost
+    U->>DND: Drops card in new position
+    DND->>OPT: Update local state immediately (0ms delay)
+    DND->>SA: Call update-card-order(cardId, newOrder)
+    SA->>SA: Validate input via Zod schema
+    SA->>SA: getTenantContext() — check auth + MOVE_CARD permission
+    SA->>DB: UPDATE card SET order = newLexoRank WHERE id = cardId
+    DB-->>SA: Success
+    SA->>EB: emitCardEvent(CARD_MOVED)
+    par
+        EB->>EB: runAutomations()
+        EB->>EB: fireWebhooks() (HMAC-signed)
+    end
+    DB->>RT: postgres_changes fires on card row update
+    RT->>Other: Broadcast card move event
+    Other->>Other: UI updates — card appears in new position
+    Note over U,OPT: If SA fails → OPT rolls back to original position
+```
+
+---
+
+### 4. Server Action Execution Flow
+
+**What this diagram shows:** The exact lifecycle every server action follows — from the user clicking a button to the database being updated and other users being notified. This is the same pattern used by all 40 server actions in the codebase.
+
+**Step by step:**
+- User does something in the UI (e.g. creates a card, adds a label, invites a member)
+- The browser calls a Next.js Server Action directly — no `fetch()` to a REST endpoint needed
+- `createSafeAction` (the shared wrapper) first validates the input using a Zod schema — if validation fails, field errors are returned immediately with no DB involvement
+- `getTenantContext()` runs — it reads the Clerk JWT to get `userId` and `orgId`, then verifies the user is an active organization member. If this fails, a 403 error is returned.
+- The RBAC permission check runs — the specific permission needed for this action is checked against the user's board role and any custom permission scheme
+- Prisma runs the database mutation, scoped to `orgId` — it is impossible for a bug to accidentally write to another tenant's data because every query includes the `orgId` filter
+- `emitCardEvent()` fires asynchronously — automations and outbound webhooks run in parallel without slowing down the response
+- `createAuditLog()` writes an immutable record of what happened
+- The result is returned to the browser — on success the UI confirms; on failure the error is user-safe (internal IDs and stack traces are never sent to the client)
 
 ```mermaid
 sequenceDiagram
     participant Client as Browser
     participant SA as Server Action
-    participant CSA as createSafeAction
+    participant CSA as createSafeAction wrapper
+    participant ZOD as Zod Schema
     participant TC as getTenantContext
-    participant DB as PostgreSQL
+    participant RBAC as Permission Check
+    participant DB as PostgreSQL (Prisma)
     participant EB as Event Bus
+    participant AL as Audit Log
+    participant RT as Supabase Realtime
 
-    Client->>SA: Invoke server action
-    SA->>CSA: Validate input (Zod schema)
+    Client->>SA: User triggers action (e.g. createCard)
+    SA->>CSA: Pass raw input
+    CSA->>ZOD: Validate input shape and types
     alt Validation fails
-        CSA-->>Client: { fieldErrors }
+        ZOD-->>Client: Return fieldErrors immediately
     end
+    ZOD-->>CSA: Input is valid
     CSA->>TC: getTenantContext()
-    TC-->>CSA: { userId, orgId, role }
-    CSA->>DB: Execute mutation (scoped by orgId)
-    DB-->>CSA: Result
+    TC-->>CSA: { userId, orgId, role } OR TenantError
+    alt Not authenticated or suspended
+        TC-->>Client: 403 Forbidden
+    end
+    CSA->>RBAC: Check permission (e.g. CREATE_CARD)
+    alt Permission denied
+        RBAC-->>Client: 403 Forbidden
+    end
+    RBAC-->>CSA: Allowed
+    CSA->>DB: Execute mutation scoped to orgId
+    DB-->>CSA: Saved record
+    CSA->>AL: createAuditLog(action, before, after)
     CSA->>EB: emitCardEvent()
-    par Parallel
+    par Runs in parallel, does not block response
         EB->>EB: runAutomations()
-        EB->>EB: fireWebhooks()
+        EB->>EB: fireWebhooks() with HMAC-SHA256 signature
     end
     CSA-->>Client: { data: result }
-    Note over Client: Supabase broadcast updates all connected clients
+    DB->>RT: postgres_changes broadcast to all board subscribers
+```
+
+---
+
+### 5. Authentication & Tenant Isolation Flow
+
+**What this diagram shows:** How every single request is authenticated and isolated to the correct tenant — ensuring one organization can never accidentally access another's data.
+
+**Step by step:**
+- Every request (whether a page load, server action, or API call) starts by calling `auth()` from Clerk — this reads the signed session cookie
+- Clerk returns the `userId` and `orgId` extracted from the JWT — these are cryptographically signed and cannot be faked or tampered with by the client
+- `getTenantContext()` takes those values and queries the database:
+  - Looks up the internal `User` record by `clerkUserId` — creates it if not found (first sign-in)
+  - Looks up the `OrganizationUser` membership record — creates it if not found (first time joining an org)
+  - If the membership exists but `isActive = false` or `status = SUSPENDED`, the request is rejected
+- The `orgId` from the JWT is set as a PostgreSQL session variable — Row-Level Security policies at the database level then automatically filter every query to only return rows belonging to that org
+- All subsequent Prisma queries are scoped by `orgId` both in the application WHERE clauses AND at the database engine level (double protection)
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant NextJS as Next.js Server
+    participant Clerk as Clerk Auth
+    participant App as getTenantContext()
+    participant PG as PostgreSQL + RLS
+
+    Browser->>NextJS: Any request (page / action / API)
+    NextJS->>Clerk: auth() — read signed session cookie
+    Clerk-->>NextJS: { userId, orgId } from JWT claims
+    Note over NextJS: orgId is NEVER read from query params or request body
+    NextJS->>App: getTenantContext(userId, orgId)
+    App->>PG: SELECT User WHERE clerkUserId = userId
+    alt User not found (first sign-in)
+        App->>PG: INSERT User (healing path)
+    end
+    App->>PG: SELECT OrganizationUser WHERE userId + orgId
+    alt Membership not found
+        App->>PG: INSERT OrganizationUser (auto-join)
+    end
+    alt isActive = false OR status = SUSPENDED
+        App-->>Browser: 403 Forbidden
+    end
+    App->>PG: SET app.current_org_id = orgId (RLS session variable)
+    Note over PG: All subsequent queries filtered by RLS policies at DB engine level
+    App-->>NextJS: TenantContext { userId, orgId, role }
+    NextJS->>PG: Execute business logic query (scoped by orgId in WHERE + RLS)
+    PG-->>NextJS: Data for this org only
+    NextJS-->>Browser: Response
 ```
 
 ---
 
 ## Use Case Diagram
 
+> This section describes **who can do what** in Nexus. There are two separate layers of access control — Organization level and Board level. A user must pass both gates to interact with a board.
+
+### How the Two-Gate System Works
+
+- **Gate 1 — Organization Membership:** The user must be an active member of the organization. Their role at this level is `OWNER`, `ADMIN`, `MEMBER`, or `GUEST`.
+- **Gate 2 — Board Membership:** Even if the user is an org OWNER, they still need an explicit `BoardMember` record to access a specific board. Without it, the board is completely invisible to them.
+- **Role inheritance:** Being an org OWNER does not automatically make you a board OWNER — the two roles are independent.
+
+---
+
+### Role Permissions — Plain English
+
+#### Guest (accessed via public share link — no account needed)
+- Can view the board they were given a link to
+- Can view all cards on that board
+- Can optionally leave comments if the share link allows it
+- Cannot create, edit, move, or delete any cards
+- Cannot see any other boards in the organization
+- Cannot see member information beyond public names
+- Their session is time-limited and can be password-protected by the board owner
+
+#### Board Viewer (has an account, added to the board as Viewer role)
+- Everything a Guest can do, plus:
+- Can see card details including attachments, checklists, time logs, and comments
+- Can see who is online on the board via presence avatars
+- Cannot create, edit, move, or delete any cards
+- Cannot add comments
+- Can export visible data to PDF if analytics are enabled
+
+#### Board Member (the standard working role for contributors)
+- Everything a Viewer can do, plus:
+- Can create new cards in any list
+- Can edit card titles, descriptions, due dates, labels, and priorities
+- Can drag and drop cards between lists and reorder them
+- Can add rich-text comments and react to other comments with emoji
+- Can upload files and attachments to cards (up to 100 MB per file)
+- Can log time spent working on a card
+- Can tick off checklist items
+- Can link card dependencies (marks one card as blocking another)
+- Can assign themselves or others to cards (if they have org membership)
+- Can use AI to generate descriptions and checklist items
+- Cannot delete cards (deletion requires Admin or above)
+- Cannot change board settings or manage who has access
+
+#### Board Admin (trusted team lead role)
+- Everything a Member can do, plus:
+- Can delete any card on the board
+- Can edit board settings (title, background image, description)
+- Can invite members to the board and remove them
+- Can change any members board role (Member ↔ Viewer)
+- Can configure custom permission schemes for the board or individual members
+- Can create a public share link with optional password and expiry date
+- Can archive or unarchive any card
+- Can create, start, and complete sprints
+- Cannot delete the board itself
+- Cannot manage organization-level settings
+
+#### Org Owner (highest privilege — typically the account creator or designated admin)
+- Everything a Board Admin can do on any board, plus:
+- Can create new boards (and set them as public or private)
+- Can delete boards permanently
+- Can manage all organization members — invite, remove, change org roles, suspend members
+- Can manage Stripe billing — upgrade to PRO, view invoices, cancel subscription
+- Can view organization-wide analytics across all boards
+- Can export any data to CSV, JSON, or PDF
+- Can configure automation rules ("when X happens, do Y")
+- Can manage outbound webhooks (register endpoints, view delivery logs)
+- Can create and revoke API keys for the public REST API
+- Can configure third-party integrations (GitHub, Slack)
+- Can access GDPR tools — export user data, process deletion requests
+- Can view the full audit log across all boards and all members
+
+---
+
+### Full Use Case Diagram
+
 ```mermaid
 graph TB
     subgraph Roles
-        Guest["Guest (shared link)"]
-        Viewer["Board Viewer"]
-        Member["Board Member"]
-        Admin["Board Admin"]
-        Owner["Org Owner"]
+        Guest["Guest\n(shared link, no account)"]
+        Viewer["Board Viewer\n(read-only account holder)"]
+        Member["Board Member\n(standard contributor)"]
+        Admin["Board Admin\n(team lead)"]
+        Owner["Org Owner\n(full organization control)"]
     end
 
-    subgraph Board Interaction
-        ViewBoard["View Board"]
-        ViewCards["View Cards"]
+    subgraph Card Actions
+        ViewCards["View Cards & Details"]
         CreateCard["Create Cards"]
-        EditCard["Edit Cards"]
-        DeleteCard["Delete Cards"]
+        EditCard["Edit Card Content"]
         MoveCard["Drag & Drop Cards"]
-        Comment["Add Comments"]
-        Attach["Upload Files"]
-        Track["Track Time"]
+        DeleteCard["Delete Cards"]
+        Comment["Add Comments & Reactions"]
+        Attach["Upload File Attachments"]
+        Track["Log Time"]
+        Checklist["Update Checklists"]
+        Deps["Link Dependencies"]
+        AICard["Use AI on Cards"]
     end
 
     subgraph Board Management
-        CreateBoard["Create Board"]
+        ViewBoard["View Board"]
         EditSettings["Edit Board Settings"]
         ManageMembers["Manage Board Members"]
-        ConfigPerms["Configure Permissions"]
-        ShareBoard["Share Board (Public Link)"]
-        DeleteBoard["Delete Board"]
+        ConfigPerms["Set Custom Permissions"]
+        ShareBoard["Create Public Share Link"]
+        CreateBoard["Create Boards"]
+        DeleteBoard["Delete Boards"]
+        ManageSprints["Manage Sprints"]
     end
 
-    subgraph Organisation
+    subgraph Organisation Management
         ManageOrg["Manage Org Members"]
-        ManageBilling["Manage Billing"]
+        ManageBilling["Manage Stripe Billing"]
         ViewAnalytics["View Analytics"]
-        ExportData["Export Data / PDF"]
+        ExportData["Export Data (CSV/JSON/PDF)"]
         ConfigAuto["Configure Automations"]
         ManageWebhooks["Manage Webhooks"]
         ManageAPIKeys["Manage API Keys"]
+        Integrations["Set Up GitHub + Slack"]
+        GDPR["GDPR Data Export & Deletion"]
+        AuditLog["View Full Audit Log"]
     end
 
     Guest --> ViewBoard
     Guest --> ViewCards
+
     Viewer --> ViewBoard
     Viewer --> ViewCards
+    Viewer --> ViewAnalytics
+
+    Member --> ViewBoard
+    Member --> ViewCards
     Member --> CreateCard
     Member --> EditCard
     Member --> MoveCard
     Member --> Comment
     Member --> Attach
     Member --> Track
+    Member --> Checklist
+    Member --> Deps
+    Member --> AICard
+
+    Admin --> CreateCard
+    Admin --> EditCard
+    Admin --> MoveCard
     Admin --> DeleteCard
+    Admin --> Comment
+    Admin --> Attach
+    Admin --> Track
+    Admin --> Checklist
     Admin --> EditSettings
     Admin --> ManageMembers
     Admin --> ConfigPerms
     Admin --> ShareBoard
+    Admin --> ManageSprints
+
     Owner --> CreateBoard
     Owner --> DeleteBoard
+    Owner --> EditSettings
+    Owner --> ManageMembers
     Owner --> ManageOrg
     Owner --> ManageBilling
     Owner --> ViewAnalytics
@@ -2061,7 +2626,40 @@ graph TB
     Owner --> ConfigAuto
     Owner --> ManageWebhooks
     Owner --> ManageAPIKeys
+    Owner --> Integrations
+    Owner --> GDPR
+    Owner --> AuditLog
 ```
+
+---
+
+### Permission Matrix Summary
+
+| Action | Guest | Viewer | Member | Admin | Owner |
+|---|:---:|:---:|:---:|:---:|:---:|
+| View board | ✓ | ✓ | ✓ | ✓ | ✓ |
+| View card details | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Create cards | — | — | ✓ | ✓ | ✓ |
+| Edit card content | — | — | ✓ | ✓ | ✓ |
+| Drag & drop cards | — | — | ✓ | ✓ | ✓ |
+| Delete cards | — | — | — | ✓ | ✓ |
+| Add comments | — | — | ✓ | ✓ | ✓ |
+| Upload attachments | — | — | ✓ | ✓ | ✓ |
+| Log time | — | — | ✓ | ✓ | ✓ |
+| Use AI features | — | — | ✓ | ✓ | ✓ |
+| Edit board settings | — | — | — | ✓ | ✓ |
+| Manage board members | — | — | — | ✓ | ✓ |
+| Create public share link | — | — | — | ✓ | ✓ |
+| Manage sprints | — | — | — | ✓ | ✓ |
+| Create new boards | — | — | — | — | ✓ |
+| Delete boards | — | — | — | — | ✓ |
+| Manage org members | — | — | — | — | ✓ |
+| Manage billing | — | — | — | — | ✓ |
+| Configure automations | — | — | — | — | ✓ |
+| Manage webhooks | — | — | — | — | ✓ |
+| Manage API keys | — | — | — | — | ✓ |
+| View audit log | — | — | — | — | ✓ |
+| GDPR tools | — | — | — | — | ✓ |
 
 ---
 
