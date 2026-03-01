@@ -132,7 +132,7 @@ function BurndownChart({ sprint }: { sprint: Sprint }) {
         <BarChart2 className="h-4 w-4 text-blue-500" />
         Burndown Chart
       </h4>
-      <div className="h-[160px]">
+      <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={idealData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -195,11 +195,11 @@ function SprintCard({
         <CollapsibleTrigger asChild>
           <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
             {open ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
-            <GitBranch className="h-4 w-4 text-blue-500 flex-shrink-0" />
+            <GitBranch className="h-4 w-4 text-blue-500 shrink-0" />
             <span className="font-medium text-sm flex-1 truncate">{sprint.name}</span>
             <Badge className={cn("text-xs", statusInfo.className)}>{statusInfo.label}</Badge>
           </div>
@@ -209,7 +209,7 @@ function SprintCard({
           <div className="px-4 pb-4 space-y-3">
             {sprint.goal && (
               <p className="text-sm text-muted-foreground italic flex items-start gap-2">
-                <Target className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                <Target className="h-3 w-3 mt-0.5 shrink-0" />
                 {sprint.goal}
               </p>
             )}
@@ -248,7 +248,7 @@ function SprintCard({
                     )}
                   >
                     <CheckCircle2
-                      className={cn("h-3 w-3 flex-shrink-0", isCardDone(card) ? "text-green-500" : "text-muted-foreground/30")}
+                      className={cn("h-3 w-3 shrink-0", isCardDone(card) ? "text-green-500" : "text-muted-foreground/30")}
                     />
                     <span className="flex-1 truncate">{card.title}</span>
                     {card.storyPoints ? (
@@ -257,7 +257,7 @@ function SprintCard({
                       </Badge>
                     ) : null}
                     {card.list?.title && (
-                      <span className="text-muted-foreground/60 truncate max-w-[80px]">{card.list.title}</span>
+                      <span className="text-muted-foreground/60 truncate max-w-20">{card.list.title}</span>
                     )}
                   </div>
                 ))}

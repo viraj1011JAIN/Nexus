@@ -74,7 +74,7 @@ export function RichTextEditor({
         inline: true,
         allowBase64: false,
         HTMLAttributes: {
-          class: 'rounded-lg max-w-[300px] max-h-[300px] h-auto',
+          class: 'rounded-lg max-w-75 max-h-75 h-auto',
         },
       }),
       TaskList.configure({

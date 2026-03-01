@@ -228,7 +228,7 @@ export function GanttView({ lists }: GanttViewProps) {
       <div className="flex" style={{ minHeight: 200 }}>
         {/* Row label column — fixed left */}
         <div
-          className="flex-shrink-0 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 z-10"
+          className="shrink-0 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 z-10"
           style={{ width: LABEL_COL_W }}
         >
           {/* Header placeholder */}
@@ -284,7 +284,7 @@ export function GanttView({ lists }: GanttViewProps) {
                   <div
                     key={i}
                     className={cn(
-                      "flex-shrink-0 flex flex-col items-center justify-end pb-1 border-r border-slate-100 dark:border-slate-700 text-xs",
+                      "shrink-0 flex flex-col items-center justify-end pb-1 border-r border-slate-100 dark:border-slate-700 text-xs",
                       (isDayToday || isCurrentMonth) && "bg-indigo-50/60 dark:bg-indigo-950/20"
                     )}
                     style={{ width: colWidth }}

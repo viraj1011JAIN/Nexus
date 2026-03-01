@@ -204,10 +204,10 @@ export function ShareBoardDialog({ boardId, boardTitle, open, onClose }: ShareBo
                     value={shareUrl}
                     className="h-8 text-xs font-mono bg-slate-50 dark:bg-slate-800"
                   />
-                  <Button size="sm" variant="outline" className="h-8 px-2.5 flex-shrink-0" onClick={copyLink}>
+                  <Button size="sm" variant="outline" className="h-8 px-2.5 shrink-0" onClick={copyLink}>
                     {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8 px-2.5 flex-shrink-0" asChild>
+                  <Button size="sm" variant="outline" className="h-8 px-2.5 shrink-0" asChild>
                     <a href={shareUrl} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>

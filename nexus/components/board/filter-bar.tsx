@@ -412,7 +412,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
 
   // ── Shared filter button base (Tailwind — theme-aware, keyboard-accessible) ─
   const filterBtnBase =
-    "inline-flex items-center gap-1.5 h-[30px] px-3 rounded-lg " +
+    "inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg " +
     "text-xs font-semibold text-white cursor-pointer border-0 whitespace-nowrap select-none " +
     "transition-all duration-150 " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background " +

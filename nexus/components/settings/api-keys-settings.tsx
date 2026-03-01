@@ -107,7 +107,7 @@ function ApiKeyRow({
   return (
     <div className={cn("border rounded-xl p-4 space-y-3", !isActive && "opacity-60")}>
       <div className="flex items-start gap-3">
-        <Key className={cn("h-4 w-4 mt-0.5 flex-shrink-0", isActive ? "text-green-500" : "text-muted-foreground")} />
+        <Key className={cn("h-4 w-4 mt-0.5 shrink-0", isActive ? "text-green-500" : "text-muted-foreground")} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm">{apiKey.name}</span>
@@ -331,10 +331,10 @@ export function ApiKeysSettings() {
                   <code className={cn("text-xs font-mono flex-1 break-all", showKey ? "" : "blur-sm select-none")}>
                     {createdKey.rawKey}
                   </code>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => setShowKey((v) => !v)}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setShowKey((v) => !v)}>
                     {showKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                   </Button>
-                  <CopyButton value={createdKey.rawKey} className="flex-shrink-0" />
+                  <CopyButton value={createdKey.rawKey} className="shrink-0" />
                 </div>
               </div>
             </div>

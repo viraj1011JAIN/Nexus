@@ -50,6 +50,8 @@ export function CardCoverPicker({ currentColor, currentImage, onSelect }: CardCo
           />
           <button
             onClick={() => onSelect("none", null)}
+            title="Remove cover"
+            aria-label="Remove cover"
             className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
           >
             <X className="h-3 w-3" />

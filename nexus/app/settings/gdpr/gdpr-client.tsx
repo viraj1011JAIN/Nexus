@@ -35,7 +35,7 @@ function SectionCard({
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 space-y-4">
       <div className="flex items-start gap-4">
-        <div className="h-10 w-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+        <div className="h-10 w-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
           <Icon className="h-5 w-5 text-indigo-500" />
         </div>
         <div className="flex-1 min-w-0">
@@ -152,7 +152,7 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
     <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
       {/* Page header */}
       <div className="flex items-center gap-3 mb-2">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+        <div className="h-10 w-10 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
           <Shield className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -165,7 +165,7 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
 
       {/* Identity summary */}
       <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3">
-        <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
         <p className="text-sm text-muted-foreground">
           Data controller for account <span className="font-semibold text-foreground">{userEmail}</span>
           {userName ? ` (${userName})` : ""}.
@@ -207,7 +207,7 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
           <div className="space-y-3">
             {confirmDelete && (
               <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-300">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>
                   This will permanently delete your account, boards, cards, comments, and all other personal data.
                   The request will be queued and completed within 30 days — you will receive a confirmation once processing begins.
@@ -255,7 +255,7 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
             >
               <input
                 type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded accent-indigo-500 flex-shrink-0"
+                className="mt-0.5 h-4 w-4 rounded accent-indigo-500 shrink-0"
                 checked={cookieConsent[cat.key]}
                 disabled={cat.required}
                 onChange={(e) =>

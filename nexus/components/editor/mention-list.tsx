@@ -74,7 +74,7 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>((props, 
   }
 
   return (
-    <div className="bg-popover border rounded-lg shadow-lg overflow-hidden min-w-[200px] max-w-[280px]">
+    <div className="bg-popover border rounded-lg shadow-lg overflow-hidden min-w-50 max-w-70">
       {props.items.map((item, index) => (
         <button
           key={item.id}
@@ -90,10 +90,10 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>((props, 
               alt={item.name}
               width={24}
               height={24}
-              className="rounded-full flex-shrink-0"
+              className="rounded-full shrink-0"
             />
           ) : (
-            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
               <span className="text-[10px] font-semibold text-primary">
                 {item.name.charAt(0).toUpperCase()}
               </span>

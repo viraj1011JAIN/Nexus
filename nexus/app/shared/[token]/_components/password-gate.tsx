@@ -65,7 +65,7 @@ export function PasswordGate({ token, boardTitle }: PasswordGateProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-indigo-950 dark:to-purple-950 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-indigo-950 dark:to-purple-950 px-4">
       <div className="w-full max-w-sm">
         {/* Card */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border p-8 space-y-6">

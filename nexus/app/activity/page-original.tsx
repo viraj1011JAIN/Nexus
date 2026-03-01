@@ -91,7 +91,7 @@ export default function ActivityPage() {
               className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   {log.userImage ? (
                     <img
                       src={log.userImage}
@@ -99,7 +99,7 @@ export default function ActivityPage() {
                       className="w-10 h-10 rounded-full"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
                       <User className="h-5 w-5 text-white" />
                     </div>
                   )}

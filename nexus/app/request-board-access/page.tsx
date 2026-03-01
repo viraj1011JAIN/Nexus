@@ -109,7 +109,7 @@ export default function RequestBoardAccessPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-indigo-50 to-purple-50 p-6">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -177,7 +177,7 @@ export default function RequestBoardAccessPage() {
                             size="sm"
                             disabled={isPending}
                             onClick={() => handleRequestAccess(board.id)}
-                            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+                            className="bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
                           >
                             {isPending ? (
                               <Loader2 className="h-4 w-4 animate-spin" />

@@ -70,18 +70,10 @@ export default async function BoardIdPage(props: BoardIdPageProps) {
       {!board.imageFullUrl ? (
         <div className="absolute inset-0 overflow-hidden pointer-events-none dark:bg-[#0D0C14] bg-[#F4F1ED]">
           <div
-            className="absolute top-[-120px] left-[10%] w-[600px] h-[600px] rounded-full"
-            style={{
-              background: "radial-gradient(circle, rgba(123,47,247,0.07) 0%, transparent 70%)",
-              filter: "blur(40px)",
-            }}
+            className="absolute top-[-120px] left-[10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(123,47,247,0.07)_0%,transparent_70%)] blur-[40px]"
           />
           <div
-            className="absolute bottom-[-100px] right-[5%] w-[500px] h-[500px] rounded-full"
-            style={{
-              background: "radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%)",
-              filter: "blur(40px)",
-            }}
+            className="absolute bottom-[-100px] right-[5%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.05)_0%,transparent_70%)] blur-[40px]"
           />
         </div>
       ) : (

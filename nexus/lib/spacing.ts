@@ -33,8 +33,8 @@ export const shadowClasses = {
 
 // Gradient classes
 export const gradientClasses = {
-  primary: 'bg-gradient-to-r from-purple-600 to-pink-600',
-  primaryText: 'bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent',
-  button: 'bg-gradient-to-r from-purple-600 to-purple-700',
+  primary: 'bg-linear-to-r from-purple-600 to-pink-600',
+  primaryText: 'bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent',
+  button: 'bg-linear-to-r from-purple-600 to-purple-700',
   buttonShadow: 'shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40',
 } as const;

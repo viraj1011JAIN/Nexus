@@ -112,7 +112,7 @@ function EpicBar({ epic }: { epic: EpicData }) {
   return (
     <div className="flex items-center gap-3 py-2.5 pl-8 pr-4 hover:bg-muted/30 rounded-lg transition-colors">
       <div
-        className="w-2 h-2 rounded-full flex-shrink-0"
+        className="w-2 h-2 rounded-full shrink-0"
         style={{ backgroundColor: epic.color ?? "#6366f1" }}
       />
       <span className="flex-1 text-sm font-medium truncate">{epic.title}</span>
@@ -192,11 +192,11 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
       {/* Month header */}
       <div className="flex border-b bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10">
         {/* Label column */}
-        <div className="w-56 flex-shrink-0 border-r px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="w-56 shrink-0 border-r px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Initiative / Epic
         </div>
         {/* Month columns */}
-        <div className="flex-1 relative flex min-w-[600px]">
+        <div className="flex-1 relative flex min-w-150">
           {months.map((m) => {
             const leftPct = toPct(m);
             const nextMonth = addMonths(m, 1);
@@ -227,12 +227,12 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
             <div key={init.id} className="border-b last:border-0">
               {/* Initiative row */}
               <div className="flex items-center h-12 hover:bg-muted/20 transition-colors">
-                <div className="w-56 flex-shrink-0 border-r px-3 flex items-center gap-2 overflow-hidden">
-                  <StatusIcon className={cn("h-3.5 w-3.5 flex-shrink-0", statusInfo.className)} />
-                  <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: init.color ?? "#6366f1" }} />
+                <div className="w-56 shrink-0 border-r px-3 flex items-center gap-2 overflow-hidden">
+                  <StatusIcon className={cn("h-3.5 w-3.5 shrink-0", statusInfo.className)} />
+                  <div className="w-2.5 h-2.5 rounded shrink-0" style={{ backgroundColor: init.color ?? "#6366f1" }} />
                   <span className="text-sm font-medium truncate">{init.title}</span>
                 </div>
-                <div className="flex-1 relative h-full flex items-center min-w-[600px] px-1">
+                <div className="flex-1 relative h-full flex items-center min-w-150 px-1">
                   {/* Today marker — rendered only when today is within the visible range */}
                   {(() => { const today = new Date(); return today >= rangeStart && today <= rangeEnd; })() && (
                     <div
@@ -270,14 +270,14 @@ function GanttView({ initiatives }: { initiatives: InitiativeData[] }) {
                 const epicStatus = EPIC_STATUS[epic.status as keyof typeof EPIC_STATUS] ?? EPIC_STATUS.BACKLOG;
                 return (
                   <div key={epic.id} className="flex items-center h-9 bg-slate-50/50 dark:bg-slate-800/20 hover:bg-muted/10 transition-colors">
-                    <div className="w-56 flex-shrink-0 border-r px-3 pl-8 flex items-center gap-2 overflow-hidden">
+                    <div className="w-56 shrink-0 border-r px-3 pl-8 flex items-center gap-2 overflow-hidden">
                       <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: epic.color ?? "#94a3b8" }} />
                       <span className="text-xs text-muted-foreground truncate">{epic.title}</span>
-                      <Badge className={cn("text-[10px] ml-auto flex-shrink-0", epicStatus.className)}>
+                      <Badge className={cn("text-[10px] ml-auto shrink-0", epicStatus.className)}>
                         {epicStatus.label}
                       </Badge>
                     </div>
-                    <div className="flex-1 relative h-full flex items-center min-w-[600px] px-1">
+                    <div className="flex-1 relative h-full flex items-center min-w-150 px-1">
                       {epicHasRange && (
                         <div
                           className="absolute h-4 rounded-full"
@@ -333,10 +333,10 @@ function InitiativeRow({
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <div className="flex items-center gap-3 px-4 py-4 cursor-pointer hover:bg-muted/30 transition-colors">
-            {open ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
-            <StatusIcon className={cn("h-4 w-4 flex-shrink-0", statusInfo.className)} />
+            {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+            <StatusIcon className={cn("h-4 w-4 shrink-0", statusInfo.className)} />
             <div
-              className="w-3 h-3 rounded-sm flex-shrink-0"
+              className="w-3 h-3 rounded-sm shrink-0"
               style={{ backgroundColor: initiative.color ?? "#6366f1" }}
             />
             <span className="flex-1 font-semibold text-sm">{initiative.title}</span>

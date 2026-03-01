@@ -82,7 +82,7 @@ export const GifPicker = ({ onSelect }: GifPickerProps) => {
           e.preventDefault();
         }}
       >
-        <div className="flex flex-col h-[500px]">
+        <div className="flex flex-col h-125">
           {/* Search Header */}
           <div className="p-3 border-b bg-muted/30">
             <div className="relative">

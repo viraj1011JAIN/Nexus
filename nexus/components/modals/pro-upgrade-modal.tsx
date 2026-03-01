@@ -67,7 +67,7 @@ export function ProUpgradeModal({
       <DialogContent className="max-w-md glass-effect border-2 border-white/20 shadow-2xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-x-2 text-2xl font-bold bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 bg-clip-text text-transparent">
+            <DialogTitle className="flex items-center gap-x-2 text-2xl font-bold bg-linear-to-r from-amber-500 via-yellow-500 to-amber-600 bg-clip-text text-transparent">
               <Crown className="h-6 w-6 text-amber-500 animate-pulse" />
               Upgrade to Pro
             </DialogTitle>
@@ -85,9 +85,9 @@ export function ProUpgradeModal({
 
         <div className="space-y-6 py-4">
           {/* Pricing */}
-          <div className="relative text-center p-8 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-xl overflow-hidden">
+          <div className="relative text-center p-8 bg-linear-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-xl overflow-hidden">
             {/* Animated shine */}
-            <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="absolute inset-0 -translate-x-full animate-shimmer bg-linear-to-r from-transparent via-white/20 to-transparent" />
             <div className="relative z-10">
               <div className="flex items-baseline justify-center gap-x-2 mb-3">
                 <span className="text-5xl font-bold text-white">$9</span>
@@ -110,7 +110,7 @@ export function ProUpgradeModal({
               "Team collaboration tools",
             ].map((feature) => (
               <div key={feature} className="flex items-center gap-x-3 group">
-                <div className="shrink-0 w-6 h-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="shrink-0 w-6 h-6 bg-linear-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Check className="h-3.5 w-3.5 text-indigo-600 font-bold" />
                 </div>
                 <span className="text-sm text-slate-700 font-medium group-hover:text-slate-900 transition-colors">{feature}</span>
@@ -123,7 +123,7 @@ export function ProUpgradeModal({
             <Button
               onClick={handleUpgrade}
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 font-bold"
+              className="w-full bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 font-bold"
               size="lg"
             >
               {isLoading ? (

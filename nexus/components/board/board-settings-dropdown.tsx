@@ -291,29 +291,17 @@ export function BoardSettingsDropdown({
     "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium",
     "cursor-pointer transition-colors duration-100 select-none",
     isDark
-      ? "hover:bg-white/[0.06] text-white/75 hover:text-white"
-      : "hover:bg-black/[0.04] text-[#3D3733] hover:text-[#1A1714]",
+      ? "hover:bg-white/6 text-white/75 hover:text-white"
+      : "hover:bg-black/4 text-[#3D3733] hover:text-[#1A1714]",
   ].join(" ");
 
-  const sectionLabel = {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase" as const,
-    padding: "6px 12px 2px",
-    color: isDark ? "rgba(255,255,255,0.28)" : "#B5AFA9",
-  };
-
-  const divider = {
-    height: 1,
-    margin: "4px 0",
-    background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-  };
+  const sectionLabelCls = "block text-[10px] font-bold tracking-[0.08em] uppercase px-3 pt-1.5 pb-0.5 text-[#B5AFA9] dark:text-white/28 m-0";
+  const dividerCls = "h-px my-1 bg-black/6 dark:bg-white/6";
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div ref={dropdownRef} style={{ position: "relative" }}>
+    <div ref={dropdownRef} className="relative">
       {/* Trigger */}
       {/* suppressHydrationWarning: this button has theme-dependent inline styles.
           The mounted pattern ensures isDark=false on both server and first client
@@ -343,7 +331,7 @@ export function BoardSettingsDropdown({
           transition: "all 0.15s ease",
         }}
       >
-        <Settings className="w-3.5 h-3.5" style={{ transition: "transform 0.3s ease", transform: open ? "rotate(45deg)" : "none" }} />
+        <Settings className={`w-3.5 h-3.5 transition-transform duration-300 ease-in-out${open ? " rotate-45" : ""}`} />
       </button>
 
       {/* Dropdown panel */}
@@ -367,44 +355,44 @@ export function BoardSettingsDropdown({
           {panel === "main" && (
             <>
               {/* Header */}
-              <div style={{
-                padding: "12px 14px 8px",
-                borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.05)",
-              }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isDark ? "#E8E3DE" : "#1A1714", fontFamily: "'Playfair Display', serif" }}>
+              <div
+                className="pt-3 px-3.5 pb-2"
+                style={{ borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.05)" }}
+              >
+                <p className="m-0 text-[13px] font-bold font-['Playfair_Display',serif]" style={{ color: isDark ? "#E8E3DE" : "#1A1714" }}>
                   Board Settings
                 </p>
-                <p style={{ margin: "2px 0 0", fontSize: 11, color: isDark ? "rgba(255,255,255,0.35)" : "#B5AFA9", fontFamily: "'DM Sans', sans-serif" }}>
+                <p className="mt-[2px] text-[11px]" style={{ color: isDark ? "rgba(255,255,255,0.35)" : "#B5AFA9" }}>
                   {boardTitle}
                 </p>
               </div>
 
-              <div style={{ padding: "6px 6px" }}>
+              <div className="p-1.5">
                 {/* General section */}
-                <p style={sectionLabel}>General</p>
+                <p className={sectionLabelCls}>General</p>
 
                 <button className={itemCls} onClick={() => setPanel("rename")}>
                   <Pencil className="w-3.5 h-3.5 opacity-60 shrink-0" />
-                  <span style={{ flex: 1, textAlign: "left" }}>Rename board</span>
+                  <span className="flex-1 text-left">Rename board</span>
                   <ChevronRight className="w-3.5 h-3.5 opacity-30" />
                 </button>
 
                 <button className={itemCls} onClick={() => setPanel("background")}>
                   <ImageIcon className="w-3.5 h-3.5 opacity-60 shrink-0" />
-                  <span style={{ flex: 1, textAlign: "left" }}>Change background</span>
+                  <span className="flex-1 text-left">Change background</span>
                   <ChevronRight className="w-3.5 h-3.5 opacity-30" />
                 </button>
 
                 <button className={itemCls} onClick={handleCopyLink}>
                   <Link2 className="w-3.5 h-3.5 opacity-60 shrink-0" />
-                  <span style={{ flex: 1, textAlign: "left" }}>Copy board link</span>
+                  <span className="flex-1 text-left">Copy board link</span>
                   <Copy className="w-3 h-3 opacity-30" />
                 </button>
 
-                <div style={divider} />
+                <div className={dividerCls} />
 
                 {/* Data section */}
-                <p style={sectionLabel}>Data</p>
+                <p className={sectionLabelCls}>Data</p>
 
                 <button
                   className={itemCls}
@@ -414,28 +402,25 @@ export function BoardSettingsDropdown({
                   }}
                 >
                   <Settings2 className="w-3.5 h-3.5 opacity-60 shrink-0" />
-                  <span style={{ flex: 1, textAlign: "left" }}>Custom fields</span>
+                  <span className="flex-1 text-left">Custom fields</span>
                   <ChevronRight className="w-3.5 h-3.5 opacity-30" />
                 </button>
 
                 <button className={itemCls} onClick={() => setPanel("export")}>
                   <FileJson className="w-3.5 h-3.5 opacity-60 shrink-0" />
-                  <span style={{ flex: 1, textAlign: "left" }}>Export board</span>
+                  <span className="flex-1 text-left">Export board</span>
                   <ChevronRight className="w-3.5 h-3.5 opacity-30" />
                 </button>
 
-                <div style={divider} />
+                <div className={dividerCls} />
 
                 {/* Danger section */}
                 <button
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-100 select-none"
-                  style={{ color: "#F43F5E" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(244,63,94,0.10)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-100 select-none text-[#F43F5E] hover:bg-rose-500/10"
                   onClick={() => setPanel("delete")}
                 >
                   <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                  <span style={{ flex: 1, textAlign: "left" }}>Delete board</span>
+                  <span className="flex-1 text-left">Delete board</span>
                   <ChevronRight className="w-3.5 h-3.5 opacity-50" />
                 </button>
               </div>
@@ -446,7 +431,7 @@ export function BoardSettingsDropdown({
           {panel === "rename" && (
             <>
               <PanelHeader title="Rename Board" onBack={() => setPanel("main")} isDark={isDark} />
-              <div style={{ padding: "12px 14px" }}>
+              <div className="px-3.5 py-3">
                 <input
                   ref={renameInputRef}
                   value={renameValue}
@@ -457,37 +442,31 @@ export function BoardSettingsDropdown({
                   }}
                   placeholder="Board name"
                   maxLength={100}
+                  className="w-full py-2 px-2.5 rounded-lg text-[13px] outline-none box-border"
                   style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
                     border: renameError
                       ? "1.5px solid #F43F5E"
                       : isDark ? "1.5px solid rgba(255,255,255,0.12)" : "1.5px solid rgba(0,0,0,0.13)",
                     background: isDark ? "rgba(255,255,255,0.05)" : "#F7F5F2",
                     color: isDark ? "#E8E3DE" : "#1A1714",
-                    fontSize: 13,
-                    fontFamily: "'DM Sans', sans-serif",
-                    outline: "none",
-                    boxSizing: "border-box",
                   }}
                 />
                 {renameError && (
-                  <p style={{ margin: "5px 0 0", fontSize: 11, color: "#F43F5E", fontFamily: "'DM Sans', sans-serif" }}>
+                  <p className="mt-[5px] text-[11px] text-[#F43F5E]">
                     {renameError}
                   </p>
                 )}
-                <p style={{ margin: "4px 0 10px", fontSize: 11, color: isDark ? "rgba(255,255,255,0.28)" : "#B5AFA9", fontFamily: "'DM Sans', sans-serif", textAlign: "right" }}>
+                <p className="mt-1 mb-2.5 text-[11px] text-right" style={{ color: isDark ? "rgba(255,255,255,0.28)" : "#B5AFA9" }}>
                   {renameValue.length}/100
                 </p>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="flex gap-2">
                   <button
                     onClick={() => setPanel("main")}
+                    className="flex-1 py-1.75 rounded-lg text-[13px] font-semibold cursor-pointer"
                     style={{
-                      flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", border: isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.10)",
-                      background: isDark ? "rgba(255,255,255,0.05)" : "#F0EDE9", color: isDark ? "rgba(255,255,255,0.55)" : "#6B6560",
-                      fontFamily: "'DM Sans', sans-serif",
+                      border: isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.10)",
+                      background: isDark ? "rgba(255,255,255,0.05)" : "#F0EDE9",
+                      color: isDark ? "rgba(255,255,255,0.55)" : "#6B6560",
                     }}
                   >
                     Cancel
@@ -495,14 +474,7 @@ export function BoardSettingsDropdown({
                   <button
                     onClick={handleRename}
                     disabled={isPending || !renameValue.trim()}
-                    style={{
-                      flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                      cursor: isPending ? "not-allowed" : "pointer",
-                      border: "none", background: "linear-gradient(135deg,#7B2FF7,#F107A3)",
-                      color: "#fff", opacity: isPending || !renameValue.trim() ? 0.55 : 1,
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                      fontFamily: "'DM Sans', sans-serif",
-                    }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.75 rounded-lg text-[13px] font-semibold text-white border-0 bg-[linear-gradient(135deg,#7B2FF7,#F107A3)] ${isPending || !renameValue.trim() ? "opacity-55 cursor-not-allowed" : "opacity-100 cursor-pointer"}`}
                   >
                     {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                     Save
@@ -516,8 +488,8 @@ export function BoardSettingsDropdown({
           {panel === "background" && (
             <>
               <PanelHeader title="Change Background" onBack={() => setPanel("main")} isDark={isDark} />
-              <div style={{ padding: "12px 14px" }}>
-                <p style={{ margin: "0 0 10px", fontSize: 12, color: isDark ? "rgba(255,255,255,0.45)" : "#9A8F85", fontFamily: "'DM Sans', sans-serif" }}>
+              <div className="px-3.5 py-3">
+                <p className="mb-2.5 text-xs" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#9A8F85" }}>
                   Pick a photo from Unsplash or remove the current background.
                 </p>
                 <UnsplashPicker
@@ -526,7 +498,7 @@ export function BoardSettingsDropdown({
                   onClear={currentImageId ? handleBackgroundClear : undefined}
                 />
                 {isPending && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 12, color: isDark ? "rgba(255,255,255,0.4)" : "#9A8F85", fontFamily: "'DM Sans', sans-serif" }}>
+                  <div className="flex items-center gap-2 mt-2.5 text-xs" style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9A8F85" }}>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     Saving...
                   </div>
@@ -539,8 +511,8 @@ export function BoardSettingsDropdown({
           {panel === "export" && (
             <>
               <PanelHeader title="Export Board" onBack={() => setPanel("main")} isDark={isDark} />
-              <div style={{ padding: "10px 10px" }}>
-                <p style={{ margin: "0 4px 10px", fontSize: 12, color: isDark ? "rgba(255,255,255,0.40)" : "#9A8F85", fontFamily: "'DM Sans', sans-serif" }}>
+              <div className="p-2.5">
+                <p className="mx-1 mb-2.5 text-xs" style={{ color: isDark ? "rgba(255,255,255,0.40)" : "#9A8F85" }}>
                   Download all lists and cards from this board.
                 </p>
 
@@ -548,15 +520,15 @@ export function BoardSettingsDropdown({
                 <button
                   onClick={handleExportJSON}
                   disabled={exportPending !== null}
-                  className={itemCls}
-                  style={{ border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.06)", marginBottom: 6 }}
+                  className={`${itemCls} mb-1.5`}
+                  style={{ border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.06)" }}
                 >
                   {exportPending === "json"
                     ? <Loader2 className="w-3.5 h-3.5 animate-spin opacity-70 shrink-0" />
-                    : <FileJson className="w-3.5 h-3.5 shrink-0" style={{ color: "#6366F1" }} />}
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>JSON — Full snapshot</p>
-                    <p style={{ margin: 0, fontSize: 10, opacity: 0.5 }}>Cards, labels, checklists, assignees</p>
+                    : <FileJson className="w-3.5 h-3.5 shrink-0 text-[#6366F1]" />}
+                  <div className="flex-1 text-left">
+                    <p className="m-0 text-xs font-semibold">JSON — Full snapshot</p>
+                    <p className="m-0 text-[10px] opacity-50">Cards, labels, checklists, assignees</p>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 opacity-30 -rotate-90" />
                 </button>
@@ -570,10 +542,10 @@ export function BoardSettingsDropdown({
                 >
                   {exportPending === "csv"
                     ? <Loader2 className="w-3.5 h-3.5 animate-spin opacity-70 shrink-0" />
-                    : <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" style={{ color: "#059669" }} />}
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>CSV — Flat table</p>
-                    <p style={{ margin: 0, fontSize: 10, opacity: 0.5 }}>Spreadsheet-compatible, one row per card</p>
+                    : <FileSpreadsheet className="w-3.5 h-3.5 shrink-0 text-[#059669]" />}
+                  <div className="flex-1 text-left">
+                    <p className="m-0 text-xs font-semibold">CSV — Flat table</p>
+                    <p className="m-0 text-[10px] opacity-50">Spreadsheet-compatible, one row per card</p>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 opacity-30 -rotate-90" />
                 </button>
@@ -585,21 +557,20 @@ export function BoardSettingsDropdown({
           {panel === "delete" && (
             <>
               <PanelHeader title="Delete Board" onBack={() => setPanel("main")} isDark={isDark} danger />
-              <div style={{ padding: "12px 14px" }}>
+              <div className="px-3.5 py-3">
                 {/* Warning banner */}
-                <div style={{
-                  display: "flex", gap: 8, alignItems: "flex-start", padding: "10px 12px",
-                  borderRadius: 10, marginBottom: 14,
-                  background: "rgba(244,63,94,0.09)", border: "1px solid rgba(244,63,94,0.22)",
-                }}>
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#F43F5E" }} />
-                  <p style={{ margin: 0, fontSize: 12, color: isDark ? "#FCA5A5" : "#BE123C", lineHeight: 1.5, fontFamily: "'DM Sans', sans-serif" }}>
+                <div className="flex gap-2 items-start px-3 py-2.5 rounded-[10px] mb-3.5 bg-[rgba(244,63,94,0.09)] border border-[rgba(244,63,94,0.22)]">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-[#F43F5E]" />
+                  <p className="m-0 text-xs leading-[1.5]" style={{ color: isDark ? "#FCA5A5" : "#BE123C" }}>
                     This will <strong>permanently delete</strong> all lists, cards, checklists, and attachments. This action cannot be undone.
                   </p>
                 </div>
 
-                <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: isDark ? "rgba(255,255,255,0.6)" : "#6B6560", fontFamily: "'DM Sans', sans-serif" }}>
-                  Type <span style={{ fontFamily: "monospace", background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", padding: "1px 5px", borderRadius: 4, color: isDark ? "#E8E3DE" : "#1A1714" }}>{boardTitle}</span> to confirm
+                <p className="mb-1.5 text-xs font-semibold" style={{ color: isDark ? "rgba(255,255,255,0.6)" : "#6B6560" }}>
+                  Type <span
+                    className="font-mono py-px px-[5px] rounded-[4px]"
+                    style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", color: isDark ? "#E8E3DE" : "#1A1714" }}
+                  >{boardTitle}</span> to confirm
                 </p>
 
                 <input
@@ -608,29 +579,20 @@ export function BoardSettingsDropdown({
                   onKeyDown={(e) => { if (e.key === "Enter" && deleteConfirmText === boardTitle) handleDelete(); }}
                   placeholder={boardTitle}
                   autoComplete="off"
+                  className="w-full py-2 px-2.5 rounded-lg text-[13px] outline-none box-border mb-3 [border:1.5px_solid_rgba(244,63,94,0.35)]"
                   style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    border: "1.5px solid rgba(244,63,94,0.35)",
                     background: isDark ? "rgba(244,63,94,0.06)" : "#FFF5F5",
                     color: isDark ? "#E8E3DE" : "#1A1714",
-                    fontSize: 13, fontFamily: "'DM Sans', sans-serif",
-                    outline: "none", boxSizing: "border-box", marginBottom: 12,
                   }}
                 />
 
                 <button
                   onClick={handleDelete}
                   disabled={isPending || deleteConfirmText !== boardTitle}
+                  className="w-full flex items-center justify-center gap-[7px] py-2 rounded-[9px] border-0 text-[13px] font-bold transition-all duration-150 ease-in-out disabled:cursor-not-allowed cursor-pointer"
                   style={{
-                    width: "100%", padding: "8px 0", borderRadius: 9, border: "none",
                     background: deleteConfirmText === boardTitle ? "#F43F5E" : isDark ? "rgba(244,63,94,0.20)" : "rgba(244,63,94,0.12)",
                     color: deleteConfirmText === boardTitle ? "#fff" : "rgba(244,63,94,0.5)",
-                    fontSize: 13, fontWeight: 700, cursor: deleteConfirmText === boardTitle ? "pointer" : "not-allowed",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                    fontFamily: "'DM Sans', sans-serif",
-                    transition: "all 0.15s ease",
                     boxShadow: deleteConfirmText === boardTitle ? "0 4px 14px rgba(244,63,94,0.35)" : "none",
                   }}
                 >
@@ -661,35 +623,24 @@ function PanelHeader({
 }) {
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "10px 14px",
-        borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.05)",
-      }}
+      className="flex items-center gap-2 px-3.5 py-2.5"
+      style={{ borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.05)" }}
     >
       <button
         onClick={onBack}
         title="Back"
+        className="w-6 h-6 rounded-[6px] bg-transparent cursor-pointer flex items-center justify-center shrink-0"
         style={{
-          width: 24, height: 24, borderRadius: 6,
           border: isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(0,0,0,0.08)",
-          background: "transparent", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
           color: isDark ? "rgba(255,255,255,0.40)" : "#9A8F85",
-          flexShrink: 0,
         }}
         aria-label="Back"
       >
         <X className="w-3 h-3" />
       </button>
       <p
-        style={{
-          margin: 0, fontSize: 13, fontWeight: 700,
-          fontFamily: "'DM Sans', sans-serif",
-          color: danger ? "#F43F5E" : isDark ? "#E8E3DE" : "#1A1714",
-        }}
+        className="m-0 text-[13px] font-bold"
+        style={{ color: danger ? "#F43F5E" : isDark ? "#E8E3DE" : "#1A1714" }}
       >
         {title}
       </p>

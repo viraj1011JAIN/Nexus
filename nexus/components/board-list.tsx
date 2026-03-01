@@ -217,12 +217,12 @@ export function BoardList() {
     return Math.min(100, recencyScore + densityScore + volumeScore);
   }, [boards, totalCards, totalLists, recentBoards]);
 
-  const healthGradient =
+  const healthGradientClass =
     healthScore >= 70
-      ? "linear-gradient(135deg,#059669,#10B981)"
+      ? "bg-linear-to-br from-[#059669] to-[#10B981]"
       : healthScore >= 40
-      ? "linear-gradient(135deg,#D97706,#F59E0B)"
-      : "linear-gradient(135deg,#C0392B,#F44369)";
+      ? "bg-linear-to-br from-[#D97706] to-[#F59E0B]"
+      : "bg-linear-to-br from-[#C0392B] to-[#F44369]";
 
   const maxBoardCards = Math.max(...boards.map((b) => b.cardCount), 1);
 
@@ -258,10 +258,10 @@ export function BoardList() {
           <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
-              { label: "Total Boards",  value: boards.length,                                    bg: "hsl(271 92% 95%)", fg: "#7B2FF7" },
-              { label: "Total Cards",   value: totalCards,                                       bg: "hsl(213 90% 95%)", fg: "#1A73E8" },
-              { label: "Total Lists",   value: totalLists,                                       bg: "hsl(161 80% 94%)", fg: "#059669" },
-              { label: "Active (7d)",   value: `${recentBoards.length}/${boards.length}`,        bg: "hsl(43 90% 94%)",  fg: "#D97706" },
+              { label: "Total Boards",  value: boards.length,                                    bgClass: "bg-[hsl(271_92%_95%)] dark:bg-purple-950/40",  fgClass: "text-[#7B2FF7]" },
+              { label: "Total Cards",   value: totalCards,                                       bgClass: "bg-[hsl(213_90%_95%)] dark:bg-blue-950/40",    fgClass: "text-[#1A73E8]" },
+              { label: "Total Lists",   value: totalLists,                                       bgClass: "bg-[hsl(161_80%_94%)] dark:bg-emerald-950/40", fgClass: "text-[#059669]" },
+              { label: "Active (7d)",   value: `${recentBoards.length}/${boards.length}`,        bgClass: "bg-[hsl(43_90%_94%)] dark:bg-amber-950/40",    fgClass: "text-[#D97706]" },
             ].map((stat, i) => (
               <div
                 key={stat.label}
@@ -269,10 +269,9 @@ export function BoardList() {
                 style={{ animationDelay: `${i * 0.06}s` }}
               >
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: stat.bg }}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${stat.bgClass}`}
                 >
-                  <span className="font-display font-bold text-xl leading-none" style={{ color: stat.fg }}>
+                  <span className={`font-display font-bold text-xl leading-none ${stat.fgClass}`}>
                     {stat.value}
                   </span>
                 </div>
@@ -505,8 +504,8 @@ export function BoardList() {
                 <div className="flex items-center gap-4 px-4 py-3">
                   {/* Colour swatch */}
                   <div
-                    className="w-10 h-10 rounded-xl shrink-0"
-                    style={{ backgroundImage: board.imageThumbUrl ? `url(${board.imageThumbUrl})` : getBoardGradient(board), backgroundSize: "cover", backgroundPosition: "center" }}
+                    className="w-10 h-10 rounded-xl shrink-0 bg-cover bg-center"
+                    style={{ backgroundImage: board.imageThumbUrl ? `url(${board.imageThumbUrl})` : getBoardGradient(board) }}
                   />
 
                   {/* Title + meta */}
@@ -575,13 +574,11 @@ export function BoardList() {
               >
                 {/* === Banner === */}
                 <div
-                  className="relative h-28 overflow-hidden"
+                  className="relative h-28 overflow-hidden bg-cover bg-center"
                   style={{
                     backgroundImage: board.imageThumbUrl
                       ? `url(${board.imageThumbUrl})`
                       : getBoardGradient(board),
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
                   }}
                 >
                   {/* Noise texture overlay – SVG data-URI kept in className to satisfy no-inline-style rule */}
@@ -589,7 +586,7 @@ export function BoardList() {
                   {/* Soft light blob */}
                   <div className="absolute -top-5 -right-5 w-24 h-24 rounded-full bg-white/15 blur-[28px]" />
                   {/* Board name tag */}
-                  <div className="absolute bottom-3 left-3.5 text-[9px] font-bold tracking-[0.14em] uppercase text-white/85 px-2 py-1 rounded-md backdrop-blur-sm bg-black/[0.18] border border-white/[0.18]">
+                  <div className="absolute bottom-3 left-3.5 text-[9px] font-bold tracking-[0.14em] uppercase text-white/85 px-2 py-1 rounded-md backdrop-blur-sm bg-black/18 border border-white/18">
                     {board.title.substring(0, 14)}
                   </div>
                   {/* Status dot */}
@@ -647,13 +644,12 @@ export function BoardList() {
                     </div>
                     {/* Avatar stack */}
                     <div className="flex -space-x-1.5">
-                      {(["linear-gradient(135deg,#7B2FF7,#F107A3)", "linear-gradient(135deg,#1A73E8,#6C63FF)", "linear-gradient(135deg,#059669,#10B981)"] as const)
+                      {(["bg-linear-to-br from-[#7B2FF7] to-[#F107A3]", "bg-linear-to-br from-[#1A73E8] to-[#6C63FF]", "bg-linear-to-br from-[#059669] to-[#10B981]"] as const)
                         .slice(0, Math.min(3, Math.max(1, board.listCount)))
                         .map((g, i) => (
                           <div
                             key={i}
-                            className="w-5.5 h-5.5 rounded-full border-2 border-card flex items-center justify-center text-white text-[8px] font-bold shadow-[0_1px_4px_rgba(0,0,0,0.12)]"
-                            style={{ background: g }}
+                            className={`w-5.5 h-5.5 rounded-full border-2 border-card flex items-center justify-center text-white text-[8px] font-bold shadow-[0_1px_4px_rgba(0,0,0,0.12)] ${g}`}
                           >
                             {["V","M","A"][i]}
                           </div>
@@ -725,8 +721,7 @@ export function BoardList() {
               </div>
               <div className="text-right shrink-0">
                 <div
-                  className="font-display font-bold text-[32px] leading-none tabular-nums bg-clip-text text-transparent"
-                  style={{ background: healthGradient }}
+                  className={`font-display font-bold text-[32px] leading-none tabular-nums bg-clip-text text-transparent ${healthGradientClass}`}
                 >
                   {healthScore}
                 </div>

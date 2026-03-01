@@ -126,9 +126,9 @@ function MiniCard({
       }
     >
       {card.priority && card.priority !== "NONE" && (
-        <span className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", PRIORITY_DOT[card.priority])} />
+        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", PRIORITY_DOT[card.priority])} />
       )}
-      {isOverdue && <AlertTriangle className="h-2.5 w-2.5 flex-shrink-0 text-red-500" />}
+      {isOverdue && <AlertTriangle className="h-2.5 w-2.5 shrink-0 text-red-500" />}
       <span className="truncate">{card.title}</span>
       {!compact && card.assigneeImageUrl && (
         <Image
@@ -136,7 +136,7 @@ function MiniCard({
           alt={card.assigneeName ?? ""}
           width={14}
           height={14}
-          className="h-3.5 w-3.5 rounded-full flex-shrink-0 ml-auto"
+          className="h-3.5 w-3.5 rounded-full shrink-0 ml-auto"
         />
       )}
     </motion.div>
@@ -181,7 +181,7 @@ function DayCell({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "min-h-[80px] p-1 border-r border-b border-slate-200 dark:border-slate-700 transition-colors",
+        "min-h-20 p-1 border-r border-b border-slate-200 dark:border-slate-700 transition-colors",
         !isCurrentMonth && "bg-slate-50 dark:bg-slate-900/50",
         isCurrentMonth && "bg-white dark:bg-slate-900",
         isToday(date) && "bg-indigo-50 dark:bg-indigo-950/20",
@@ -231,7 +231,7 @@ function DayCell({
 
 function UnscheduledPanel({ cards }: { cards: CalendarCard[] }) {
   return (
-    <div className="w-56 flex-shrink-0 border-l border-slate-200 dark:border-slate-700 flex flex-col">
+    <div className="w-56 shrink-0 border-l border-slate-200 dark:border-slate-700 flex flex-col">
       <div className="p-3 border-b border-slate-200 dark:border-slate-700">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Unscheduled</p>
         <p className="text-xs text-muted-foreground">{cards.length} card{cards.length !== 1 ? "s" : ""}</p>
@@ -377,7 +377,7 @@ export function CalendarView({ cards, boardId, onCardUpdate }: CalendarViewProps
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-[600px] overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+      <div className="flex h-full min-h-150 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         {/* Main area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}

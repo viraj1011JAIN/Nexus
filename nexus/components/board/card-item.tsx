@@ -94,35 +94,34 @@ const CardItemInner = ({
       ref={setNodeRef}
       style={{
         ...style,
-        background: isDark ? "rgba(255,255,255,0.04)" : "#FFFDF9",
-        border: `1px solid ${isSelected
-          ? "rgb(123,47,247)"
-          : isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"
+        background: isDark ? "rgba(26,22,36,0.85)" : "#FFFFFF",
+        border: `1px solid ${
+          isSelected
+            ? "rgba(123,47,247,0.7)"
+            : isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)"
         }`,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)",
+        boxShadow: isDark
+          ? "0 1px 3px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.25)"
+          : "0 1px 3px rgba(0,0,0,0.05), 0 2px 6px rgba(0,0,0,0.04)",
         animationDelay: `${index * 0.07}s`,
       }}
       {...attributes}
       {...listeners}
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ scale: 1.018, boxShadow: isDark
-        ? "0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(123,47,247,0.2)"
-        : "0 16px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.07)"
+      exit={{ opacity: 0, scale: 0.97 }}
+      whileHover={{ scale: 1.012, boxShadow: isDark
+        ? "0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(123,47,247,0.25)"
+        : "0 8px 24px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06), 0 0 0 1px rgba(123,47,247,0.1)"
       }}
-      whileTap={{ scale: 0.98 }}
-      transition={{
-        duration: 0.2,
-        ease: [0.4, 0, 0.2, 1],
-        delay: index * 0.05
-      }}
+      whileTap={{ scale: 0.985 }}
+      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1], delay: index * 0.04 }}
       onClick={() => {
         if (isBulkMode) { toggleCard(data.id); return; }
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative text-sm rounded-[14px] cursor-pointer animate-card-enter touch-manipulation min-h-[72px] overflow-hidden kanban-card",
+        "group relative text-sm rounded-[12px] cursor-pointer animate-card-enter touch-manipulation overflow-hidden kanban-card",
         isSelected && "ring-2 ring-primary"
       )}
     >
@@ -133,8 +132,8 @@ const CardItemInner = ({
             position: "absolute",
             left: 0, top: 0, bottom: 0,
             width: 3,
-            background: `linear-gradient(to bottom, ${priorityDot}, ${priorityDot}88)`,
-            borderRadius: "14px 0 0 14px",
+            background: `linear-gradient(to bottom, ${priorityDot}, ${priorityDot}66)`,
+            borderRadius: "12px 0 0 12px",
           }}
         />
       )}
@@ -143,7 +142,7 @@ const CardItemInner = ({
         <div
           role="checkbox"
           tabIndex={0}
-          aria-checked={isSelected}
+          aria-checked={isSelected ? "true" : "false"}
           aria-label={`Select card: ${data.title}`}
           className={cn(
             "absolute top-1.5 left-1.5 z-20 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",
@@ -178,24 +177,19 @@ const CardItemInner = ({
       )}
 
       {/* Card Content */}
-      <div
-        className="p-3 space-y-2"
-        style={{ paddingLeft: priorityDot ? 18 : 12 }}
-      >
+      <div className={cn("py-3 pr-9 space-y-2.5", priorityDot ? "pl-4" : "pl-3")}>
         {/* Title */}
-        <div className="pr-8">
-          <span className="block font-semibold text-card-foreground group-hover:text-primary transition-colors line-clamp-2">
-            {data.title}
-          </span>
-        </div>
+        <p className="text-[13px] font-semibold leading-[1.4] text-[#1A1714] dark:text-[#E8E4F0] group-hover:text-[#7B2FF7] dark:group-hover:text-[#C084FC] transition-colors duration-150 line-clamp-2 pr-1">
+          {data.title}
+        </p>
 
         {/* Tags Section */}
-        <div className="flex flex-wrap gap-1.5 items-center">
+        <div className="flex flex-wrap gap-1 items-center">
           {/* Priority Badge */}
           {data.priority && data.priority !== 'LOW' && (
-            <PriorityBadge 
-              priority={data.priority as Priority} 
-              size="sm" 
+            <PriorityBadge
+              priority={data.priority as Priority}
+              size="sm"
               animated={false}
             />
           )}
@@ -203,12 +197,12 @@ const CardItemInner = ({
           {/* Due Date Tag */}
           {data.dueDate && (
             <div className={cn(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium",
+              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium",
               isOverdue
-                ? "bg-destructive/10 text-destructive"
+                ? "bg-red-500/10 text-red-600 dark:text-red-400"
                 : isDueSoon
-                ? "bg-warning/10 text-warning"
-                : "bg-accent text-muted-foreground"
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                : "bg-black/5 dark:bg-white/8 text-[#6B6560] dark:text-white/45"
             )}>
               <Clock className="w-3 h-3" />
               <span>{format(new Date(data.dueDate), "MMM d")}</span>
@@ -217,16 +211,16 @@ const CardItemInner = ({
 
           {/* Story Points badge */}
           {data.storyPoints !== null && data.storyPoints !== undefined && (
-            <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+            <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <span>{data.storyPoints}pt</span>
             </div>
           )}
 
-          {/* Dependency lock icon — card is blocked by others */}
+          {/* Dependency lock icon */}
           {(data._count?.dependencies ?? 0) > 0 && (
             <div
               title={`Blocked by ${data._count!.dependencies} card${data._count!.dependencies === 1 ? "" : "s"}`}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-red-500/10 text-red-600 dark:text-red-400"
             >
               <Lock className="w-3 h-3" />
               <span>{data._count!.dependencies}</span>
@@ -237,7 +231,7 @@ const CardItemInner = ({
           {(data._count?.attachments ?? 0) > 0 && (
             <div
               title={`${data._count!.attachments} attachment${data._count!.attachments === 1 ? "" : "s"}`}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/8 text-[#6B6560] dark:text-white/45"
             >
               <Paperclip className="w-3 h-3" />
               <span>{data._count!.attachments}</span>
@@ -254,37 +248,36 @@ const CardItemInner = ({
           const total = allItems.length;
           const pct = Math.round((done / total) * 100);
           return (
-            <div className="flex items-center gap-1.5 w-full">
-              <CheckSquare className="w-3 h-3 text-muted-foreground shrink-0" />
-              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+            <div className="flex items-center gap-2 w-full">
+              <CheckSquare className="w-3 h-3 text-[#9A8F85] dark:text-white/35 shrink-0" />
+              <div className="flex-1 h-1 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
                 <div
                   className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    pct === 100 ? "bg-emerald-500" : "bg-blue-400"
+                    "h-full rounded-full transition-[width] duration-500",
+                    pct === 100 ? "bg-emerald-500" : "bg-[#7B2FF7]"
                   )}
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <span className="text-[10px] text-muted-foreground tabular-nums">{done}/{total}</span>
+              <span className="text-[10px] font-medium tabular-nums text-[#9A8F85] dark:text-white/35 shrink-0">{done}/{total}</span>
             </div>
           );
         })()}
       </div>
 
-      {/* 3 DOTS MENU (Delete Only) */}
-      <div className="absolute right-1 top-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* 3 DOTS MENU */}
+      <div className="absolute right-1.5 top-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent focus:opacity-100 rounded-lg transition-all hover:scale-110"
+              className="h-6 w-6 rounded-lg text-[#9A8F85] dark:text-white/35 hover:text-[#1A1714] dark:hover:text-white hover:bg-black/6 dark:hover:bg-white/10 transition-all"
               onClick={(e) => e.stopPropagation()}
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          
           <DropdownMenuContent align="end" side="bottom" className="w-auto pb-2">
             <DropdownMenuItem
               onClick={handleDelete}

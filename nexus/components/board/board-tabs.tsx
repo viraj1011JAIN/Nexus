@@ -1,15 +1,15 @@
-﻿"use client";
+"use client";
 
-import { useState, useMemo, useCallback, useRef, useSyncExternalStore } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { startOfToday, startOfDay, endOfDay } from "date-fns";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorBoundary } from "@/components/error-boundary";
-// ─── Dynamic imports for all components that import server actions ─────────
+// --- Dynamic imports for all components that import server actions ---------
 // Static imports create a frozen reference to Turbopack's server-action stub
 // chunk (content-hashed ID). When any file changes during HMR the stub gets a
-// new hash; the old ID no longer has a registered factory → runtime crash.
+// new hash; the old ID no longer has a registered factory ? runtime crash.
 // dynamic() integrates with the Turbopack HMR system so after each update the
 // next render re-fetches the latest chunk, always getting a live factory.
 const ListContainer = dynamic(() =>
@@ -33,7 +33,7 @@ const FilterBar = dynamic(() =>
 const BulkActionBar = dynamic(() =>
   import("@/components/board/bulk-action-bar").then((m) => ({ default: m.BulkActionBar }))
 );
-// TableView and GanttView don't import server actions — static imports are safe
+// TableView and GanttView don't import server actions � static imports are safe
 import { TableView } from "@/components/board/table-view";
 import { GanttView } from "@/components/board/gantt-view";
 import type { BoardFilterState } from "@/components/board/filter-bar";
@@ -43,9 +43,9 @@ import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import {
   BarChart3, LayoutDashboard, Table2, GitBranch, Calendar, Users, GanttChart, Filter,
 } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+import { cn } from "@/lib/utils";
 
-// â”€â”€â”€ Tab definitions (order matters â€” keys 1â€“6 map to tabs by index) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Tab definitions (order matters — keys 1–6 map to tabs by index) ──────────
 
 const TABS = [
   { value: "board",     label: "Board",     Icon: LayoutDashboard },
@@ -74,12 +74,9 @@ interface BoardTabsProps {
   onFilterBarChange?: (open: boolean) => void;
 }
 
-// â”€â”€â”€ Inner component (consumes BulkSelectionContext) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Inner component (consumes BulkSelectionContext) ─────────────────────────
 
 function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: externalFilterOpen, onFilterBarChange }: BoardTabsProps) {
-  const { resolvedTheme } = useTheme();
-  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
-  const isDark = mounted && resolvedTheme === "dark";
   const [activeTab, setActiveTab] = useState<TabValue>("board");
   const [filters, setFilters] = useState<BoardFilterState>({
     assigneeIds: [],
@@ -87,7 +84,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
     labelIds: [],
   });
 
-  // ── Filter bar open state ──────────────────────────────────────────────────
+  // -- Filter bar open state --------------------------------------------------
   // If an external controller is provided (BoardPageClient), use it; otherwise
   // fall back to internal state so the component also works standalone.
   const [internalFilterOpen, setInternalFilterOpen] = useState(false);
@@ -103,7 +100,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
     [onFilterBarChange]
   );
 
-  // Tab switching — no longer resets filters so a user can switch views while
+  // Tab switching � no longer resets filters so a user can switch views while
   // keeping the same active filters (e.g. "my cards" on board, then on table).
   const handleTabChange = useCallback((tab: TabValue) => {
     setActiveTab(tab);
@@ -155,7 +152,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
     const map = new Map<string, { id: string; name: string; imageUrl?: string | null }>();
     for (const card of allCards) {
       // Only include cards that have a real assigneeId so the map key is always
-      // the actual DB user id — keeps FilterBar predicate consistent
+      // the actual DB user id � keeps FilterBar predicate consistent
       if (card.assigneeId && card.assigneeName) {
         if (!map.has(card.assigneeId)) {
           map.set(card.assigneeId, { id: card.assigneeId, name: card.assigneeName, imageUrl: card.assigneeImageUrl });
@@ -207,7 +204,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
       if (filters.overdue) {
         if (!card.dueDate || new Date(card.dueDate) >= startOfToday()) return false;
       }
-      // Due date range — inclusive: card.dueDate must be within [startOfDay(from), endOfDay(to)]
+      // Due date range � inclusive: card.dueDate must be within [startOfDay(from), endOfDay(to)]
       if (filters.dueDateFrom) {
         if (!card.dueDate || new Date(card.dueDate) < startOfDay(new Date(filters.dueDateFrom))) return false;
       }
@@ -218,7 +215,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
     });
   }, [allCards, filters]);
 
-  // Whether any filter is currently applied — used to decide when to narrow views
+  // Whether any filter is currently applied � used to decide when to narrow views
   const filteredCardIds = useMemo(() => new Set(filteredCards.map((c) => c.id)), [filteredCards]);
   const hasActiveFilter = filteredCards.length < allCards.length;
 
@@ -239,7 +236,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
   // Analytics and Sprints manage their own data; no card filter applies there.
   const showFilterBar = isFilterBarOpen && !["analytics", "sprints"].includes(activeTab);
 
-  // â”€â”€ Keyboard shortcuts (TASK-016) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Keyboard shortcuts (TASK-016) ─────────────────────────────────────────
 
   const switchToTab = useCallback((tab: TabValue) => {
     handleTabChange(tab);
@@ -253,7 +250,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
   }, [bulk, filteredCards]);
 
   const shortcuts = useMemo(() => [
-    // â”€â”€ View switch (1â€“6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── View switch (1–6) ───────────────────────────────────────────────────
     { key: "1", description: "Switch to Board view",    action: () => switchToTab("board"),     ignoreInInput: true },
     { key: "2", description: "Switch to Table view",    action: () => switchToTab("table"),     ignoreInInput: true },
     { key: "3", description: "Switch to Calendar view", action: () => switchToTab("calendar"),  ignoreInInput: true },
@@ -261,7 +258,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
     { key: "5", description: "Switch to Sprints view",  action: () => switchToTab("sprints"),   ignoreInInput: true },
     { key: "6", description: "Switch to Workload view", action: () => switchToTab("workload"),  ignoreInInput: true },
     { key: "7", description: "Switch to Analytics",     action: () => switchToTab("analytics"), ignoreInInput: true },
-    // â”€â”€ Bulk selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Bulk selection ──────────────────────────────────────────────────────
     { key: "b", description: "Toggle bulk selection mode", action: () => bulk.isBulkMode ? bulk.exitBulkMode() : bulk.enterBulkMode(), ignoreInInput: true },
     { key: "a", modifiers: { ctrl: true } as const, description: "Select all visible cards", action: selectAllVisible, ignoreInInput: true },
     // Two Escape entries: closing the shortcuts modal should work even when focus is inside
@@ -284,9 +281,9 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
       },
       ignoreInInput: false,
     },
-    // ── Filter bar ────────────────────────────────────────────────────────────────
+    // -- Filter bar ----------------------------------------------------------------
     { key: "f", description: "Toggle filter bar", action: () => setFilterBarOpen(!isFilterBarOpen), ignoreInInput: true },
-    // ── Help ─────────────────────────────────────────────────────────────────────
+    // -- Help ---------------------------------------------------------------------
     { key: "?", description: "Show keyboard shortcuts", action: () => setShortcutsOpen(true), ignoreInInput: true },
   ], [switchToTab, bulk, selectAllVisible, setFilterBarOpen, isFilterBarOpen]);
 
@@ -304,7 +301,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
       />
 
       {/* Shimmer brand stripe */}
-      <div className="h-[2px] flex-shrink-0 shimmer-stripe" />
+      <div className="h-0.5 shrink-0 shimmer-stripe" />
 
       <Tabs
         id="board-tabs"
@@ -313,44 +310,22 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
         className="w-full relative z-10 flex-1 flex flex-col overflow-hidden"
       >
         <div
-          className="px-6 py-2 flex items-center justify-between gap-4"
+          className="px-6 py-2 flex items-center justify-between gap-4 border-b border-black/7 dark:border-white/6 bg-[rgba(255,253,249,0.9)] dark:bg-[rgba(13,12,20,0.75)] backdrop-blur-md"
           ref={tabListRef as React.RefObject<HTMLDivElement>}
-          style={{
-            borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.07)",
-            background: isDark ? "rgba(13,12,20,0.75)" : "rgba(255,253,249,0.9)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-          }}
         >
           <div className="flex flex-col gap-2">
             <TabsList
-              className="h-auto p-1 gap-0.5"
-              style={{
-                background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
-                border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.07)",
-                borderRadius: 10,
-              }}
+              className="h-auto p-1 gap-0.5 rounded-[10px] border border-black/7 dark:border-white/7 bg-black/4 dark:bg-white/4"
             >
               {TABS.map(({ value, label, Icon }, i) => (
                 <TabsTrigger
                   key={value}
                   value={value}
                   data-value={value}
-                  className="gap-1.5 text-[12.5px] rounded-[7px] px-3 py-1.5 data-[state=active]:shadow-none"
-                  style={{
-                    color: activeTab === value
-                      ? isDark ? "#C084FC" : "#7B2FF7"
-                      : isDark ? "rgba(255,255,255,0.38)" : "#9A8F85",
-                    background: activeTab === value
-                      ? isDark ? "rgba(123,47,247,0.15)" : "rgba(123,47,247,0.08)"
-                      : "transparent",
-                    fontWeight: activeTab === value ? 600 : 400,
-                    fontFamily: "'DM Sans', sans-serif",
-                    transition: "all 0.18s ease",
-                  }}
+                  className="gap-1.5 text-[12.5px] rounded-[7px] px-3 py-1.5 data-[state=active]:shadow-none font-sans transition-all duration-180 text-[#9A8F85] dark:text-white/38 data-[state=active]:text-[#7B2FF7] dark:data-[state=active]:text-[#C084FC] data-[state=active]:bg-[rgba(123,47,247,0.08)] dark:data-[state=active]:bg-[rgba(123,47,247,0.15)] data-[state=active]:font-semibold"
                   title={`${label} (${i + 1})`}
                 >
-                  <Icon className="h-3.5 w-3.5" style={{ opacity: activeTab === value ? 1 : 0.6 }} />
+                  <Icon className="h-3.5 w-3.5 data-[state=active]:opacity-100" />
                   {label}
                 </TabsTrigger>
               ))}
@@ -363,72 +338,44 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
             )}
           </div>
 
-          {/* Board stats + filter toggle — right side */}
-          <div className="flex items-center gap-4 flex-shrink-0">
+          {/* Board stats + filter toggle � right side */}
+          <div className="flex items-center gap-4 shrink-0">
             {[
-              { label: "Lists",  val: (lists ?? []).length,  color: "#7B2FF7" },
-              { label: "Cards",  val: allCards.length,       color: "#1A73E8" },
-              { label: "Done",   val: doneCount,             color: "#059669" },
+              { label: "Lists",  val: (lists ?? []).length,  colorClass: "text-[#7B2FF7]" },
+              { label: "Cards",  val: allCards.length,       colorClass: "text-[#1A73E8]" },
+              { label: "Done",   val: doneCount,             colorClass: "text-[#059669]" },
             ].map((s) => (
               <div key={s.label} className="flex items-center gap-1.5">
                 <span
-                  className="text-[14px] font-bold leading-none font-display"
-                  style={{ color: s.color }}
+                  className={`text-[14px] font-bold leading-none font-display ${s.colorClass}`}
                 >
                   {s.val}
                 </span>
                 <span
-                  className="text-[11px] font-normal"
-                  style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#BFB9B3" }}
+                  className="text-[11px] font-normal text-[#BFB9B3] dark:text-white/25"
                 >
                   {s.label}
                 </span>
               </div>
             ))}
 
-            {/* Filter toggle — active indicator dot when filters are applied */}
+            {/* Filter toggle � active indicator dot when filters are applied */}
             {!["analytics", "sprints"].includes(activeTab) && (
               <button
                 onClick={() => setFilterBarOpen(!isFilterBarOpen)}
                 title="Toggle filters (F)"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "5px 12px",
-                  borderRadius: 8,
-                  border: isFilterBarOpen
-                    ? "1px solid #00C8FF"
-                    : "1px solid rgba(0,200,255,0.45)",
-                  background: isFilterBarOpen
-                    ? "#00C8FF"
-                    : "rgba(0,200,255,0.12)",
-                  color: isFilterBarOpen ? "#000" : "#00C8FF",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                  transition: "all 0.18s ease",
-                  position: "relative",
-                  boxShadow: isFilterBarOpen
-                    ? "0 0 10px rgba(0,200,255,0.55), 0 0 20px rgba(0,200,255,0.25)"
-                    : "0 0 6px rgba(0,200,255,0.2)",
-                }}
+                className={cn(
+                  "relative flex items-center gap-1.25 px-3 py-1.25 rounded-xl text-[12px] font-semibold font-sans cursor-pointer transition-all duration-180",
+                  isFilterBarOpen
+                    ? "border border-[#00C8FF] bg-[#00C8FF] text-black shadow-[0_0_10px_rgba(0,200,255,0.55),0_0_20px_rgba(0,200,255,0.25)]"
+                    : "border border-[rgba(0,200,255,0.45)] bg-[rgba(0,200,255,0.12)] text-[#00C8FF] shadow-[0_0_6px_rgba(0,200,255,0.2)]"
+                )}
               >
                 <Filter className="w-3 h-3" />
                 Filters
                 {hasActiveFilter && (
                   <span
-                    style={{
-                      position: "absolute",
-                      top: 2,
-                      right: 2,
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: "#00C8FF",
-                      boxShadow: "0 0 4px #00C8FF",
-                    }}
+                    className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#00C8FF] shadow-[0_0_4px_#00C8FF]"
                   />
                 )}
               </button>
@@ -479,7 +426,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
         </TabsContent>
       </Tabs>
 
-      {/* Bulk action bar â€” appears when cards are selected */}
+      {/* Bulk action bar — appears when cards are selected */}
       <BulkActionBar
         selectedIds={bulk.selectedIds}
         onClearSelection={bulk.clearSelection}
@@ -491,7 +438,7 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
   );
 }
 
-// â”€â”€â”€ Public export (wraps inner with BulkSelectionProvider) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Public export (wraps inner with BulkSelectionProvider) ──────────────────
 
 export function BoardTabs(props: BoardTabsProps) {
   return (

@@ -116,16 +116,16 @@ const FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
 };
 
 /** Accent colour per field type — bg / text / border */
-const FIELD_TYPE_COLORS: Record<CustomFieldType, { bg: string; text: string; border: string }> = {
-  TEXT:         { bg: "#EEF2FF", text: "#4F46E5", border: "#C7D2FE" },
-  NUMBER:       { bg: "#F0FDF4", text: "#16A34A", border: "#BBF7D0" },
-  DATE:         { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
-  CHECKBOX:     { bg: "#F0F9FF", text: "#0369A1", border: "#BAE6FD" },
-  SELECT:       { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF" },
-  MULTI_SELECT: { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF" },
-  URL:          { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
-  EMAIL:        { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3" },
-  PHONE:        { bg: "#FEF9C3", text: "#A16207", border: "#FDE047" },
+const FIELD_TYPE_COLORS: Record<CustomFieldType, { bg: string; text: string; border: string; twClasses: string; twText: string }> = {
+  TEXT:         { bg: "#EEF2FF", text: "#4F46E5", border: "#C7D2FE", twClasses: "bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]", twText: "text-[#4F46E5]" },
+  NUMBER:       { bg: "#F0FDF4", text: "#16A34A", border: "#BBF7D0", twClasses: "bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]", twText: "text-[#16A34A]" },
+  DATE:         { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA", twClasses: "bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]", twText: "text-[#C2410C]" },
+  CHECKBOX:     { bg: "#F0F9FF", text: "#0369A1", border: "#BAE6FD", twClasses: "bg-[#F0F9FF] text-[#0369A1] border-[#BAE6FD]", twText: "text-[#0369A1]" },
+  SELECT:       { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF", twClasses: "bg-[#FDF4FF] text-[#7C3AED] border-[#E9D5FF]", twText: "text-[#7C3AED]" },
+  MULTI_SELECT: { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF", twClasses: "bg-[#FDF4FF] text-[#7C3AED] border-[#E9D5FF]", twText: "text-[#7C3AED]" },
+  URL:          { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0", twClasses: "bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]", twText: "text-[#059669]" },
+  EMAIL:        { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3", twClasses: "bg-[#FFF1F2] text-[#BE123C] border-[#FECDD3]", twText: "text-[#BE123C]" },
+  PHONE:        { bg: "#FEF9C3", text: "#A16207", border: "#FDE047", twClasses: "bg-[#FEF9C3] text-[#A16207] border-[#FDE047]", twText: "text-[#A16207]" },
 };
 
 // ─── Field Value Input ────────────────────────────────────────────────────────
@@ -387,24 +387,19 @@ function CreateFieldDialog({
                     key={t}
                     type="button"
                     onClick={() => setType(t)}
-                    style={isSelected ? {
-                      background: colors.bg,
-                      borderColor: colors.border,
-                      color: colors.text,
-                    } : undefined}
                     className={cn(
                       "relative flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all text-left",
                       isSelected
-                        ? "shadow-sm ring-1 ring-offset-0"
+                        ? `shadow-sm ring-1 ring-offset-0 ${colors.twClasses}`
                         : "border-border text-muted-foreground hover:border-muted-foreground/40 hover:bg-muted/50",
                     )}
                   >
-                    <span style={isSelected ? { color: colors.text } : undefined}>
+                    <span className={isSelected ? colors.twText : ""}>
                       {FIELD_ICONS[t]}
                     </span>
                     {FIELD_TYPE_LABELS[t]}
                     {isSelected && (
-                      <Check className="h-3 w-3 absolute top-1.5 right-1.5" style={{ color: colors.text }} />
+                      <Check className={`h-3 w-3 absolute top-1.5 right-1.5 ${colors.twText}`} />
                     )}
                   </button>
                 );
@@ -611,15 +606,14 @@ export function CustomFieldsPanel({ boardId, cardId, isAdmin = false }: CustomFi
                 >
                   {/* Type pill */}
                   <div
-                    className="flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap"
-                    style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
+                    className={`shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap border ${colors.twClasses}`}
                   >
                     {FIELD_ICONS[field.type]}
                     {FIELD_TYPE_LABELS[field.type]}
                   </div>
 
                   {/* Field name */}
-                  <label className="flex-shrink-0 text-xs font-medium text-foreground w-[90px] truncate">
+                  <label className="shrink-0 text-xs font-medium text-foreground w-22.5 truncate">
                     {field.name}
                     {field.isRequired && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
@@ -633,7 +627,7 @@ export function CustomFieldsPanel({ boardId, cardId, isAdmin = false }: CustomFi
                   {isAdmin && (
                     <button
                       onClick={() => handleDelete(field.id)}
-                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
+                      className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
                       title="Delete field"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

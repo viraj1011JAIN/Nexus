@@ -50,10 +50,18 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
-        // Long-lived cache for all static Next.js bundles
+        // In production, JS chunk filenames include a content hash so 1-year
+        // immutable caching is safe. In development (Turbopack), chunk filenames
+        // like _920085a8._.js can keep the SAME NAME after source edits, meaning
+        // the browser would serve a year-old stale bundle → hydration mismatch.
         source: "/_next/static/:path*",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          {
+            key: "Cache-Control",
+            value: process.env.NODE_ENV === "production"
+              ? "public, max-age=31536000, immutable"
+              : "no-store",
+          },
         ],
       },
       {

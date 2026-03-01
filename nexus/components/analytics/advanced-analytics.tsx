@@ -526,7 +526,7 @@ function CycleTimeTab({ d }: { d: AdvancedBoardAnalytics }) {
             <CardTitle className="text-sm font-medium">Cycle Time Percentile Bar</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="relative h-8 bg-gradient-to-r from-emerald-400 via-yellow-400 to-red-500 rounded-full overflow-hidden">
+            <div className="relative h-8 bg-linear-to-r from-emerald-400 via-yellow-400 to-red-500 rounded-full overflow-hidden">
               {[
                 { p: cycleTime.p50, label: "P50", pos: 50 },
                 { p: cycleTime.p75, label: "P75", pos: 75 },
@@ -634,10 +634,10 @@ function FlowTab({ d, days }: { d: AdvancedBoardAnalytics; days: DaysBack }) {
                   )}
                 >
                   <div
-                    className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: LIST_COLORS[i % LIST_COLORS.length] }}
                   />
-                  <span className="font-medium min-w-[120px] truncate">{ls.listTitle}</span>
+                  <span className="font-medium min-w-30 truncate">{ls.listTitle}</span>
                   <div className="flex-1 flex items-center gap-4 text-xs text-muted-foreground">
                     <span>
                       <strong className="text-foreground">{ls.cardCount}</strong> cards
@@ -781,11 +781,11 @@ function PatternsTab({ d }: { d: AdvancedBoardAnalytics }) {
                   <RechartsTooltip contentStyle={CHART_STYLE} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex flex-col gap-1.5 min-w-[140px]">
+              <div className="flex flex-col gap-1.5 min-w-35">
                 {d.topLabels.map((l) => (
                   <div key={l.name} className="flex items-center gap-2 text-xs">
                     <span
-                      className="h-2.5 w-2.5 rounded-sm flex-shrink-0"
+                      className="h-2.5 w-2.5 rounded-sm shrink-0"
                       style={{ backgroundColor: l.color }}
                     />
                     <span className="truncate text-muted-foreground">{l.name}</span>
@@ -920,12 +920,12 @@ function MembersTab({ d }: { d: AdvancedBoardAnalytics }) {
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm dark:border-slate-700"
                 >
                   <div
-                    className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
                     style={{ backgroundColor: LIST_COLORS[i % LIST_COLORS.length] }}
                   >
                     {m.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="font-medium min-w-[110px] truncate">{m.name}</span>
+                  <span className="font-medium min-w-27.5 truncate">{m.name}</span>
                   <div className="flex-1 flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                     <span>
                       <strong className="text-foreground">{m.totalCards}</strong> total

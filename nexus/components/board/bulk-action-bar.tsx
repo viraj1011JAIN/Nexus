@@ -146,7 +146,7 @@ export function BulkActionBar({
           >
             <div className="flex items-center gap-1.5 bg-slate-900 dark:bg-slate-800 text-white
               rounded-2xl shadow-2xl shadow-black/30 border border-slate-700 px-4 py-2.5
-              min-w-[480px] max-w-[90vw]"
+              min-w-120 max-w-[90vw]"
             >
               {/* Selection count */}
               <div className="flex items-center gap-2 pr-3 border-r border-slate-600">
@@ -276,7 +276,7 @@ export function BulkActionBar({
                         <DropdownMenuItem key={l.id} onClick={() => handleAddLabel(l.id)}>
                           <span className="flex items-center gap-2">
                             <span
-                              className="h-3 w-3 rounded-full flex-shrink-0"
+                              className="h-3 w-3 rounded-full shrink-0"
                               style={{ backgroundColor: l.color }}
                             />
                             {l.name}

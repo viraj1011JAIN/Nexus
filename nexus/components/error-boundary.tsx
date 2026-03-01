@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+        <div className="flex flex-col items-center justify-center min-h-100 p-8 text-center">
           <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
           <h2 className="text-2xl font-bold text-slate-900 mb-2">
             Something went wrong

@@ -86,14 +86,14 @@ export function PriorityBadge({
     URGENT: {
       label: "Urgent",
       icon: AlertTriangle,
-      baseClasses: "bg-gradient-to-r from-red-500 to-red-600 text-white font-bold shadow-lg",
+      baseClasses: "bg-linear-to-r from-red-500 to-red-600 text-white font-bold shadow-lg",
       pulseColor: "bg-red-400",
       shouldPulse: true,
     },
     HIGH: {
       label: "High",
       icon: ArrowUp,
-      baseClasses: "bg-gradient-to-r from-orange-400 to-orange-500 text-white font-semibold shadow-md",
+      baseClasses: "bg-linear-to-r from-orange-400 to-orange-500 text-white font-semibold shadow-md",
       pulseColor: "bg-orange-300",
       shouldPulse: isDeadlineNear, // Pulse when deadline is near
     },
@@ -126,7 +126,7 @@ export function PriorityBadge({
         className={cn(
           "relative inline-flex items-center gap-1.5 rounded-md",
           sizeClasses[size],
-          "bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-xl",
+          "bg-linear-to-r from-red-600 to-red-700 text-white font-bold shadow-xl",
           className
         )}
         role="status"

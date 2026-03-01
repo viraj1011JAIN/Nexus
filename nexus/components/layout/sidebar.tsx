@@ -47,7 +47,7 @@ export const Sidebar = () => {
   return (
     <aside className="w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 z-20 select-none relative overflow-hidden">
       {/* Rainbow shimmer stripe */}
-      <div className="shimmer-stripe absolute top-0 left-0 right-0 h-[3px] z-10" />
+      <div className="shimmer-stripe absolute top-0 left-0 right-0 h-0.75 z-10" />
 
       {/* == Brand Header ================================================== */}
       <div className="px-5 pt-7 pb-5 border-b border-sidebar-border">
@@ -56,11 +56,7 @@ export const Sidebar = () => {
         <div className="flex items-center gap-3 mb-5">
           {/* Gradient logo mark with "N" lettermark */}
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: "linear-gradient(135deg, #7B2FF7, #F107A3)",
-              boxShadow: "0 6px 20px rgba(123,47,247,0.35)",
-            }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-linear-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
           >
             <span className="text-white font-bold text-[17px] leading-none tracking-tight select-none font-display">N</span>
           </div>
@@ -123,7 +119,7 @@ export const Sidebar = () => {
               <Link
                 href={route.href}
                 className={cn(
-                  "group relative flex items-center gap-2.5 px-2.5 py-[9px] rounded-lg text-[13.5px] transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
+                  "group relative flex items-center gap-2.5 px-2.5 py-2.25 rounded-lg text-[13.5px] transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
                   isActive
                     ? "bg-accent text-accent-foreground font-semibold"
                     : "text-sidebar-foreground hover:bg-sidebar-accent/40 font-normal"
@@ -132,8 +128,7 @@ export const Sidebar = () => {
                 {/* Active indicator pill */}
                 {isActive && (
                   <span
-                    className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full"
-                    style={{ background: "linear-gradient(to bottom, #7B2FF7, #C01CC4)" }}
+                    className="absolute left-0 top-[18%] bottom-[18%] w-0.75 rounded-r-full bg-linear-to-b from-[#7B2FF7] to-[#C01CC4]"
                   />
                 )}
 
@@ -162,8 +157,7 @@ export const Sidebar = () => {
         </div>
         <div className="h-1 bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full"
-            style={{ width: "24%", background: "linear-gradient(90deg, #7B2FF7, #C01CC4)" }}
+            className="h-full rounded-full w-[24%] bg-linear-to-r from-[#7B2FF7] to-[#C01CC4]"
           />
         </div>
       </div>

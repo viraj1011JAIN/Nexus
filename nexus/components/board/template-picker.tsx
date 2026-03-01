@@ -139,7 +139,7 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
                     }`}
                   >
                     {/* Icon */}
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <LayoutTemplate className="h-5 w-5 text-primary" />
                     </div>
 
@@ -166,9 +166,9 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
                     </div>
 
                     {selectedId === template.id ? (
-                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      <Check className="h-4 w-4 text-primary shrink-0" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     )}
                   </button>
                 ))}

@@ -106,7 +106,7 @@ function ActionItem({
   );
   return (
     <div className="flex items-start gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-      <div className="flex-shrink-0 h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-[10px] font-bold text-indigo-600 mt-0.5">
+      <div className="shrink-0 h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-[10px] font-bold text-indigo-600 mt-0.5">
         {index + 1}
       </div>
       <div className="flex-1 space-y-2">
@@ -395,7 +395,7 @@ function AutomationCard({
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className={cn(
-          "h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0",
+          "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
           automation.isEnabled
             ? "bg-amber-100 dark:bg-amber-900/30"
             : "bg-slate-100 dark:bg-slate-800"
@@ -439,7 +439,7 @@ function AutomationCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <Switch
             checked={automation.isEnabled}
             onCheckedChange={onToggle}
@@ -522,8 +522,8 @@ function LogsDialog({
                 log.success ? "bg-emerald-50 dark:bg-emerald-950/20" : "bg-red-50 dark:bg-red-950/20"
               )}>
                 {log.success
-                  ? <Check className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  : <AlertCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0 mt-0.5" />}
+                  ? <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  : <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />}
                 <div className="flex-1">
                   <p className={log.success ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
                     {log.success ? "Ran successfully" : log.error ?? "Failed"}

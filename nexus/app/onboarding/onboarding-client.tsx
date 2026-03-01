@@ -57,7 +57,7 @@ function StepProgress({ current }: { current: Step }) {
       </div>
       <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
         <motion.div
-          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+          className="h-full bg-linear-to-r from-indigo-500 to-purple-500 rounded-full"
           initial={false}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -72,7 +72,7 @@ function StepProgress({ current }: { current: Step }) {
 function WelcomeStep({ userName, onNext }: { userName: string; onNext: () => void }) {
   return (
     <div className="flex flex-col items-center text-center gap-6">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+      <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
         <Sparkles className="w-10 h-10 text-white" />
       </div>
       <div>
@@ -102,7 +102,7 @@ function WelcomeStep({ userName, onNext }: { userName: string; onNext: () => voi
         ))}
       </div>
 
-      <Button onClick={onNext} size="lg" className="gap-2 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 shadow-md">
+      <Button onClick={onNext} size="lg" className="gap-2 mt-2 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 shadow-md">
         Get Started <ArrowRight className="h-4 w-4" />
       </Button>
     </div>
@@ -224,7 +224,7 @@ function TipsStep({ onNext }: { onNext: () => void }) {
             key={i}
             className="flex items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-800/30"
           >
-            <span className="text-xl flex-shrink-0">{tip.icon}</span>
+            <span className="text-xl shrink-0">{tip.icon}</span>
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{tip.title}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{tip.body}</p>
@@ -270,7 +270,7 @@ function DoneStep({ boardId }: { boardId: string | null }) {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-        <Button onClick={handleGoToBoard} className="flex-1 gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0">
+        <Button onClick={handleGoToBoard} className="flex-1 gap-2 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0">
           {boardId ? "Open My Board" : "Go to Dashboard"}
           <ArrowRight className="h-4 w-4" />
         </Button>
@@ -297,7 +297,7 @@ export default function OnboardingClient({ userName }: { userName: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-purple-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-indigo-50/40 to-purple-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Card */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -307,7 +307,7 @@ export default function OnboardingClient({ userName }: { userName: string }) {
           </div>
 
           {/* Step content with slide animation */}
-          <div className="px-6 py-8 min-h-[380px] flex items-start">
+          <div className="px-6 py-8 min-h-95 flex items-start">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}

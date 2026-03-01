@@ -146,56 +146,41 @@ const ListItemInner = ({
   return (
     <div
       ref={setNodeRef}
-      style={{
-        ...style,
-        width: 280,
-        flexShrink: 0,
-        userSelect: "none",
-        touchAction: "none",
-      }}
+      style={style}
       {...attributes}
-      className="animate-list-enter kanban-list-col"
+      className="animate-list-enter kanban-list-col w-72 shrink-0 select-none touch-none"
     >
       {/* List column outer shell */}
       <div
+        className="w-full flex flex-col rounded-[16px] overflow-hidden"
         style={{
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          paddingBottom: 10,
-          borderRadius: 14,
+          background: isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.018)",
+          border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.06)",
+          boxShadow: isDark
+            ? "0 4px 24px rgba(0,0,0,0.35)"
+            : "0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)",
         }}
       >
         {/* List Header — drag handle */}
         <div
           {...listeners}
+          className="flex items-center justify-between px-3.5 pt-3 pb-3 cursor-grab active:cursor-grabbing"
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "11px 14px",
-            marginBottom: 10,
             background: isDark
-              ? `linear-gradient(135deg, ${listColor}18 0%, rgba(255,255,255,0.03) 100%)`
-              : `linear-gradient(135deg, ${listColor}0D 0%, #FFFDF9 100%)`,
-            border: isDark ? `1px solid ${listColor}35` : `1px solid ${listColor}25`,
+              ? `linear-gradient(135deg, ${listColor}14 0%, rgba(255,255,255,0.02) 100%)`
+              : `linear-gradient(135deg, ${listColor}09 0%, rgba(255,253,249,0.8) 100%)`,
+            borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.05)",
             borderTop: `3px solid ${listColor}`,
-            borderRadius: "12px 12px 10px 10px",
-            boxShadow: isDark
-              ? `0 2px 12px ${listColor}18, 0 1px 4px rgba(0,0,0,0.3)`
-              : `0 2px 8px rgba(0,0,0,0.05), 0 1px 0 ${listColor}15`,
-            cursor: "grab",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-            {/* Color dot — always visible in both themes */}
-            <div style={{
-              width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-              background: listColor,
-              boxShadow: isDark ? `0 0 8px ${listColor}99` : `0 0 4px ${listColor}66`,
-            }}/>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* Color dot */}
+            <div
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ background: listColor, boxShadow: isDark ? `0 0 7px ${listColor}bb` : `0 0 5px ${listColor}77` }}
+            />
 
-            {/* Inline title editing — keep existing logic */}
+            {/* Inline title editing */}
             {isEditing ? (
               <form ref={formRef} action={handleSubmit} className="flex-1 min-w-0">
                 <input hidden name="listId" value={data.id} readOnly />
@@ -204,34 +189,18 @@ const ListItemInner = ({
                   ref={inputRef}
                   name="title"
                   defaultValue={data.title}
+                  aria-label="List title"
                   onBlur={() => formRef.current?.requestSubmit()}
-                  style={{
-                    fontSize: 13, fontWeight: 700,
-                    width: "100%",
-                    background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
-                    border: `1px solid ${listColor}66`,
-                    borderRadius: 6,
-                    padding: "2px 8px",
-                    outline: "none",
-                    color: isDark ? "#E8E4F0" : "#1A1714",
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
+                  className="w-full text-[13px] font-bold font-sans rounded-[6px] px-2 py-0.5 outline-none bg-black/5 dark:bg-white/8 text-[#1A1714] dark:text-[#E8E4F0]"
+                  style={{ border: `1.5px solid ${listColor}80` }}
                 />
                 <button type="submit" hidden />
               </form>
             ) : (
               <span
                 onClick={enableEditing}
-                style={{
-                  fontSize: 13, fontWeight: 700,
-                  color: isDark ? "#E8E4F0" : "#1A1714",
-                  fontFamily: "'DM Sans', sans-serif",
-                  letterSpacing: "-0.01em",
-                  cursor: "pointer",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
+                title="Click to rename"
+                className="text-[13px] font-bold tracking-[-0.01em] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[#1A1714] dark:text-[#E8E4F0] hover:text-[#0F0D0B] dark:hover:text-white transition-colors duration-100"
               >
                 {data.title}
               </span>
@@ -239,11 +208,11 @@ const ListItemInner = ({
 
             {/* Card count pill */}
             <span
+              className="shrink-0 text-[10px] font-bold px-1.5 py-px rounded-full leading-none"
               style={{
-                fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 20, flexShrink: 0,
-                background: `${listColor}20`,
-                color: listColor,
-                border: `1px solid ${listColor}40`,
+                background: `${listColor}1A`,
+                color: isDark ? `${listColor}` : `${listColor}`,
+                border: `1px solid ${listColor}30`,
               }}
             >
               {data.cards.length}
@@ -251,42 +220,32 @@ const ListItemInner = ({
           </div>
 
           {/* Header actions */}
-          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          <div className="flex gap-0.5 shrink-0 ml-2">
             {/* Add card button */}
             <button
               onClick={() => cardInputRef.current?.focus()}
-              style={{
-                width: 26, height: 26, borderRadius: 7, border: "none",
-                background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
-                color: isDark ? "rgba(255,255,255,0.4)" : "#9A8F85",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", transition: "all 0.15s ease",
-              }}
+              title="Add card"
+              className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#9A8F85] dark:text-white/40 hover:scale-105"
               onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.background = `${listColor}25`;
+                (e.currentTarget as HTMLElement).style.background = `${listColor}28`;
                 (e.currentTarget as HTMLElement).style.color = listColor;
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.background = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)";
-                (e.currentTarget as HTMLElement).style.color = isDark ? "rgba(255,255,255,0.4)" : "#9A8F85";
+                (e.currentTarget as HTMLElement).style.background = "";
+                (e.currentTarget as HTMLElement).style.color = "";
               }}
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
 
-            {/* More menu (delete/rename) */}
+            {/* More menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  style={{
-                    width: 26, height: 26, borderRadius: 7, border: "none",
-                    background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
-                    color: isDark ? "rgba(255,255,255,0.35)" : "#BFB9B3",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                  }}
+                  title="List options"
+                  className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#BFB9B3] dark:text-white/30 hover:bg-black/8 dark:hover:bg-white/10 hover:text-[#6B6560] dark:hover:text-white/60"
                 >
-                  <MoreHorizontal className="w-3 h-3" />
+                  <MoreHorizontal className="w-3.5 h-3.5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="bottom" className="w-auto pb-2">
@@ -310,14 +269,7 @@ const ListItemInner = ({
 
         {/* Cards Area */}
         <SortableContext items={data.cards} strategy={verticalListSortingStrategy}>
-          <div
-            className="flex flex-col gap-y-2 board-scrollbar"
-            style={{
-              overflow: "hidden auto",
-              maxHeight: "calc(100vh - 280px)",
-              padding: "0 2px 4px",
-            }}
-          >
+          <div className="flex flex-col gap-y-2 board-scrollbar overflow-x-hidden overflow-y-auto max-h-[calc(100vh-260px)] px-2.5 py-2.5">
             {data.cards.map((card, cardIndex) => (
               <CardItem
                 index={cardIndex}
@@ -330,7 +282,10 @@ const ListItemInner = ({
         </SortableContext>
 
         {/* Add Card Form */}
-        <div style={{ padding: "8px 2px 0" }}>
+        <div
+          className="px-2.5 pb-2.5 pt-1"
+          style={{ borderTop: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.04)" }}
+        >
           <form
             action={async (formData) => {
               const title = formData.get("title") as string;
@@ -353,47 +308,31 @@ const ListItemInner = ({
             <input hidden name="boardId" value={boardId} readOnly />
             {formPriority && <input hidden name="priority" value={formPriority} readOnly />}
 
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-1.5 items-center mt-1.5">
               <input
                 name="title"
                 placeholder="Add a card…"
+                aria-label="New card title"
                 onChange={handleCardTitleChange}
                 ref={cardInputRef}
                 required
-                style={{
-                  flex: 1,
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.1)",
-                  background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-                  outline: "none",
-                  color: isDark ? "#E8E4F0" : "#1A1714",
-                  fontSize: 12.5,
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontWeight: 500,
-                  transition: "border-color 0.15s ease",
-                }}
-                onFocus={e => (e.currentTarget.style.borderColor = `${listColor}66`)}
-                onBlur={e => (e.currentTarget.style.borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)")}
+                className="flex-1 px-3 py-1.75 rounded-[10px] outline-none text-[12.5px] font-medium transition-colors duration-150 bg-black/4 dark:bg-white/5 text-[#1A1714] dark:text-[#E8E4F0] border border-black/8 dark:border-white/8 placeholder:text-black/25 dark:placeholder:text-white/25"
+                onFocus={e => (e.currentTarget.style.borderColor = `${listColor}70`)}
+                onBlur={e => (e.currentTarget.style.borderColor = "")}
               />
               <button
                 type="submit"
-                style={{
-                  width: 32, height: 32, borderRadius: 8, border: "none",
-                  background: `${listColor}22`,
-                  color: listColor,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer", fontSize: 18, fontWeight: 400,
-                  transition: "all 0.15s ease",
-                }}
+                title="Add card"
+                className="h-8 w-8 rounded-[10px] border-none shrink-0 flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95"
+                style={{ background: `${listColor}20`, color: listColor }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = `${listColor}40`;
+                  (e.currentTarget as HTMLElement).style.background = `${listColor}38`;
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = `${listColor}22`;
+                  (e.currentTarget as HTMLElement).style.background = `${listColor}20`;
                 }}
               >
-                +
+                <Plus className="w-4 h-4" />
               </button>
             </div>
 

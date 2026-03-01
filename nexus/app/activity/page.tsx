@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
@@ -160,12 +160,12 @@ export default function ActivityPage() {
         className="mb-8 sm:mb-12 space-y-3"
       >
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <div className="relative flex-shrink-0">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center">
+          <div className="relative shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-violet-600 to-purple-500 flex items-center justify-center">
               <ActivityIcon className="h-6 w-6 text-white" />
             </div>
             <motion.div
-              className="absolute -inset-1 bg-gradient-to-br from-violet-600 to-purple-500 rounded-xl opacity-20 blur-lg"
+              className="absolute -inset-1 bg-linear-to-br from-violet-600 to-purple-500 rounded-xl opacity-20 blur-lg"
               animate={{ opacity: [0.2, 0.4, 0.2] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
@@ -268,7 +268,7 @@ export default function ActivityPage() {
                         >
                           <div className="flex items-start gap-3 sm:gap-4">
                             {/* Avatar */}
-                            <div className="flex-shrink-0 relative">
+                            <div className="shrink-0 relative">
                               {log.userImage ? (
                                 <img
                                   src={log.userImage}

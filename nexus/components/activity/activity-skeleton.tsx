@@ -21,7 +21,7 @@ export function ActivityLogSkeleton() {
         {/* Header Skeleton */}
         <div className="mb-8 space-y-4">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full animate-pulse" />
+            <div className="h-12 w-12 bg-linear-to-br from-gray-200 to-gray-300 rounded-full animate-pulse" />
             <div className="h-10 bg-gray-200 rounded w-64 animate-pulse" />
           </div>
           <div className="flex gap-3">

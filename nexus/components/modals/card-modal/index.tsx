@@ -520,33 +520,71 @@ export const CardModal = () => {
     { id:"fields",      label:"Fields",      icon:<Settings2 className="h-3.5 w-3.5" /> },
   ];
 
+  // Pre-computed CSS custom-property values (avoids inline style props)
+  const cmPm = cardData?.priority ? priorityMeta[cardData.priority] : null;
+  const cmDot = cmPm ? (isDark ? cmPm.dotDark : cmPm.dotLight) : "#A78BFA";
+  const cmPillBg = cmPm
+    ? (cardData?.coverImageUrl ? "rgba(0,0,0,0.32)" : (isDark ? cmPm.bgDark : cmPm.bgLight))
+    : "rgba(0,0,0,0.32)";
+  const cmPillBdr = cmPm
+    ? (cardData?.coverImageUrl ? "rgba(255,255,255,0.15)" : (isDark ? cmPm.borderDark : cmPm.borderLight))
+    : "rgba(255,255,255,0.15)";
+  const cmLblColor = cmPm ? (cardData?.coverImageUrl ? "rgba(255,255,255,0.9)" : cmDot) : "#A78BFA";
+  const cmSbPillBg  = cmPm ? (isDark ? cmPm.bgDark  : cmPm.bgLight)  : "transparent";
+  const cmSbPillBdr = cmPm ? (isDark ? cmPm.borderDark : cmPm.borderLight) : "transparent";
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
+        data-cm-modal
         className="p-0 gap-0 border-none overflow-hidden"
-        style={{
-          width: "min(1080px, 95vw)",
-          maxHeight: "90vh",
-          background: T.modal,
-          borderRadius: 20,
-          boxShadow: isDark
-            ? "0 32px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05)"
-            : "0 32px 80px rgba(0,0,0,0.14), 0 8px 32px rgba(0,0,0,0.07)",
-          display: "flex",
-          flexDirection: "column",
-          fontFamily: "'DM Sans', system-ui, sans-serif",
-        }}
       >
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
+
+          /* ── Theme tokens ──────────────────────────────── */
+          [data-cm-modal] {
+            --cm-text:${T.text}; --cm-text-mid:${T.textMid}; --cm-text-muted:${T.textMuted};
+            --cm-surface:${T.surface}; --cm-surface-hover:${T.surfaceHover};
+            --cm-border:${T.border}; --cm-divider:${T.divider};
+            --cm-tab-active:${T.tabActive}; --cm-tab-active-txt:${T.tabActiveTxt};
+            --cm-sidebar:${T.sidebarBg}; --cm-meta-label:${T.metaLabel};
+            --cm-badge-bg:${T.badgeBg}; --cm-cover-overlay:${T.coverOverlay};
+            --cm-modal-bg:${T.modal};
+            --cm-modal-shadow:${isDark ? "0 32px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05)" : "0 32px 80px rgba(0,0,0,0.14), 0 8px 32px rgba(0,0,0,0.07)"};
+            --cm-cover-bg:${cardData?.coverColor ?? "#7B2FF7"};
+            --pill-bg:${cmPillBg}; --pill-bdr:1px solid ${cmPillBdr}; --dot-color:${cmDot};
+            --cm-lbl-color:${cmLblColor};
+            --cm-sb-pill-bg:${cmSbPillBg}; --cm-sb-pill-bdr:${cmSbPillBdr}; --cm-sb-dot:${cmDot};
+            --cm-dot-urgent:${isDark ? priorityMeta.URGENT.dotDark : priorityMeta.URGENT.dotLight};
+            --cm-dot-high:${isDark ? priorityMeta.HIGH.dotDark : priorityMeta.HIGH.dotLight};
+            --cm-dot-medium:${isDark ? priorityMeta.MEDIUM.dotDark : priorityMeta.MEDIUM.dotLight};
+            --cm-dot-low:${isDark ? priorityMeta.LOW.dotDark : priorityMeta.LOW.dotLight};
+            width: min(1080px, 95vw);
+            max-height: 90vh;
+            background: var(--cm-modal-bg);
+            border-radius: 20px;
+            box-shadow: var(--cm-modal-shadow);
+            display: flex;
+            flex-direction: column;
+            font-family: 'DM Sans', system-ui, sans-serif;
+          }
+
+          /* ── Scrollbars ────────────────────────────────── */
           .cm-scrollbar::-webkit-scrollbar { width:4px; height:4px; }
           .cm-scrollbar::-webkit-scrollbar-thumb { background:${T.scrollbar}; border-radius:4px; }
           .cm-scrollbar::-webkit-scrollbar-track { background:transparent; }
           .cm-tab-scroll::-webkit-scrollbar { height:0; }
+
+          /* ── Interactive states ────────────────────────── */
           .cm-meta-row { transition:background 0.13s ease; border-radius:9px; }
           .cm-meta-row:hover { background:${T.surfaceHover}; }
           .cm-action-btn { transition:background 0.15s ease,border-color 0.15s ease; }
           .cm-action-btn:hover { background:${T.surfaceHover} !important; }
+
+          /* ── Animations ────────────────────────────────── */
+          @keyframes cm-spin { to { transform:rotate(360deg); } }
+          @keyframes cmPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
           @keyframes cmModalIn {
             from { opacity:0; transform:scale(0.97) translateY(10px); }
             to   { opacity:1; transform:scale(1) translateY(0); }
@@ -557,100 +595,211 @@ export const CardModal = () => {
           }
           .cm-anim-modal { animation: cmModalIn 0.28s cubic-bezier(0.34,1.15,0.64,1) both; }
           .cm-anim-fade  { animation: cmFadeUp 0.22s ease both; }
+
+          /* ── Layout ─────────────────────────────────────── */
+          .cm-layout  { display:flex; flex-direction:column; height:100%; max-height:90vh; overflow:hidden; }
+          .cm-body    { display:flex; flex:1; min-height:0; overflow:hidden; }
+          .cm-left    { flex:1; min-width:0; display:flex; flex-direction:column; border-right:1px solid var(--cm-divider); overflow:hidden; }
+          .cm-header  { padding:18px 22px 0; flex-shrink:0; }
+          .cm-content { flex:1; overflow-y:auto; padding:18px 22px 24px; }
+          .cm-footer  { flex-shrink:0; border-top:1px solid var(--cm-divider); padding:9px 22px; display:flex; align-items:center; justify-content:space-between; }
+          .cm-footer-l{ display:flex; align-items:center; gap:12px; }
+          .cm-footer-r{ display:flex; align-items:center; gap:6px; }
+          .cm-sidebar { width:228px; flex-shrink:0; background:var(--cm-sidebar); border-left:1px solid var(--cm-divider); overflow-y:auto; display:flex; flex-direction:column; }
+          .cm-sidebar-inner { padding:18px 14px; display:flex; flex-direction:column; gap:0; }
+
+          /* ── Loading ─────────────────────────────────────── */
+          .cm-loading-wrap  { display:flex; align-items:center; justify-content:center; height:100%; min-height:360px; }
+          .cm-loading-inner { display:flex; flex-direction:column; align-items:center; gap:12px; }
+          .cm-spinner       { width:34px; height:34px; border-radius:50%; border:3px solid #7B2FF7; border-top-color:transparent; animation:cm-spin 0.8s linear infinite; }
+          .cm-loading-text  { font-size:13px; color:var(--cm-text-muted); }
+
+          /* ── Cover ───────────────────────────────────────── */
+          .cm-cover       { position:relative; height:148px; flex-shrink:0; overflow:hidden; }
+          .cm-cover-fill  { width:100%; height:100%; background:var(--cm-cover-bg); }
+          .cm-cover-img   { width:100%; height:100%; object-fit:cover; display:block; }
+          .cm-cover-grad  { position:absolute; inset:0; background:var(--cm-cover-overlay); }
+          .cm-cover-default-dark  { width:100%; height:100%; background:linear-gradient(135deg,#1a0533 0%,#0D0C14 60%,#071422 100%); border-bottom:1px solid var(--cm-divider); }
+          .cm-cover-default-light { width:100%; height:100%; background:linear-gradient(135deg,#f4f1fd 0%,#fffdf9 60%,#f0f7ff 100%); border-bottom:1px solid var(--cm-divider); }
+
+          /* ── Breadcrumb ──────────────────────────────────── */
+          .cm-breadcrumb   { position:absolute; bottom:12px; left:18px; display:flex; align-items:center; gap:5px; }
+          .cm-bc-list      { font-size:11px; color:var(--cm-text-muted); }
+          .cm-bc-list-img  { font-size:11px; color:rgba(255,255,255,0.55); }
+          .cm-bc-id        { font-size:10.5px; font-weight:600; background:var(--cm-surface); backdrop-filter:blur(8px); padding:2px 8px; border-radius:20px; border:1px solid var(--cm-border); color:var(--cm-text-mid); }
+          .cm-bc-id-img    { font-size:10.5px; font-weight:600; background:rgba(0,0,0,0.28); backdrop-filter:blur(8px); padding:2px 8px; border-radius:20px; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.8); }
+          .cm-close        { position:absolute; top:10px; right:12px; width:30px; height:30px; border-radius:9px; background:var(--cm-surface); backdrop-filter:blur(8px); border:1px solid var(--cm-border); color:var(--cm-text-mid); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.15s ease; }
+          .cm-close-img    { position:absolute; top:10px; right:12px; width:30px; height:30px; border-radius:9px; background:rgba(0,0,0,0.38); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.15s ease; }
+
+          /* ── Priority pill ───────────────────────────────── */
+          .cm-priority-pill { position:absolute; top:12px; left:18px; display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; backdrop-filter:blur(10px); background:var(--pill-bg,rgba(0,0,0,0.32)); border:1px solid var(--pill-bdr,rgba(255,255,255,0.15)); }
+          .cm-priority-dot  { width:6px; height:6px; border-radius:50%; background:var(--dot-color,#A78BFA); box-shadow:0 0 6px var(--dot-color,#A78BFA)55; }
+          .cm-priority-lbl  { font-size:10.5px; font-weight:700; color:var(--cm-lbl-color,var(--dot-color,#A78BFA)); letter-spacing:0.04em; text-transform:uppercase; }
+          .cm-dropdown-dot  { width:7px; height:7px; border-radius:50%; margin-right:8px; background:var(--dot-color); }
+
+          /* ── Title ───────────────────────────────────────── */
+          .cm-title-ta { width:100%; background:transparent; border:1px solid rgba(123,47,247,0.45); border-radius:9px; padding:4px 8px; color:var(--cm-text); font-size:21px; font-weight:700; font-family:'Playfair Display',serif; letter-spacing:-0.02em; line-height:1.3; resize:none; min-height:48px; box-shadow:0 0 0 3px rgba(123,47,247,0.1); outline:none; }
+          .cm-title-h1 { font-size:21px; font-weight:700; font-family:'Playfair Display',serif; letter-spacing:-0.02em; line-height:1.3; color:var(--cm-text); cursor:text; padding:4px 8px 4px 0; border-radius:9px; transition:background 0.13s ease; }
+
+          /* ── Date row ────────────────────────────────────── */
+          .cm-dates    { display:flex; align-items:center; gap:5px; margin-top:6px; padding-left:1px; }
+          .cm-date-txt { font-size:11px; color:var(--cm-text-muted); }
+          .cm-date-sep { color:var(--cm-text-muted); font-size:10px; }
+
+          /* ── Action bar ──────────────────────────────────── */
+          .cm-action-bar  { display:flex; align-items:center; gap:6px; margin-top:12px; padding-bottom:12px; border-bottom:1px solid var(--cm-divider); flex-wrap:wrap; }
+          .cm-fallback-btn{ padding:5px 11px; border-radius:8px; border:1px solid var(--cm-border); background:var(--cm-surface); color:var(--cm-text-mid); font-size:12px; cursor:not-allowed; font-family:inherit; }
+
+          /* ── Tabs ─────────────────────────────────────────── */
+          .cm-tab-wrap        { display:flex; gap:1px; margin-top:2px; overflow-x:auto; padding-bottom:0; }
+          .cm-tab-btn         { display:flex; align-items:center; gap:5px; padding:9px 11px; border-radius:9px 9px 0 0; border:none; cursor:pointer; font-family:inherit; font-size:12px; white-space:nowrap; position:relative; transition:color 0.13s ease,background 0.13s ease; }
+          .cm-tab-on          { background:var(--cm-tab-active); color:var(--cm-tab-active-txt); font-weight:600; }
+          .cm-tab-off         { background:transparent; color:var(--cm-text-muted); font-weight:400; }
+          .cm-tab-bdg-on      { font-size:9px; font-weight:700; padding:1px 5px; border-radius:20px; background:rgba(123,47,247,0.25); color:var(--cm-tab-active-txt); }
+          .cm-tab-bdg-off     { font-size:9px; font-weight:700; padding:1px 5px; border-radius:20px; background:var(--cm-badge-bg); color:var(--cm-text-muted); }
+          .cm-tab-indicator   { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:55%; height:2px; background:linear-gradient(90deg,#7B2FF7,#C01CC4); border-radius:4px; }
+          .cm-divider-line    { height:1px; background:var(--cm-divider); }
+
+          /* ── Description ─────────────────────────────────── */
+          .cm-err-fb   { padding:20px; text-align:center; background:rgba(239,68,68,0.05); border-radius:12px; border:1px solid rgba(239,68,68,0.15); }
+          .cm-err-txt  { font-size:12px; color:#EF4444; }
+          .cm-desc-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+          .cm-desc-lbl { font-size:12px; font-weight:600; color:var(--cm-text-mid); }
+          .cm-ai-btn   { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; background:rgba(123,47,247,0.1); border:1px solid rgba(123,47,247,0.2); color:#A78BFA; font-size:11.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+          .cm-editor-wrap  { border-radius:12px; border:1px solid var(--cm-border); overflow:hidden; }
+          .cm-editor-dark  { background:rgba(255,255,255,0.03); }
+          .cm-editor-light { background:#fff; }
+          .cm-hint     { display:flex; align-items:center; gap:6px; margin-top:8px; padding-left:2px; }
+          .cm-hint-txt { font-size:11px; color:var(--cm-text-muted); }
+          .cm-hint-kbd { padding:1px 6px; background:var(--cm-surface); border:1px solid var(--cm-border); border-radius:5px; font-size:11px; color:var(--cm-text-mid); font-family:monospace; }
+
+          /* ── Section header (shared) ─────────────────────── */
+          .cm-sec-hdr   { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+          .cm-sec-title { font-size:12.5px; font-weight:600; color:var(--cm-text); }
+          .cm-sec-count { font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:20px; background:var(--cm-badge-bg); color:var(--cm-text-muted); }
+
+          /* ── Comments wrapper ────────────────────────────── */
+          .cm-comments-wrap  { border:1px solid var(--cm-border); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+          .cm-comments-dark  { background:rgba(255,255,255,0.02); }
+          .cm-comments-light { background:rgba(0,0,0,0.015); }
+          .cm-signin-wrap { padding:24px; text-align:center; }
+          .cm-signin-txt  { font-size:12px; color:var(--cm-text-muted); }
+
+          /* ── Misc shared tokens ──────────────────────────── */
+          .cm-muted-icon { color:var(--cm-text-muted); }
+          .cm-char-txt   { font-size:11px; color:var(--cm-text-muted); }
+          .cm-badge-sm   { font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:20px; background:var(--cm-badge-bg); color:var(--cm-text-muted); }
+          .cm-save-row   { display:flex; align-items:center; gap:5px; font-size:11px; }
+          .cm-save-dot   { width:6px; height:6px; border-radius:50%; }
+          .cm-pulse-anim { animation:cmPulse 1s ease-in-out infinite; }
+
+          /* ── Sidebar ─────────────────────────────────────── */
+          .cm-meta-label-txt { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--cm-meta-label); margin-bottom:8px; padding-left:8px; }
+          .cm-divider-sm   { height:1px; background:var(--cm-divider); margin:10px 0; }
+          .cm-meta-row-pad { padding:8px; margin-bottom:2px; }
+          .cm-meta-row-pad2{ padding:8px; }
+          .cm-field-row    { display:flex; align-items:center; gap:7px; margin-bottom:5px; }
+          .cm-field-lbl    { font-size:10.5px; color:var(--cm-meta-label); font-weight:500; }
+          .cm-field-body   { display:flex; align-items:center; gap:7px; margin-left:18px; }
+          .cm-field-body-wrap { display:flex; flex-wrap:wrap; gap:4px; margin-left:18px; }
+          .cm-field-inline { display:inline-flex; align-items:center; gap:5px; margin-left:18px; padding:3px 9px; border-radius:20px; background:var(--pill-bg); border:1px solid var(--pill-bdr); }
+          .cm-assignee-avatar { width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg,#7B2FF7,#F107A3); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:#fff; }
+          .cm-assignee-name   { font-size:11.5px; font-weight:500; color:var(--cm-text); }
+          .cm-progress-track { height:3px; background:var(--cm-surface); border-radius:3px; overflow:hidden; border:1px solid var(--cm-border); }
+          .cm-progress-txt   { font-size:10px; color:var(--cm-text-muted); margin-top:3px; }
+          .cm-sidebar-btn  { width:100%; padding:7px 10px; border-radius:9px; margin-bottom:4px; border:1px solid var(--cm-border); background:var(--cm-surface); color:var(--cm-text-mid); font-size:11.5px; font-weight:500; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px; }
+          .cm-delete-btn   { width:100%; padding:7px 10px; border-radius:9px; border:1px solid rgba(239,68,68,0.22); background:rgba(239,68,68,0.06); color:#EF4444; font-size:11.5px; font-weight:500; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px; transition:background 0.15s ease; }
+          .cm-delete-btn:hover { background:rgba(239,68,68,0.12); }
+
+          /* ── Extra utility classes ─────────────────────────────────── */
+          .cm-err-icon   { color:#EF4444; }
+          .cm-icon-btn   { width:30px !important; height:30px !important; padding:0 !important; justify-content:center !important; margin-bottom:0 !important; }
+          .cm-cover-btn  { padding:5px 11px; border-radius:8px; border:1px solid var(--cm-border); background:var(--cm-surface); color:var(--cm-text-mid); font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; }
+          .cm-cover-btn-active { border-color:rgba(123,47,247,0.35) !important; background:rgba(123,47,247,0.1) !important; color:#A78BFA !important; }
+          .cm-ai-btn:disabled { opacity:0.6; }
+          .cm-save-dot-saving { background:#60A5FA; }
+          .cm-save-dot-saved  { background:#10B981; }
+          .cm-save-dot-error  { background:#EF4444; }
+          .cm-save-row-saving { color:var(--cm-text-mid); }
+          .cm-save-row-saved  { color:#10B981; font-weight:600; }
+          .cm-save-row-error  { color:#EF4444; font-weight:600; }
+          .cm-dot-priority { border-radius:50%; flex-shrink:0; margin-right:8px; }
+          .cm-dot-urgent { width:7px; height:7px; background:var(--cm-dot-urgent); }
+          .cm-dot-high   { width:7px; height:7px; background:var(--cm-dot-high); }
+          .cm-dot-medium { width:7px; height:7px; background:var(--cm-dot-medium); }
+          .cm-dot-low    { width:7px; height:7px; background:var(--cm-dot-low); }
+          .cm-due-badge  { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; }
+          .cm-due-overdue{ background:rgba(239,68,68,0.09); color:#EF4444; border:1px solid rgba(239,68,68,0.2); }
+          .cm-due-soon   { background:rgba(245,158,11,0.09); color:#F59E0B; border:1px solid rgba(245,158,11,0.2); }
+          .cm-due-ok     { background:rgba(16,185,129,0.09); color:#10B981; border:1px solid rgba(16,185,129,0.2); }
+          .cm-sb-pill    { display:inline-flex; align-items:center; gap:5px; margin-left:18px; padding:3px 9px; border-radius:20px; background:var(--cm-sb-pill-bg); border:1px solid var(--cm-sb-pill-bdr); }
+          .cm-sb-dot     { width:5px; height:5px; border-radius:50%; background:var(--cm-sb-dot); flex-shrink:0; }
+          .cm-sb-lbl     { font-size:11px; font-weight:600; color:var(--cm-sb-dot); }
+          .cm-progress-fill        { height:100%; border-radius:3px; transition:width 0.5s ease; }
+          .cm-progress-fill-done   { background:#10B981; }
+          .cm-progress-fill-active { background:linear-gradient(90deg,#7B2FF7,#C01CC4); }
+          .cm-pct-txt-done   { font-size:10px; font-weight:700; margin-left:auto; color:#10B981; }
+          .cm-pct-txt-active { font-size:10px; font-weight:700; margin-left:auto; color:#A78BFA; }
         `}</style>
 
         <DialogTitle className="sr-only">Card Details</DialogTitle>
 
         {/* ── LOADING ── */}
         {!cardData ? (
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", minHeight:360 }}>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-              <div style={{ width:34, height:34, borderRadius:"50%", border:"3px solid #7B2FF7", borderTopColor:"transparent", animation:"spin 0.8s linear infinite" }} />
-              <p style={{ fontSize:13, color:T.textMuted }}>Loading card…</p>
+          <div className="cm-loading-wrap">
+            <div className="cm-loading-inner">
+              <div className="cm-spinner" />
+              <p className="cm-loading-text">Loading card…</p>
             </div>
           </div>
         ) : (
-          <div className="cm-anim-modal" style={{ display:"flex", flexDirection:"column", height:"100%", maxHeight:"90vh", overflow:"hidden" }}>
+          <div className="cm-anim-modal cm-layout">
 
             {/* ══ COVER ══ */}
-            <div style={{ position:"relative", height:148, flexShrink:0, overflow:"hidden" }}>
+            <div className="cm-cover">
               {(cardData.coverImageUrl || cardData.coverColor) ? (
                 <>
                   {cardData.coverImageUrl
-                    ? <NextImage src={cardData.coverImageUrl} alt="" width={600} height={148} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-                    : <div style={{ width:"100%", height:"100%", background: cardData.coverColor ?? "#7B2FF7" }} />
+                    ? <NextImage src={cardData.coverImageUrl} alt="" width={600} height={148} className="cm-cover-img" />
+                    : <div className="cm-cover-fill" />
                   }
-                  <div style={{ position:"absolute", inset:0, background: T.coverOverlay }} />
+                  <div className="cm-cover-grad" />
                 </>
               ) : (
-                <div style={{
-                  width:"100%", height:"100%",
-                  background: isDark
-                    ? "linear-gradient(135deg,#1a0533 0%,#0D0C14 60%,#071422 100%)"
-                    : "linear-gradient(135deg,#f4f1fd 0%,#fffdf9 60%,#f0f7ff 100%)",
-                  borderBottom:`1px solid ${T.divider}`,
-                }}/>
+                <div className={isDark ? "cm-cover-default-dark" : "cm-cover-default-light"} />
               )}
 
               {/* Breadcrumb */}
-              <div style={{ position:"absolute", bottom:12, left:18, display:"flex", alignItems:"center", gap:5 }}>
-                <span style={{ fontSize:11, color: cardData.coverImageUrl ? "rgba(255,255,255,0.55)" : T.textMuted }}>{cardData.list?.title ?? "Board"}</span>
+              <div className="cm-breadcrumb">
+                <span className={cardData.coverImageUrl ? "cm-bc-list-img" : "cm-bc-list"}>{cardData.list?.title ?? "Board"}</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke={cardData.coverImageUrl ? "rgba(255,255,255,0.4)" : T.textMuted} strokeWidth="2" width="10" height="10"><polyline points="9 18 15 12 9 6"/></svg>
-                <span style={{
-                  fontSize:10.5, fontWeight:600,
-                  color: cardData.coverImageUrl ? "rgba(255,255,255,0.8)" : T.textMid,
-                  background: cardData.coverImageUrl ? "rgba(0,0,0,0.28)" : T.surface,
-                  backdropFilter:"blur(8px)", padding:"2px 8px", borderRadius:20,
-                  border:`1px solid ${cardData.coverImageUrl ? "rgba(255,255,255,0.15)" : T.border}`,
-                }}>#{cardData.id.slice(-8)}</span>
+                <span className={cardData.coverImageUrl ? "cm-bc-id-img" : "cm-bc-id"}>#{cardData.id.slice(-8)}</span>
               </div>
 
               {/* Priority pill */}
-              {cardData.priority && (() => {
-                const pm = priorityMeta[cardData.priority];
-                const dot = isDark ? pm.dotDark : pm.dotLight;
-                return (
-                  <div style={{
-                    position:"absolute", top:12, left:18,
-                    display:"flex", alignItems:"center", gap:5,
-                    padding:"4px 10px", borderRadius:20,
-                    background: cardData.coverImageUrl ? "rgba(0,0,0,0.32)" : isDark ? pm.bgDark : pm.bgLight,
-                    backdropFilter:"blur(10px)",
-                    border:`1px solid ${cardData.coverImageUrl ? "rgba(255,255,255,0.15)" : isDark ? pm.borderDark : pm.borderLight}`,
-                  }}>
-                    <div style={{ width:6, height:6, borderRadius:"50%", background:dot, boxShadow:`0 0 6px ${dot}55` }}/>
-                    <span style={{ fontSize:10.5, fontWeight:700, color: cardData.coverImageUrl ? "rgba(255,255,255,0.9)" : dot, letterSpacing:"0.04em", textTransform:"uppercase" }}>
-                      {pm.label}
-                    </span>
-                  </div>
-                );
-              })()}
+              {cardData.priority && (
+                <div className="cm-priority-pill">
+                  <div className="cm-priority-dot" />
+                  <span className="cm-priority-lbl">{priorityMeta[cardData.priority].label}</span>
+                </div>
+              )}
 
               {/* Close */}
               <DialogClose asChild>
-                <button style={{
-                  position:"absolute", top:10, right:12,
-                  width:30, height:30, borderRadius:9,
-                  background: cardData.coverImageUrl ? "rgba(0,0,0,0.38)" : T.surface,
-                  backdropFilter:"blur(8px)",
-                  border:`1px solid ${cardData.coverImageUrl ? "rgba(255,255,255,0.15)" : T.border}`,
-                  color: cardData.coverImageUrl ? "rgba(255,255,255,0.75)" : T.textMid,
-                  display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
-                  transition:"background 0.15s ease",
-                }}>
+                <button className={cardData.coverImageUrl ? "cm-close-img" : "cm-close"} title="Close">
                   <X className="h-3.5 w-3.5"/>
                 </button>
               </DialogClose>
             </div>
 
             {/* ══ TWO-COLUMN BODY ══ */}
-            <div style={{ display:"flex", flex:1, minHeight:0, overflow:"hidden" }}>
+            <div className="cm-body">
 
               {/* ── LEFT PANEL ── */}
-              <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", borderRight:`1px solid ${T.divider}`, overflow:"hidden" }}>
+              <div className="cm-left">
 
                 {/* Title + meta + action bar + tabs — static header */}
-                <div style={{ padding:"18px 22px 0", flexShrink:0 }}>
+                <div className="cm-header">
 
                   {/* Title */}
                   {isEditingTitle ? (
@@ -665,71 +814,53 @@ export const CardModal = () => {
                         if (e.key==="Escape") { setTitle(cardData.title); setIsEditingTitle(false); }
                       }}
                       rows={1}
-                      style={{
-                        width:"100%", background:"transparent",
-                        border:`1px solid rgba(123,47,247,0.45)`, borderRadius:9,
-                        padding:"4px 8px", color:T.text, fontSize:21, fontWeight:700,
-                        fontFamily:"'Playfair Display', serif",
-                        letterSpacing:"-0.02em", lineHeight:1.3, resize:"none", minHeight:48,
-                        boxShadow:"0 0 0 3px rgba(123,47,247,0.1)", outline:"none",
-                      }}
+                      className="cm-title-ta"
                     />
                   ) : (
                     <h1
                       onClick={() => setIsEditingTitle(true)}
-                      style={{
-                        fontSize:21, fontWeight:700,
-                        fontFamily:"'Playfair Display', serif",
-                        letterSpacing:"-0.02em", lineHeight:1.3,
-                        color:T.text, cursor:"text",
-                        padding:"4px 8px 4px 0", borderRadius:9,
-                        transition:"background 0.13s ease",
-                      }}
+                      className="cm-title-h1"
                       onMouseEnter={e => e.currentTarget.style.background=T.surfaceHover}
                       onMouseLeave={e => e.currentTarget.style.background="transparent"}
                     >{title}</h1>
                   )}
 
                   {/* Dates */}
-                  <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6, paddingLeft:1 }}>
-                    <Clock className="h-3 w-3" style={{ color:T.textMuted }} />
-                    <span style={{ fontSize:11, color:T.textMuted }}>
+                  <div className="cm-dates">
+                    <Clock className="h-3 w-3 cm-muted-icon" />
+                    <span className="cm-date-txt">
                       Created {new Date(cardData.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
                     </span>
-                    <span style={{ color:T.textMuted, fontSize:10 }}>·</span>
-                    <span style={{ fontSize:11, color:T.textMuted }}>
+                    <span className="cm-date-sep">·</span>
+                    <span className="cm-date-txt">
                       Updated {new Date(cardData.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
                     </span>
                   </div>
 
                   {/* Action bar */}
-                  <div style={{
-                    display:"flex", alignItems:"center", gap:6, marginTop:12,
-                    paddingBottom:12, borderBottom:`1px solid ${T.divider}`,
-                    flexWrap:"wrap",
-                  }}>
+                  <div className="cm-action-bar">
                     {/* Labels */}
-                    <div ref={labelWrapperRef} style={{ display:"contents" }}>
+                    <div ref={labelWrapperRef} className="contents">
                       <ErrorBoundary fallback={
-                        <button style={{ padding:"5px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, color:T.textMid, fontSize:12, cursor:"not-allowed", fontFamily:"inherit" }}>Labels</button>
+                        <button className="cm-fallback-btn">Labels</button>
                       }>
                         <LabelManager cardId={cardData.id} orgId={organizationId} availableLabels={orgLabels} cardLabels={cardLabels} onLabelsChange={refreshCardData} />
                       </ErrorBoundary>
                     </div>
 
                     {/* Assignee */}
-                    <div ref={assigneeWrapperRef} style={{ display:"contents" }}>
+                    <div ref={assigneeWrapperRef} className="contents">
                       <ErrorBoundary fallback={
-                        <button style={{ padding:"5px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, color:T.textMid, fontSize:12, cursor:"not-allowed", fontFamily:"inherit" }}>Assign</button>
+                        <button className="cm-fallback-btn">Assign</button>
                       }>
                         <AssigneePicker cardId={cardData.id} orgId={organizationId} currentAssignee={cardData.assignee || null} availableUsers={orgMembers} onAssigneeChange={refreshCardData} />
                       </ErrorBoundary>
                     </div>
 
                     {/* Due date */}
-                    <div ref={dueDateWrapperRef} style={{ display:"contents" }}>
+                    <div ref={dueDateWrapperRef} className="contents">
                       <ErrorBoundary fallback={
-                        <button style={{ padding:"5px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, color:T.textMid, fontSize:12, cursor:"not-allowed", fontFamily:"inherit" }}>Due date</button>
+                        <button className="cm-fallback-btn">Due date</button>
                       }>
                         <SmartDueDate dueDate={cardData.dueDate} onDateChange={handleDueDateChange} priority={cardData.priority} animated editable />
                       </ErrorBoundary>
@@ -738,14 +869,9 @@ export const CardModal = () => {
                     {/* Cover picker */}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="cm-action-btn" style={{
-                          display:"flex", alignItems:"center", gap:5,
-                          padding:"5px 11px", borderRadius:8,
-                          border:`1px solid ${(cardData.coverColor || cardData.coverImageUrl) ? "rgba(123,47,247,0.35)" : T.border}`,
-                          background: (cardData.coverColor || cardData.coverImageUrl) ? "rgba(123,47,247,0.1)" : T.surface,
-                          color: (cardData.coverColor || cardData.coverImageUrl) ? "#A78BFA" : T.textMid,
-                          fontSize:12, fontWeight:500, cursor:"pointer", fontFamily:"inherit",
-                        }}>
+                        <button
+                          className={`cm-cover-btn${(cardData.coverColor || cardData.coverImageUrl) ? " cm-cover-btn-active" : ""}`}
+                        >
                           <ImageIcon className="h-3 w-3" />
                           Cover
                         </button>
@@ -759,12 +885,7 @@ export const CardModal = () => {
                     {/* More */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="cm-action-btn" style={{
-                          display:"flex", alignItems:"center", justifyContent:"center",
-                          width:30, height:30, borderRadius:8,
-                          border:`1px solid ${T.border}`, background:T.surface,
-                          color:T.textMid, cursor:"pointer",
-                        }}>
+                        <button className="cm-action-btn cm-sidebar-btn cm-icon-btn" title="More options">
                           <MoreHorizontal className="h-3.5 w-3.5" />
                         </button>
                       </DropdownMenuTrigger>
@@ -781,77 +902,52 @@ export const CardModal = () => {
                   </div>
 
                   {/* Tabs */}
-                  <div className="cm-tab-scroll" style={{ display:"flex", gap:1, marginTop:2, overflowX:"auto", paddingBottom:0 }}>
+                  <div className="cm-tab-scroll cm-tab-wrap">
                     {TABS.map(tab => {
                       const isActive = activeTab === tab.id;
                       return (
                         <button
                           key={tab.id}
                           onClick={() => setActiveTab(tab.id)}
-                          style={{
-                            display:"flex", alignItems:"center", gap:5,
-                            padding:"9px 11px", borderRadius:"9px 9px 0 0",
-                            border:"none", cursor:"pointer", fontFamily:"inherit",
-                            background: isActive ? T.tabActive : "transparent",
-                            color: isActive ? T.tabActiveTxt : T.textMuted,
-                            fontSize:12, fontWeight: isActive ? 600 : 400,
-                            whiteSpace:"nowrap", position:"relative",
-                            transition:"color 0.13s ease, background 0.13s ease",
-                          }}
+                          className={`cm-tab-btn ${isActive ? "cm-tab-on" : "cm-tab-off"}`}
                         >
                           {tab.icon}
                           {tab.label}
                           {(tab.badge ?? 0) > 0 && (
-                            <span style={{
-                              fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:20,
-                              background: isActive ? "rgba(123,47,247,0.25)" : T.badgeBg,
-                              color: isActive ? T.tabActiveTxt : T.textMuted,
-                            }}>{tab.badge}</span>
+                            <span className={isActive ? "cm-tab-bdg-on" : "cm-tab-bdg-off"}>{tab.badge}</span>
                           )}
-                          {isActive && (
-                            <div style={{
-                              position:"absolute", bottom:0, left:"50%", transform:"translateX(-50%)",
-                              width:"55%", height:2,
-                              background:"linear-gradient(90deg,#7B2FF7,#C01CC4)", borderRadius:4,
-                            }}/>
-                          )}
+                          {isActive && <div className="cm-tab-indicator" />}
                         </button>
                       );
                     })}
                   </div>
-                  <div style={{ height:1, background:T.divider }} />
+                  <div className="cm-divider-line" />
                 </div>
 
                 {/* ── SCROLLABLE TAB CONTENT ── */}
-                <div className="cm-scrollbar" style={{ flex:1, overflowY:"auto", padding:"18px 22px 24px" }}>
+                <div className="cm-scrollbar cm-content">
 
                   {/* DESCRIPTION */}
                   {activeTab === "description" && (
                     <div className="cm-anim-fade">
                       <ErrorBoundary fallback={
-                        <div style={{ padding:20, textAlign:"center", background:"rgba(239,68,68,0.05)", borderRadius:12, border:"1px solid rgba(239,68,68,0.15)" }}>
-                          <AlertCircle className="h-7 w-7 mx-auto mb-2" style={{ color:"#EF4444" }} />
-                          <p style={{ fontSize:12, color:"#EF4444" }}>Editor unavailable. Refresh to try again.</p>
+                        <div className="cm-err-fb">
+                          <AlertCircle className="h-7 w-7 mx-auto mb-2 cm-err-icon" />
+                          <p className="cm-err-txt">Editor unavailable. Refresh to try again.</p>
                         </div>
                       }>
-                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-                          <span style={{ fontSize:12, fontWeight:600, color:T.textMid }}>Description</span>
+                        <div className="cm-desc-hdr">
+                          <span className="cm-desc-lbl">Description</span>
                           <button
                             onClick={handleGenerateDescription}
                             disabled={aiDescLoading}
-                            style={{
-                              display:"flex", alignItems:"center", gap:5,
-                              padding:"4px 10px", borderRadius:20,
-                              background:"rgba(123,47,247,0.1)", border:"1px solid rgba(123,47,247,0.2)",
-                              color:"#A78BFA", fontSize:11.5, fontWeight:600, cursor:"pointer", fontFamily:"inherit",
-                              opacity: aiDescLoading ? 0.6 : 1,
-                            }}
+                            className="cm-ai-btn"
                           >
                             {aiDescLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                             {aiDescLoading ? "Generating…" : "AI Generate"}
                           </button>
                         </div>
-                        <div style={{ background: isDark ? "rgba(255,255,255,0.03)" : "#fff", borderRadius:12, border:`1px solid ${T.border}`, overflow:"hidden" }}>
+                        <div className={`cm-editor-wrap ${isDark ? "cm-editor-dark" : "cm-editor-light"}`}>
                           <RichTextEditor
                             content={cardData.description || ""}
                             onSave={handleSaveDescription}
@@ -864,10 +960,10 @@ export const CardModal = () => {
                           />
                         </div>
                         {!cardData.description && (
-                          <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, paddingLeft:2 }}>
-                            <span style={{ fontSize:11, color:T.textMuted }}>💡 Tip: Type</span>
-                            <kbd style={{ padding:"1px 6px", background:T.surface, border:`1px solid ${T.border}`, borderRadius:5, fontSize:11, color:T.textMid, fontFamily:"monospace" }}>/</kbd>
-                            <span style={{ fontSize:11, color:T.textMuted }}>for commands</span>
+                          <div className="cm-hint">
+                            <span className="cm-hint-txt">💡 Tip: Type</span>
+                            <kbd className="cm-hint-kbd">/</kbd>
+                            <span className="cm-hint-txt">for commands</span>
                           </div>
                         )}
                       </ErrorBoundary>
@@ -877,11 +973,10 @@ export const CardModal = () => {
                   {/* ACTIVITY */}
                   {activeTab === "activity" && (
                     <div className="cm-anim-fade">
-                      {/* Section header */}
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
-                        <MessageSquare className="h-3.5 w-3.5" style={{ color:T.textMuted }} />
-                        <span style={{ fontSize:12.5, fontWeight:600, color:T.text }}>Audit Log</span>
-                        <span style={{ fontSize:9.5, fontWeight:700, padding:"1px 6px", borderRadius:20, background:T.badgeBg, color:T.textMuted }}>{auditLogs.length}</span>
+                      <div className="cm-sec-hdr">
+                        <MessageSquare className="h-3.5 w-3.5 cm-muted-icon" />
+                        <span className="cm-sec-title">Audit Log</span>
+                        <span className="cm-sec-count">{auditLogs.length}</span>
                       </div>
                       <Activity items={auditLogs} />
                     </div>
@@ -890,28 +985,19 @@ export const CardModal = () => {
                   {/* COMMENTS */}
                   {activeTab === "comments" && (
                     <div className="cm-anim-fade">
-                      {/* Section header */}
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
-                        <MessageSquare className="h-3.5 w-3.5" style={{ color:T.textMuted }} />
-                        <span style={{ fontSize:12.5, fontWeight:600, color:T.text }}>Comments</span>
-                        {comments.length > 0 && (
-                          <span style={{ fontSize:9.5, fontWeight:700, padding:"1px 6px", borderRadius:20, background:T.badgeBg, color:T.textMuted }}>{comments.length}</span>
-                        )}
+                      <div className="cm-sec-hdr">
+                        <MessageSquare className="h-3.5 w-3.5 cm-muted-icon" />
+                        <span className="cm-sec-title">Comments</span>
+                        {comments.length > 0 && <span className="cm-sec-count">{comments.length}</span>}
                       </div>
 
                       <ErrorBoundary fallback={
-                        <div style={{ padding:20, textAlign:"center", background:"rgba(239,68,68,0.05)", borderRadius:12, border:"1px solid rgba(239,68,68,0.15)" }}>
-                          <AlertCircle className="h-7 w-7 mx-auto mb-2" style={{ color:"#EF4444" }} />
-                          <p style={{ fontSize:12, color:"#EF4444" }}>Comments unavailable. Refresh to try again.</p>
+                        <div className="cm-err-fb">
+                          <AlertCircle className="h-7 w-7 mx-auto mb-2 cm-err-icon" />
+                          <p className="cm-err-txt">Comments unavailable. Refresh to try again.</p>
                         </div>
                       }>
-                        {/* Wrapper applies the card-modal surface + scroll */}
-                        <div style={{
-                          background: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
-                          border:`1px solid ${T.border}`, borderRadius:14,
-                          overflow:"hidden",
-                          display:"flex", flexDirection:"column",
-                        }}>
+                        <div className={`cm-comments-wrap ${isDark ? "cm-comments-dark" : "cm-comments-light"}`}>
                           {user ? (
                             <RichComments
                               cardId={cardData.id}
@@ -929,8 +1015,8 @@ export const CardModal = () => {
                               listMaxHeight="340px"
                             />
                           ) : (
-                            <div style={{ padding:24, textAlign:"center" }}>
-                              <p style={{ fontSize:12, color:T.textMuted }}>Sign in to view comments.</p>
+                            <div className="cm-signin-wrap">
+                              <p className="cm-signin-txt">Sign in to view comments.</p>
                             </div>
                           )}
                         </div>
@@ -941,10 +1027,10 @@ export const CardModal = () => {
                   {/* ATTACHMENTS */}
                   {activeTab === "attachments" && (
                     <div className="cm-anim-fade">
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
-                        <Paperclip className="h-3.5 w-3.5" style={{ color:T.textMuted }} />
-                        <span style={{ fontSize:12.5, fontWeight:600, color:T.text }}>Files</span>
-                        {attachmentCount > 0 && <span style={{ fontSize:9.5, fontWeight:700, padding:"1px 6px", borderRadius:20, background:T.badgeBg, color:T.textMuted }}>{attachmentCount}</span>}
+                      <div className="cm-sec-hdr">
+                        <Paperclip className="h-3.5 w-3.5 cm-muted-icon" />
+                        <span className="cm-sec-title">Files</span>
+                        {attachmentCount > 0 && <span className="cm-sec-count">{attachmentCount}</span>}
                       </div>
                       <AttachmentsTab cardId={cardData.id} boardId={boardId} onCountChange={setAttachmentCount} />
                     </div>
@@ -960,7 +1046,7 @@ export const CardModal = () => {
                   {/* TIME */}
                   {activeTab === "time" && (
                     <div className="cm-anim-fade">
-                      <ErrorBoundary fallback={<p style={{ fontSize:12, color:T.textMuted }}>Unable to load time tracking.</p>}>
+                      <ErrorBoundary fallback={<p className="cm-loading-text">Unable to load time tracking.</p>}>
                         <TimeTrackingPanel cardId={cardData.id} currentUserId={user?.id} />
                       </ErrorBoundary>
                     </div>
@@ -976,7 +1062,7 @@ export const CardModal = () => {
                   {/* CUSTOM FIELDS */}
                   {activeTab === "fields" && (
                     <div className="cm-anim-fade">
-                      <ErrorBoundary fallback={<p style={{ fontSize:12, color:T.textMuted }}>Unable to load custom fields.</p>}>
+                      <ErrorBoundary fallback={<p className="cm-loading-text">Unable to load custom fields.</p>}>
                         <CustomFieldsPanel boardId={boardId} cardId={cardData.id} isAdmin={membership?.role === "org:admin"} />
                       </ErrorBoundary>
                     </div>
@@ -984,30 +1070,27 @@ export const CardModal = () => {
                 </div>
 
                 {/* ── MODAL FOOTER ── */}
-                <div style={{
-                  flexShrink:0, borderTop:`1px solid ${T.divider}`,
-                  padding:"9px 22px", display:"flex", alignItems:"center", justifyContent:"space-between",
-                }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                    <span style={{ fontSize:11, color:T.textMuted }}>{charCount.toLocaleString()} / 10,000 chars</span>
+                <div className="cm-footer">
+                  <div className="cm-footer-l">
+                    <span className="cm-char-txt">{charCount.toLocaleString()} / 10,000 chars</span>
                     <KeyboardShortcutsModal />
                   </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <div className="cm-footer-r">
                     {saveStatus === "saving" && (
-                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:T.textMid }}>
-                        <div style={{ width:6, height:6, borderRadius:"50%", background:"#60A5FA", animation:"cmPulse 1s ease-in-out infinite" }}/>
+                      <div className="cm-save-row">
+                        <div className="cm-save-dot cm-save-dot-saving cm-pulse-anim" />
                         Saving…
                       </div>
                     )}
                     {saveStatus === "saved" && (
-                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:"#10B981" }}>
-                        <div style={{ width:6, height:6, borderRadius:"50%", background:"#10B981" }}/>
+                      <div className="cm-save-row cm-save-row-saved">
+                        <div className="cm-save-dot cm-save-dot-saved" />
                         All changes saved
                       </div>
                     )}
                     {saveStatus === "error" && (
-                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:"#EF4444" }}>
-                        <div style={{ width:6, height:6, borderRadius:"50%", background:"#EF4444" }}/>
+                      <div className="cm-save-row cm-save-row-error">
+                        <div className="cm-save-dot cm-save-dot-error" />
                         Failed to save
                       </div>
                     )}
@@ -1016,43 +1099,33 @@ export const CardModal = () => {
               </div>
 
               {/* ── RIGHT SIDEBAR ── */}
-              <div
-                className="cm-scrollbar"
-                style={{
-                  width:228, flexShrink:0,
-                  background:T.sidebarBg, borderLeft:`1px solid ${T.divider}`,
-                  overflowY:"auto", display:"flex", flexDirection:"column",
-                }}
-              >
-                <div style={{ padding:"18px 14px", display:"flex", flexDirection:"column", gap:0 }}>
+              <div className="cm-scrollbar cm-sidebar">
+                <div className="cm-sidebar-inner">
 
                   {/* ─ DETAILS ─ */}
-                  <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.metaLabel, marginBottom:8, paddingLeft:8 }}>Details</p>
+                  <p className="cm-meta-label-txt">Details</p>
 
                   {/* Priority */}
                   {cardData.priority && (() => {
                     const pm = priorityMeta[cardData.priority];
-                    const dot = isDark ? pm.dotDark : pm.dotLight;
-                    const bg  = isDark ? pm.bgDark  : pm.bgLight;
-                    const bdr = isDark ? pm.borderDark : pm.borderLight;
                     return (
                       <DropdownMenu open={priorityOpen} onOpenChange={setPriorityOpen}>
                         <DropdownMenuTrigger asChild>
-                          <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2, cursor:"pointer" }}>
-                            <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                          <div className="cm-meta-row cm-meta-row-pad cursor-pointer">
+                            <div className="cm-field-row">
                               <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                              <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Priority</span>
+                              <span className="cm-field-lbl">Priority</span>
                             </div>
-                            <div style={{ display:"inline-flex", alignItems:"center", gap:5, marginLeft:18, padding:"3px 9px", borderRadius:20, background:bg, border:`1px solid ${bdr}` }}>
-                              <div style={{ width:5, height:5, borderRadius:"50%", background:dot }}/>
-                              <span style={{ fontSize:11, fontWeight:600, color:dot }}>{pm.label}</span>
+                            <div className="cm-sb-pill">
+                              <div className="cm-sb-dot"/>
+                              <span className="cm-sb-lbl">{pm.label}</span>
                             </div>
                           </div>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-44">
                           {(["URGENT","HIGH","MEDIUM","LOW"] as const).map(p => (
                             <DropdownMenuItem key={p} onClick={() => handlePriorityChange(p)} className="cursor-pointer text-sm">
-                              <div style={{ width:7, height:7, borderRadius:"50%", background: isDark ? priorityMeta[p].dotDark : priorityMeta[p].dotLight, marginRight:8 }}/>
+                              <div className={`cm-dot-priority cm-dot-${p.toLowerCase()}`}/>
                               {priorityMeta[p].label}
                             </DropdownMenuItem>
                           ))}
@@ -1063,23 +1136,18 @@ export const CardModal = () => {
 
                   {/* Assignee */}
                   {cardData.assignee && (
-                    <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                    <div className="cm-meta-row cm-meta-row-pad">
+                      <div className="cm-field-row">
                         <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Assignee</span>
+                        <span className="cm-field-lbl">Assignee</span>
                       </div>
-                      <div style={{ display:"flex", alignItems:"center", gap:7, marginLeft:18 }}>
+                      <div className="cm-field-body">
                         {cardData.assignee.imageUrl ? (
-                          <NextImage src={cardData.assignee.imageUrl} alt={cardData.assignee.name} width={20} height={20} style={{ borderRadius:"50%", objectFit:"cover" }} />
+                          <NextImage src={cardData.assignee.imageUrl} alt={cardData.assignee.name} width={20} height={20} className="rounded-full object-cover" />
                         ) : (
-                          <div style={{
-                            width:20, height:20, borderRadius:"50%",
-                            background:"linear-gradient(135deg,#7B2FF7,#F107A3)",
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                            fontSize:8, fontWeight:700, color:"#fff",
-                          }}>{cardData.assignee.name.charAt(0).toUpperCase()}</div>
+                          <div className="cm-assignee-avatar">{cardData.assignee.name.charAt(0).toUpperCase()}</div>
                         )}
-                        <span style={{ fontSize:11.5, fontWeight:500, color:T.text }}>{cardData.assignee.name}</span>
+                        <span className="cm-assignee-name">{cardData.assignee.name}</span>
                       </div>
                     </div>
                   )}
@@ -1089,19 +1157,14 @@ export const CardModal = () => {
                     const due = new Date(cardData.dueDate);
                     const overdue = isPast(due);
                     const soon = !overdue && differenceInHours(due, new Date()) < 48;
-                    const col = overdue ? "#EF4444" : soon ? "#F59E0B" : "#10B981";
                     return (
-                      <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2 }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                      <div className="cm-meta-row cm-meta-row-pad">
+                        <div className="cm-field-row">
                           <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                          <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Due Date</span>
+                          <span className="cm-field-lbl">Due Date</span>
                         </div>
-                        <div style={{ marginLeft:18 }}>
-                          <span style={{
-                            display:"inline-flex", alignItems:"center", gap:4,
-                            fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:20,
-                            background:`${col}18`, color:col, border:`1px solid ${col}33`,
-                          }}>
+                        <div className="cm-field-body-wrap">
+                          <span className={`cm-due-badge ${overdue ? "cm-due-overdue" : soon ? "cm-due-soon" : "cm-due-ok"}`}>
                             <Clock className="h-2.5 w-2.5" />
                             {format(due,"MMM d, yyyy")}
                             {overdue ? " · Overdue" : soon ? " · Soon" : ""}
@@ -1113,12 +1176,12 @@ export const CardModal = () => {
 
                   {/* Labels */}
                   {cardLabels.length > 0 && (
-                    <div className="cm-meta-row" style={{ padding:"8px", marginBottom:2 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
+                    <div className="cm-meta-row cm-meta-row-pad">
+                      <div className="cm-field-row">
                         <svg viewBox="0 0 24 24" fill="none" stroke={T.metaLabel} strokeWidth="1.8" width="11" height="11"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                        <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Labels</span>
+                        <span className="cm-field-lbl">Labels</span>
                       </div>
-                      <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginLeft:18 }}>
+                      <div className="cm-field-body-wrap">
                         {cardLabels.map((lbl: CardLabel) => (
                           <span key={lbl.id} style={{
                             fontSize:9.5, fontWeight:700, padding:"2px 7px", borderRadius:20,
@@ -1132,10 +1195,10 @@ export const CardModal = () => {
                     </div>
                   )}
 
-                  <div style={{ height:1, background:T.divider, margin:"10px 0" }}/>
+                  <div className="cm-divider-sm"/>
 
                   {/* ─ PROGRESS ─ */}
-                  <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.metaLabel, marginBottom:8, paddingLeft:8 }}>Progress</p>
+                  <p className="cm-meta-label-txt">Progress</p>
 
                   {/* Checklist mini */}
                   {cardData.checklists && cardData.checklists.length > 0 && (() => {
@@ -1144,50 +1207,33 @@ export const CardModal = () => {
                     const total = allItems.length;
                     const pct = total > 0 ? Math.round((done/total)*100) : 0;
                     return (
-                      <div style={{ padding:"8px" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
-                          <CheckSquare className="h-2.5 w-2.5" style={{ color:T.metaLabel }} />
-                          <span style={{ fontSize:10.5, color:T.metaLabel, fontWeight:500 }}>Checklist</span>
-                          <span style={{ fontSize:10, fontWeight:700, color: pct===100 ? "#10B981" : "#A78BFA", marginLeft:"auto" }}>{pct}%</span>
+                      <div className="cm-meta-row-pad">
+                        <div className="cm-field-row">
+                          <CheckSquare className="h-2.5 w-2.5 cm-muted-icon" />
+                          <span className="cm-field-lbl">Checklist</span>
+                          <span className={pct===100 ? "cm-pct-txt-done" : "cm-pct-txt-active"}>{pct}%</span>
                         </div>
-                        <div style={{ height:3, background:T.surface, borderRadius:3, overflow:"hidden", border:`1px solid ${T.border}` }}>
-                          <div style={{ height:"100%", width:`${pct}%`, background: pct===100 ? "#10B981" : "linear-gradient(90deg,#7B2FF7,#C01CC4)", borderRadius:3, transition:"width 0.5s ease" }}/>
+                        <div className="cm-progress-track">
+                          <div className={`cm-progress-fill ${pct===100 ? "cm-progress-fill-done" : "cm-progress-fill-active"}`} style={{ width:`${pct}%` }}/>
                         </div>
-                        <p style={{ fontSize:10, color:T.textMuted, marginTop:3 }}>{done} of {total} tasks</p>
+                        <p className="cm-progress-txt">{done} of {total} tasks</p>
                       </div>
                     );
                   })()}
 
-                  <div style={{ height:1, background:T.divider, margin:"10px 0" }}/>
+                  <div className="cm-divider-sm"/>
 
                   {/* ─ ACTIONS ─ */}
-                  <p style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.metaLabel, marginBottom:8, paddingLeft:8 }}>Actions</p>
+                  <p className="cm-meta-label-txt">Actions</p>
 
                   <button
-                    className="cm-action-btn"
+                    className="cm-sidebar-btn"
                     onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Link copied"); }}
-                    style={{
-                      width:"100%", padding:"7px 10px", borderRadius:9, marginBottom:4,
-                      border:`1px solid ${T.border}`, background:T.surface,
-                      color:T.textMid, fontSize:11.5, fontWeight:500, cursor:"pointer",
-                      fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
-                    }}
                   >
                     <Copy className="h-3 w-3" /> Copy link
                   </button>
 
-                  <button
-                    className="cm-action-btn"
-                    style={{
-                      width:"100%", padding:"7px 10px", borderRadius:9,
-                      border:"1px solid rgba(239,68,68,0.22)", background:"rgba(239,68,68,0.06)",
-                      color:"#EF4444", fontSize:11.5, fontWeight:500, cursor:"pointer",
-                      fontFamily:"inherit", display:"flex", alignItems:"center", gap:6,
-                      transition:"background 0.15s ease",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.12)"}
-                    onMouseLeave={e => e.currentTarget.style.background="rgba(239,68,68,0.06)"}
-                  >
+                  <button className="cm-delete-btn">
                     <Trash2 className="h-3 w-3" /> Delete card
                   </button>
 

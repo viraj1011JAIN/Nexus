@@ -121,8 +121,8 @@ function WebhookRow({
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <div className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-            {open ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
-            <Webhook className="h-4 w-4 text-blue-500 flex-shrink-0" />
+            {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+            <Webhook className="h-4 w-4 text-blue-500 shrink-0" />
             <span className="flex-1 text-sm font-mono truncate">{webhook.url}</span>
             <Switch
               checked={webhook.isEnabled}
@@ -130,11 +130,11 @@ function WebhookRow({
                 onToggle(webhook.id, v);
               }}
               onClick={(e) => e.stopPropagation()}
-              className="flex-shrink-0"
+              className="shrink-0"
             />
             <Badge
               variant={webhook.isEnabled ? "default" : "secondary"}
-              className={cn("flex-shrink-0 text-xs", webhook.isEnabled ? "bg-green-100 text-green-700 border-green-200" : "")}
+              className={cn("shrink-0 text-xs", webhook.isEnabled ? "bg-green-100 text-green-700 border-green-200" : "")}
             >
               {webhook.isEnabled ? "Active" : "Paused"}
             </Badge>
@@ -163,9 +163,9 @@ function WebhookRow({
                   {webhook.deliveries.map((d) => (
                     <div key={d.id} className="flex items-center gap-2 text-xs">
                       {d.success ? (
-                        <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
+                        <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
                       ) : (
-                        <XCircle className="h-3 w-3 text-red-500 flex-shrink-0" />
+                        <XCircle className="h-3 w-3 text-red-500 shrink-0" />
                       )}
                       <span className="flex-1 truncate text-muted-foreground">{d.event}</span>
                       {d.statusCode && (

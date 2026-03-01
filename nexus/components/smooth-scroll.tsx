@@ -64,12 +64,7 @@ export function SmoothScroll({
   return (
     <div
       ref={containerRef}
-      className={`scroll-smooth ${className}`}
-      style={{
-        willChange: "scroll-position",
-        WebkitOverflowScrolling: "touch",
-        overscrollBehavior: "contain",
-      }}
+      className={`scroll-smooth overscroll-contain [will-change:scroll-position] ${className}`}
     >
       {children}
     </div>

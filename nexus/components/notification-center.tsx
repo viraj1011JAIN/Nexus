@@ -90,7 +90,7 @@ function NotificationRow({
       onClick={() => !notification.isRead && onMarkRead(notification.id)}
     >
       {/* Unread dot */}
-      <div className="mt-1 flex-shrink-0">
+      <div className="mt-1 shrink-0">
         {!notification.isRead ? (
           <span className="block h-2 w-2 rounded-full bg-blue-500" />
         ) : (
@@ -99,7 +99,7 @@ function NotificationRow({
       </div>
 
       {/* Icon */}
-      <div className={cn("mt-0.5 flex-shrink-0", iconColor)}>
+      <div className={cn("mt-0.5 shrink-0", iconColor)}>
         <Icon className="h-4 w-4" />
       </div>
 
@@ -120,7 +120,7 @@ function NotificationRow({
       </div>
 
       {/* Actions (shown on hover) */}
-      <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {!notification.isRead && (
           <Button
             variant="ghost"
@@ -247,7 +247,7 @@ export function NotificationCenter() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[380px] p-0 shadow-xl"
+        className="w-95 p-0 shadow-xl"
         sideOffset={8}
       >
         {/* Header */}
@@ -274,7 +274,7 @@ export function NotificationCenter() {
         </div>
 
         {/* Body */}
-        <ScrollArea className="h-[420px]">
+        <ScrollArea className="h-105">
           {loading && notifications.length === 0 && (
             <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
               Loading…

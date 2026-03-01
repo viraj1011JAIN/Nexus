@@ -47,8 +47,7 @@ export const MobileNav = () => {
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
-            style={{ background: "linear-gradient(135deg, #7B2FF7, #F107A3)", boxShadow: "0 6px 20px rgba(123,47,247,0.35)" }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-linear-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
           >
             <span className="text-white font-bold text-[17px] leading-none select-none font-display">N</span>
           </div>
@@ -133,7 +132,7 @@ export const MobileNav = () => {
                           href={route.href}
                           onClick={closeMenu}
                           className={cn(
-                            "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 touch-manipulation min-h-[48px]",
+                            "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 touch-manipulation min-h-12",
                             route.active
                               ? "bg-accent text-accent-foreground font-semibold"
                               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -141,8 +140,7 @@ export const MobileNav = () => {
                         >
                           {route.active && (
                             <span
-                              className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full"
-                              style={{ background: "linear-gradient(to bottom, #7B2FF7, #C01CC4)" }}
+                              className="absolute left-0 top-[18%] bottom-[18%] w-0.75 rounded-r-full bg-linear-to-b from-[#7B2FF7] to-[#C01CC4]"
                             />
                           )}
                           <Icon className="h-5 w-5 shrink-0" />

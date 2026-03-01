@@ -313,18 +313,10 @@ export const ListContainer = ({
   if (!isMounted) return null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
+    <div className="flex flex-col min-h-0 flex-1">
       {/* Shared horizontal scroller — canvas + footer scroll together */}
       <div
-        className="board-scrollbar"
-        style={{
-          flex: 1,
-          overflowX: "auto",
-          overflowY: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          paddingBottom: 36,
-        }}
+        className="board-scrollbar flex-1 overflow-x-auto overflow-y-hidden flex flex-col pb-9"
       >
       {/* Board canvas */}
       <DndContext
@@ -334,10 +326,7 @@ export const ListContainer = ({
         onDragOver={onDragOver}
       >
         <div
-          className="flex gap-3.5 items-start"
-          style={{
-            padding: "18px 24px 8px",
-          }}
+          className="flex gap-3.5 items-start px-6 pt-4.5 pb-2"
         >
           <SortableContext
             items={orderedData.map(item => item.id)}
@@ -355,12 +344,8 @@ export const ListContainer = ({
 
           {/* Add new list column */}
           <div
-            className="animate-list-enter"
-            style={{
-              width: 265,
-              flexShrink: 0,
-              animationDelay: `${orderedData.length * 0.08}s`,
-            }}
+            className="animate-list-enter w-66.25 shrink-0"
+            style={{ animationDelay: `${orderedData.length * 0.08}s` }}
           >
             <form
               action={async (formData) => {
@@ -374,58 +359,18 @@ export const ListContainer = ({
             >
               <input hidden name="boardId" value={boardId} readOnly />
               {/* Title input */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "11px 14px",
-                  marginBottom: 8,
-                  background: isDark ? "rgba(255,255,255,0.025)" : "#FFFDF9",
-                  border: isDark ? "1.5px dashed rgba(255,255,255,0.1)" : "1.5px dashed rgba(0,0,0,0.1)",
-                  borderRadius: 12,
-                  boxShadow: isDark ? "none" : "0 1px 6px rgba(0,0,0,0.04)",
-                }}
-              >
+              <div className="flex items-center gap-2 px-3.5 py-2.75 mb-2 bg-[#FFFDF9] dark:bg-white/2.5 border border-dashed border-black/10 dark:border-white/10 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] dark:shadow-none">
                 <input
                   name="title"
                   placeholder="Name this list…"
                   required
-                  style={{
-                    flex: 1,
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    color: isDark ? "#E8E4F0" : "#1A1714",
-                    fontSize: 13,
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontWeight: 500,
-                  }}
+                  className="flex-1 bg-transparent border-none outline-none text-[#1A1714] dark:text-[#E8E4F0] text-[13px] font-medium font-sans placeholder:text-[#9A8F85]"
                 />
               </div>
               {/* Add List button */}
               <button
                 type="submit"
-                style={{
-                  width: "100%",
-                  padding: "10px 0",
-                  borderRadius: 12,
-                  border: "none",
-                  background: "linear-gradient(135deg,#7B2FF7,#C01CC4)",
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  fontFamily: "'DM Sans', sans-serif",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  cursor: "pointer",
-                  boxShadow: "0 4px 16px rgba(123,47,247,0.28)",
-                  transition: "box-shadow 0.2s ease",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 24px rgba(123,47,247,0.42)")}
-                onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(123,47,247,0.28)")}
+                className="w-full py-2.5 rounded-xl border-none bg-linear-to-br from-[#7B2FF7] to-[#C01CC4] text-white text-[13px] font-semibold font-sans flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_6px_24px_rgba(123,47,247,0.42)] transition-shadow duration-200"
               >
                 + Add List
               </button>
@@ -437,38 +382,20 @@ export const ListContainer = ({
       </div>{/* end shared scroll wrapper */}
 
       {/* Footer status bar — fixed to the bottom of the viewport */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          height: 36,
-          padding: "0 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 32,
-          background: isDark ? "rgba(13,12,20,0.92)" : "rgba(255,253,249,0.96)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderTop: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.07)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div className="fixed bottom-0 left-0 right-0 z-50 h-9 px-6 flex items-center justify-between gap-8 bg-[rgba(255,253,249,0.96)] dark:bg-[rgba(13,12,20,0.92)] backdrop-blur-[14px] border-t border-black/7 dark:border-white/6">
+        <div className="flex items-center gap-4">
           {orderedData.map((list, i) => {
             const LIST_COLORS = ["#7C3AED","#D97706","#8B5CF6","#059669","#1A73E8","#E0284A"];
             const col = LIST_COLORS[i % LIST_COLORS.length];
             return (
-              <div key={list.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{
-                  width: 5, height: 5, borderRadius: "50%", background: col,
-                  boxShadow: isDark ? `0 0 4px ${col}66` : "none",
-                }}/>
-                <span style={{ fontSize: 10.5, color: isDark ? "rgba(255,255,255,0.28)" : "#BFB9B3" }}>
+              <div key={list.id} className="flex items-center gap-1.25">
+                <div
+                  className="w-1.25 h-1.25 rounded-full"
+                  style={{ background: col, boxShadow: isDark ? `0 0 4px ${col}66` : "none" }}
+                />
+                <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/28">
                   {list.title} ·{" "}
-                  <span style={{ color: isDark ? "rgba(255,255,255,0.45)" : "#6B6560", fontWeight: 500 }}>
+                  <span className="text-[#6B6560] dark:text-white/45 font-medium">
                     {list.cards.length}
                   </span>
                 </span>
@@ -476,15 +403,10 @@ export const ListContainer = ({
             );
           })}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 10.5, color: isDark ? "rgba(255,255,255,0.2)" : "#BFB9B3" }}>Auto-save</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/20">Auto-save</span>
           <div
-            className="animate-pulse-dot"
-            style={{
-              width: 5, height: 5, borderRadius: "50%",
-              background: isDark ? "#4FFFB0" : "#059669",
-              boxShadow: isDark ? "0 0 4px rgba(79,255,176,0.5)" : "0 0 4px rgba(5,150,105,0.4)",
-            }}
+            className="animate-pulse-dot w-1.25 h-1.25 rounded-full bg-[#059669] dark:bg-[#4FFFB0] shadow-[0_0_4px_rgba(5,150,105,0.4)] dark:shadow-[0_0_4px_rgba(79,255,176,0.5)]"
           />
         </div>
       </div>

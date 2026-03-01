@@ -85,7 +85,7 @@ function TimeLogRow({
 
   return (
     <div className="group flex items-start gap-3 py-2.5">
-      <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
+      <Avatar className="h-7 w-7 shrink-0 mt-0.5">
         <AvatarImage src={entry.user.imageUrl ?? ""} />
         <AvatarFallback className="text-xs">{entry.user.name?.[0] ?? "?"}</AvatarFallback>
       </Avatar>
@@ -136,7 +136,7 @@ function TimeLogRow({
       </div>
 
       {isOwn && !editing && (
-        <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
             variant="ghost"
             size="icon"

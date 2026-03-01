@@ -271,11 +271,11 @@ function CommentItem({
     <div className={cn("group relative", isReply && "text-sm")}>
       <div className="flex gap-3">
         {/* Avatar */}
-        <Avatar className="w-8 h-8 flex-shrink-0">
+        <Avatar className="w-8 h-8 shrink-0">
           {comment.userImage ? (
             <Image src={comment.userImage} alt={comment.userName} width={32} height={32} className="rounded-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+            <div className="w-full h-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
               {comment.userName[0].toUpperCase()}
             </div>
           )}
@@ -496,7 +496,7 @@ function CommentEditor({
   return (
     <div className="flex gap-3">
       {currentUserImage && (
-        <Avatar className="w-8 h-8 flex-shrink-0">
+        <Avatar className="w-8 h-8 shrink-0">
           <Image src={currentUserImage} alt="You" width={32} height={32} className="rounded-full object-cover" />
         </Avatar>
       )}
@@ -515,7 +515,7 @@ function CommentEditor({
             editor={editor}
             className={cn(
               "px-3 py-2 prose prose-sm dark:prose-invert max-w-none focus:outline-none transition-all duration-200",
-              isFocused ? "min-h-[100px]" : "min-h-[44px]"
+              isFocused ? "min-h-25" : "min-h-11"
             )}
           />
 

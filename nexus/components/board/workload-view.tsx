@@ -105,7 +105,7 @@ function WorkloadCardTile({ card }: { card: WorkloadCard }) {
             onClick={() => onOpen(card.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(card.id); } }}
             className={cn(
-              "relative flex-shrink-0 w-40 cursor-pointer rounded-lg border p-2.5",
+              "relative shrink-0 w-40 cursor-pointer rounded-lg border p-2.5",
               "shadow-sm transition-shadow hover:shadow-md",
               isOverdue
                 ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
@@ -119,7 +119,7 @@ function WorkloadCardTile({ card }: { card: WorkloadCard }) {
           >
             {/* Priority dot */}
             <div className="flex items-center gap-1.5 mb-1.5">
-              <span className={cn("h-2 w-2 rounded-full flex-shrink-0", p.dot)} />
+              <span className={cn("h-2 w-2 rounded-full shrink-0", p.dot)} />
               <span className={cn("text-[10px] font-medium uppercase tracking-wide", p.color)}>
                 {p.label}
               </span>
@@ -148,7 +148,7 @@ function WorkloadCardTile({ card }: { card: WorkloadCard }) {
             )}
           </motion.div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[200px]">
+        <TooltipContent side="top" className="max-w-50">
           <p className="font-medium">{card.title}</p>
           {dueDate && (
             <p className={cn("text-xs mt-0.5", isOverdue ? "text-red-400" : "text-muted-foreground")}>
@@ -239,7 +239,7 @@ function MemberRow({ member }: { member: WorkloadMember }) {
             className="h-9 w-9 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-sm"
           />
         ) : (
-          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm ring-2 ring-white dark:ring-slate-700">
+          <div className="h-9 w-9 rounded-full bg-linear-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm ring-2 ring-white dark:ring-slate-700">
             {member.name[0]?.toUpperCase()}
           </div>
         )}
@@ -257,7 +257,7 @@ function MemberRow({ member }: { member: WorkloadMember }) {
 
           {/* Capacity bar */}
           <div className="mt-1.5 flex items-center gap-2">
-            <div className="flex-1 max-w-[120px] h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="flex-1 max-w-30 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
               <div
                 className={cn("h-full rounded-full transition-all", cap.barColor)}
                 style={{ width: `${barWidth}%` }}

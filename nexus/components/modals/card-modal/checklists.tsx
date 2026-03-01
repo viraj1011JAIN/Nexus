@@ -155,7 +155,7 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
                   aria-label={addingItem.has(item) ? "Adding suggestion" : "Add suggestion"}
                   onClick={() => handleAddSuggestion(item)}
                   disabled={addingItem.has(item)}
-                  className="text-primary hover:text-primary/80 flex-shrink-0 disabled:opacity-40"
+                  className="text-primary hover:text-primary/80 shrink-0 disabled:opacity-40"
                 >
                   {addingItem.has(item)
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

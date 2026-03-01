@@ -153,7 +153,7 @@ export function TableView({ lists }: TableViewProps) {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-50">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search cards..."
@@ -164,6 +164,8 @@ export function TableView({ lists }: TableViewProps) {
           {search && (
             <button
               onClick={() => setSearch("")}
+              title="Clear search"
+              aria-label="Clear search"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               <X className="h-3.5 w-3.5" />

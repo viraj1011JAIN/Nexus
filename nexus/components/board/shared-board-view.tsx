@@ -135,7 +135,7 @@ function SharedCardTile({ card }: { card: SharedCard }) {
                 {card.assignee.name.trim().charAt(0).toUpperCase() || "?"}
               </div>
             )}
-            <span className="truncate max-w-[60px]">{card.assignee.name}</span>
+            <span className="truncate max-w-15">{card.assignee.name}</span>
           </div>
         )}
       </div>
@@ -164,7 +164,7 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
   const totalCards = board.lists.reduce((s, l) => s + l.cards.length, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
       <div
         className="relative h-36 flex items-end overflow-hidden"
@@ -241,7 +241,7 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="w-72 flex-shrink-0"
+              className="w-72 shrink-0"
             >
               {/* List header */}
               <div className="flex items-center justify-between mb-2 px-1">
@@ -255,7 +255,7 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
 
               {/* Cards */}
               <div
-                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 p-2 space-y-2 min-h-[80px]"
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 p-2 space-y-2 min-h-20"
               >
                 {list.cards.map((card) => (
                   <SharedCardTile key={card.id} card={card} />
