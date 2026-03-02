@@ -95,26 +95,47 @@ export async function checkShareRequiresPassword(token: string) {
 
 export async function getSharedBoardData(token: string, password?: string) {
   try {
+    // SECURITY: explicit `select` on every level — never use `include` for
+    // unauthenticated queries. Any new column added to Board, List, or Card
+    // (e.g. orgId, createdById, assignee.email) will NOT leak automatically
+    // because it must be explicitly listed here first.
     const share = await db.boardShare.findFirst({
       where: {
         token,
         isActive: true,
         OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
-      include: {
+      select: {
+        id: true,
+        passwordHash: true,
+        allowComments: true,
+        allowCopyCards: true,
+        viewCount: true,
         board: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            imageThumbUrl: true,
+            imageFullUrl: true,
             lists: {
               orderBy: { order: "asc" },
-              include: {
+              select: {
+                id: true,
+                title: true,
+                order: true,
                 cards: {
                   orderBy: { order: "asc" },
-                  include: {
-                    assignee: {
-                      select: { name: true, imageUrl: true },
-                    },
+                  select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    priority: true,
+                    dueDate: true,
+                    order: true,
+                    // Assignee: display name and avatar only — never email or internal user ID
+                    assignee: { select: { name: true, imageUrl: true } },
                     labels: {
-                      include: { label: true },
+                      select: { label: { select: { name: true, color: true } } },
                     },
                   },
                 },

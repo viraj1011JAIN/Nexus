@@ -3,6 +3,7 @@ import "server-only";
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { createClient as createSupabaseServiceClient } from "@supabase/supabase-js";
 import { createDAL } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
@@ -30,7 +31,15 @@ export async function deleteCard(id: string, _boardId: string) {
   // trusting the caller-supplied parameter (prevents SSRF cache-invalidation abuse).
   const card = await db.card.findUnique({
     where: { id, list: { board: { orgId: ctx.orgId } } },
-    include: { list: { select: { boardId: true } } },
+    include: {
+      list: { select: { boardId: true } },
+      // Capture storage paths BEFORE the cascade delete removes attachment rows.
+      // The Prisma `onDelete: Cascade` on Attachment ensures DB rows are cleaned
+      // up automatically, but the actual files in Supabase Storage are NOT touched
+      // by the cascade — they must be removed explicitly to prevent orphan files
+      // accumulating against the Supabase Storage quota.
+      attachments: { select: { storagePath: true } },
+    },
   });
   if (!card) {
     throw new Error(`Card ${id} not found or access denied.`);
@@ -42,6 +51,7 @@ export async function deleteCard(id: string, _boardId: string) {
     throw new Error(`Card ${id} is missing its list association — cannot resolve a trusted boardId.`);
   }
   const trustedBoardId = card.list.boardId;
+  const storagePaths = card.attachments.map((a) => a.storagePath);
 
   // RBAC: require CARD_DELETE permission on the board (not the untrusted _boardId param)
   await requireBoardPermission(ctx, trustedBoardId, "CARD_DELETE");
@@ -61,10 +71,36 @@ export async function deleteCard(id: string, _boardId: string) {
   // Fire CARD_DELETED event for automations + webhooks (TASK-019).
   // Wrapped in after() so the serverless runtime keeps the function alive until
   // delivery completes, and the event is guaranteed to fire after the audit write.
-  after(() => emitCardEvent(
-    { type: "CARD_DELETED", orgId: ctx.orgId, boardId: trustedBoardId, cardId: id },
-    { cardId: id, cardTitle, boardId: trustedBoardId, orgId: ctx.orgId }
-  ));
+  after(async () => {
+    // ── Event bus ────────────────────────────────────────────────────────────
+    await emitCardEvent(
+      { type: "CARD_DELETED", orgId: ctx.orgId, boardId: trustedBoardId, cardId: id },
+      { cardId: id, cardTitle, boardId: trustedBoardId, orgId: ctx.orgId },
+    );
+
+    // ── Supabase Storage cleanup ──────────────────────────────────────────────
+    // The Prisma cascade already removed the Attachment DB rows. Now remove the
+    // actual files from Supabase Storage so orphaned blobs don't accumulate
+    // against the storage quota. This is best-effort: a failure here is not
+    // fatal — a separate retention job can clean up any remaining orphans.
+    if (storagePaths.length > 0) {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (supabaseUrl && serviceKey) {
+          const storageClient = createSupabaseServiceClient(supabaseUrl, serviceKey, {
+            auth: { persistSession: false },
+          });
+          await storageClient.storage
+            .from("card-attachments")
+            .remove(storagePaths);
+        }
+      } catch {
+        // Storage cleanup failure is non-fatal — the card and its DB rows are
+        // already deleted. Orphaned files are cleaned up by the weekly cron.
+      }
+    }
+  });
 
   revalidatePath(`/board/${trustedBoardId}`);
 }

@@ -72,6 +72,11 @@ export default async function SharedBoardPage({ params }: SharedBoardPageProps) 
 
   // Step 2: full query — only reached when share is public (no password required).
   // Re-include validity conditions to close the TOCTOU gap between the two queries.
+  // SECURITY: use explicit `select` (not `include`) on every level so that newly-
+  // added columns (e.g. orgId, createdById, assignee email) are never accidentally
+  // returned to unauthenticated callers. The minimal shape required by
+  // SharedBoardView is: board title + imageUrl, list titles, card titles /
+  // descriptions / priority / dueDate, assignee display name + avatar, label name + colour.
   const share = await db.boardShare.findFirst({
     where: {
       id: shareLight.id,
@@ -85,15 +90,31 @@ export default async function SharedBoardPage({ params }: SharedBoardPageProps) 
       allowCopyCards: true,
       viewCount: true,
       board: {
-        include: {
+        select: {
+          id: true,
+          title: true,
+          imageThumbUrl: true,
+          imageFullUrl: true,
           lists: {
             orderBy: { order: "asc" },
-            include: {
+            select: {
+              id: true,
+              title: true,
+              order: true,
               cards: {
                 orderBy: { order: "asc" },
-                include: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  priority: true,
+                  dueDate: true,
+                  order: true,
+                  // Assignee: display name and avatar only — never email or internal user ID
                   assignee: { select: { name: true, imageUrl: true } },
-                  labels: { include: { label: true } },
+                  labels: {
+                    select: { label: { select: { name: true, color: true } } },
+                  },
                 },
               },
             },

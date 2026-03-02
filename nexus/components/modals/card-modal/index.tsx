@@ -95,6 +95,7 @@ import { generateCardDescription } from "@/actions/ai-actions";
 import { deleteCard } from "@/actions/delete-card";
 import { ErrorBoundary } from "@/components/error-boundary-realtime";
 import type { CardLabel } from "@/hooks/use-optimistic-card";
+import { useAiCooldown } from "@/hooks/use-ai-cooldown";
 
 type CardWithRelations = Card & {
   list: List;
@@ -136,6 +137,8 @@ export const CardModal = () => {
 
   // AI state (TASK-022)
   const [aiDescLoading, setAiDescLoading] = useState(false);
+  // 10-second cooldown so users cannot spam the description-generation endpoint.
+  const { isOnCooldown: isDescCooldown, secondsRemaining: descCooldownSecs, triggerCooldown: triggerDescCooldown } = useAiCooldown(10_000);
 
   // Refs for keyboard-shortcut-triggered picker opens (TASK-016)
   const labelWrapperRef = useRef<HTMLDivElement>(null);
@@ -249,6 +252,9 @@ export const CardModal = () => {
       );
       if (!confirmed) return;
     }
+    // Start client-side cooldown before the async work so the button is
+    // disabled immediately (server-side guard fires after the OpenAI call).
+    triggerDescCooldown();
     setAiDescLoading(true);
     try {
       const result = await generateCardDescription({
@@ -956,11 +962,11 @@ export const CardModal = () => {
                           <span className="cm-desc-lbl">Description</span>
                           <button
                             onClick={handleGenerateDescription}
-                            disabled={aiDescLoading}
+                            disabled={aiDescLoading || isDescCooldown}
                             className="cm-ai-btn"
                           >
                             {aiDescLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                            {aiDescLoading ? "Generating…" : "AI Generate"}
+                            {aiDescLoading ? "Generating…" : isDescCooldown ? `Wait ${descCooldownSecs}s…` : "AI Generate"}
                           </button>
                         </div>
                         <div className={`cm-editor-wrap ${isDark ? "cm-editor-dark" : "cm-editor-light"}`}>

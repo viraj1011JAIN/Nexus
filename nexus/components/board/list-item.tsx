@@ -54,6 +54,10 @@ const ListItemInner = ({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Tracks the most-recent request so stale responses are silently discarded.
   const requestIdRef = useRef(0);
+  // Client-side cooldown: prevents calling the AI endpoint more than once per
+  // 10 s regardless of how many times the user edits the title field.
+  const lastAiSuggestionRef = useRef(0);
+  const AI_SUGGESTION_COOLDOWN_MS = 10_000;
 
   useEffect(() => {
     return () => clearTimeout(debounceRef.current);
@@ -66,6 +70,10 @@ const ListItemInner = ({
     if (value.trim().length < 5) return;
     const currentRequestId = ++requestIdRef.current;
     debounceRef.current = setTimeout(async () => {
+      // Enforce client-side cooldown: skip AI call if last suggestion was < 10 s ago.
+      const now = Date.now();
+      if (now - lastAiSuggestionRef.current < AI_SUGGESTION_COOLDOWN_MS) return;
+      lastAiSuggestionRef.current = now;
       setIsLoadingSuggestion(true);
       try {
         const result = await suggestPriority({ title: value });

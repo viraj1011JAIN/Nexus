@@ -6,6 +6,7 @@ import { ChecklistPanel } from "@/components/board/checklist-panel";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { getChecklists, addChecklist, addChecklistItem } from "@/actions/checklist-actions";
 import { suggestChecklists } from "@/actions/ai-checklist-actions";
+import { useAiCooldown } from "@/hooks/use-ai-cooldown";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -24,6 +25,11 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
   // AI suggest state (TASK-022)
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  // 10-second cooldown prevents accidental or malicious button spam from
+  // draining OpenAI credits. The server-side rate limiter fires AFTER the
+  // OpenAI call, so each spam click costs money before it is rejected;
+  // this client-side gate stops the request entirely.
+  const { isOnCooldown, secondsRemaining, triggerCooldown } = useAiCooldown(10_000);
   // Use a Set to track each in-flight item independently — prevents duplicate
   // addChecklist calls when the user quickly taps multiple suggestions.
   const [addingItem, setAddingItem] = useState<Set<string>>(new Set());
@@ -45,6 +51,7 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
   useEffect(() => { load(); }, [cardId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSuggestItems = async () => {
+    triggerCooldown(); // Disable button immediately — before any async work
     setIsLoadingSuggestions(true);
     setSuggestions([]);
     try {
@@ -127,7 +134,7 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
         <button
           type="button"
           onClick={handleSuggestItems}
-          disabled={isLoadingSuggestions}
+          disabled={isLoadingSuggestions || isOnCooldown}
           className={cn(
             "flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md w-full justify-center",
             "border border-violet-200 dark:border-violet-800",
@@ -138,6 +145,8 @@ export function ChecklistsTab({ cardId, boardId, cardTitle }: ChecklistsTabProps
         >
           {isLoadingSuggestions
             ? <><Loader2 className="h-3 w-3 animate-spin" /> Generating suggestions...</>
+            : isOnCooldown
+            ? <><Loader2 className="h-3 w-3" /> Wait {secondsRemaining}s...</>
             : <><Sparkles className="h-3 w-3" /> Suggest checklist items</>}
         </button>
 

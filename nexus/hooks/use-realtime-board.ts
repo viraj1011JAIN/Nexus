@@ -95,6 +95,24 @@ export function useRealtimeBoard({
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ── Version gate — race condition prevention ──────────────────────────────
+  // When multiple users move cards simultaneously, a remote broadcast from
+  // Supabase can arrive AFTER the local user has already committed a newer
+  // drag. Without a guard, the stale broadcast would snap the card back to
+  // its old position ("state flickering").
+  //
+  // Strategy: when a local drag operation starts, record `Date.now()` for
+  // that card. Remote UPDATE events are suppressed for that card until 2 s
+  // after the most recent local operation — enough time for any in-flight
+  // Supabase broadcasts from the same card to arrive and be dropped.
+  //
+  // 2 s is chosen because:
+  //   - Supabase postgres_changes latency is typically < 200 ms
+  //   - 2 s covers the 95th-percentile latency spike under load
+  //   - Cards that are NOT being dragged locally are never suppressed (Map miss)
+  const localOpTimestampRef = useRef(new Map<string, number>());
+  const LOCAL_OP_SUPPRESS_MS = 2_000;
+
   // Stable callback refs to prevent re-subscriptions
   const handleCardChange = useCallback(
     (payload: CardPayload) => {
@@ -106,11 +124,19 @@ export function useRealtimeBoard({
             onCardCreated(newRecord as unknown as Card);
           }
           break;
-        case "UPDATE":
-          if (newRecord && onCardUpdated) {
-            onCardUpdated(newRecord as unknown as Card);
-          }
+        case "UPDATE": {
+          if (!newRecord || !onCardUpdated) break;
+
+          // ── Version gate ────────────────────────────────────────────────
+          // If this card has had a local drag operation in the last
+          // LOCAL_OP_SUPPRESS_MS, drop the remote broadcast — it is stale
+          // relative to the user's current local state.
+          const suppressedUntil = localOpTimestampRef.current.get(newRecord.id as string);
+          if (suppressedUntil && Date.now() < suppressedUntil) break;
+
+          onCardUpdated(newRecord as unknown as Card);
           break;
+        }
         case "DELETE":
           if (oldRecord?.id && onCardDeleted) {
             onCardDeleted(oldRecord.id);
@@ -118,6 +144,8 @@ export function useRealtimeBoard({
           break;
       }
     },
+    // localOpTimestampRef is a stable ref — it doesn't need to be a dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [onCardCreated, onCardUpdated, onCardDeleted]
   );
 
@@ -345,5 +373,18 @@ export function useRealtimeBoard({
   return {
     isConnected,
     error,
+    /**
+     * Call this BEFORE applying an optimistic local card update (e.g. drag start).
+     * Remote Supabase broadcasts for this card will be suppressed for 2 seconds,
+     * preventing stale events from snapping the card back to an old position.
+     *
+     * @param cardId - The Prisma Card id being locally updated.
+     */
+    markLocalCardUpdate(cardId: string) {
+      localOpTimestampRef.current.set(
+        cardId,
+        Date.now() + LOCAL_OP_SUPPRESS_MS,
+      );
+    },
   };
 }
