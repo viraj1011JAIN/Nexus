@@ -130,7 +130,7 @@ export default function SignInContent() {
           source: "sign-in-page",
         });
       }
-      router.push("/dashboard");
+      router.push(`/organization/${DEMO_ORG_ID}`);
     } catch (error) {
       console.error("Error starting demo:", error);
       setIsDemoLoading(false);

@@ -36,6 +36,7 @@ const isPublicRoute = createRouteMatcher([
   "/privacy",
   "/terms",
   "/shared/(.*)",
+  "/organization/demo-org-id(.*)",
   "/manifest.json",
   "/favicon.ico",
   "/robots.txt",
