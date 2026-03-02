@@ -377,11 +377,11 @@ export function CalendarView({ cards, boardId, onCardUpdate }: CalendarViewProps
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-[600px] overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+      <div className="flex h-full min-h-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
         {/* Main area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 sm:px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
             <CalendarIcon className="h-5 w-5 text-indigo-500" />
             <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
               {mode === "month" ? format(currentDate, "MMMM yyyy") : `Week of ${format(getWeekStart(currentDate, { weekStartsOn: 0 }), "MMM d, yyyy")}`}
@@ -398,17 +398,19 @@ export function CalendarView({ cards, boardId, onCardUpdate }: CalendarViewProps
               </Button>
             </div>
 
-            <div className="ml-auto flex items-center gap-2">
-              {/* Stats */}
-              <div className="flex items-center gap-3 text-xs text-muted-foreground mr-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+              {/* Stats — icon+count only on mobile, full label on sm+ */}
+              <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground mr-1 sm:mr-2">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
-                  {scheduledCards.length} scheduled
+                  <span className="hidden sm:inline">{scheduledCards.length} scheduled</span>
+                  <span className="sm:hidden text-foreground font-medium">{scheduledCards.length}</span>
                 </span>
                 {unscheduledCards.length > 0 && (
                   <span className="text-amber-500 flex items-center gap-1">
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    {unscheduledCards.length} unscheduled
+                    <span className="hidden sm:inline">{unscheduledCards.length} unscheduled</span>
+                    <span className="sm:hidden font-medium">{unscheduledCards.length}</span>
                   </span>
                 )}
               </div>
@@ -496,8 +498,10 @@ export function CalendarView({ cards, boardId, onCardUpdate }: CalendarViewProps
           )}
         </div>
 
-        {/* Unscheduled sidebar */}
-        <UnscheduledPanel cards={unscheduledCards} />
+        {/* Unscheduled sidebar — hidden on mobile to maximise calendar grid width */}
+        <div className="hidden sm:block">
+          <UnscheduledPanel cards={unscheduledCards} />
+        </div>
       </div>
     </TooltipProvider>
   );

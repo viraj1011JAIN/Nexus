@@ -946,6 +946,25 @@ html:not(.theme-mounted) * {
 .board-scrollbar:not(.dark)::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); }
 
 /* ============================================================================
+   MOBILE KANBAN UX
+   On phones: momentum scrolling (iOS), column snap-points so the view rests
+   on a column boundary rather than stopping mid-card.
+   snap-type: x proximity is used (not mandatory) so that drag-and-drop touches
+   are not hijacked by the scroll container.
+   ============================================================================ */
+@media (max-width: 639px) {
+  /* Horizontal kanban scroller */
+  .board-scrollbar {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  /* Each list column becomes a snap target */
+  .kanban-list-col {
+    scroll-snap-align: start;
+  }
+}
+
+/* ============================================================================
    KANBAN BOARD PERFORMANCE
    Containment notes: Do NOT use contain:layout or contain:paint on draggable
    elements — they break dnd-kit's CSS-transform drag by isolating layout

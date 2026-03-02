@@ -16,7 +16,7 @@
  *  - List-grouped rows
  */
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { addDays, addMonths, differenceInDays, format, startOfDay, endOfDay, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isToday, isSameMonth } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ const PRIORITY_BAR_COLORS: Record<string, string> = {
 
 const ROW_HEIGHT = 40;
 const HEADER_HEIGHT = 56;
-const LABEL_COL_W = 200;
+// LABEL_COL_W is now responsive — computed via useState/useEffect inside GanttView
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -152,6 +152,15 @@ export function GanttView({ lists }: GanttViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { onOpen } = useCardModal();
 
+  // Responsive label column: narrower on mobile so the chart area gets more space
+  const [labelColW, setLabelColW] = useState(200);
+  useEffect(() => {
+    const update = () => setLabelColW(window.innerWidth < 640 ? 110 : 200);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   // Gather all cards with dates
   const allCards = useMemo(() => lists.flatMap((l) => l.cards), [lists]);
   const datedCards = useMemo(
@@ -195,7 +204,7 @@ export function GanttView({ lists }: GanttViewProps) {
   return (
     <div className="w-full overflow-hidden border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 select-none">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 px-3 sm:px-4 py-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOffset((o) => o - 1)} aria-label="Shift range back">
             <ChevronLeft className="h-4 w-4" />
@@ -229,7 +238,7 @@ export function GanttView({ lists }: GanttViewProps) {
         {/* Row label column — fixed left */}
         <div
           className="shrink-0 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 z-10"
-          style={{ width: LABEL_COL_W }}
+          style={{ width: labelColW }}
         >
           {/* Header placeholder */}
           <div style={{ height: HEADER_HEIGHT }} className="border-b border-slate-100 dark:border-slate-700 flex items-end px-3 pb-2">
@@ -375,7 +384,7 @@ export function GanttView({ lists }: GanttViewProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30">
+      <div className="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30">
         <span className="text-xs text-muted-foreground font-medium">Priority:</span>
         {Object.entries(PRIORITY_BAR_COLORS).map(([p, cls]) => (
           <div key={p} className="flex items-center gap-1">

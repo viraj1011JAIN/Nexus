@@ -382,19 +382,21 @@ export const ListContainer = ({
       </div>{/* end shared scroll wrapper */}
 
       {/* Footer status bar — fixed to the bottom of the viewport */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 h-9 px-6 flex items-center justify-between gap-8 bg-[rgba(255,253,249,0.96)] dark:bg-[rgba(13,12,20,0.92)] backdrop-blur-[14px] border-t border-black/7 dark:border-white/6">
-        <div className="flex items-center gap-4">
+      <div className="fixed bottom-0 left-0 right-0 z-50 h-9 px-3 sm:px-6 flex items-center justify-between gap-4 sm:gap-8 bg-[rgba(255,253,249,0.96)] dark:bg-[rgba(13,12,20,0.92)] backdrop-blur-[14px] border-t border-black/7 dark:border-white/6">
+        {/* List indicators: dot+count on mobile, full name+count on sm+ */}
+        <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto flex-1 min-w-0">
           {orderedData.map((list, i) => {
             const LIST_COLORS = ["#7C3AED","#D97706","#8B5CF6","#059669","#1A73E8","#E0284A"];
             const col = LIST_COLORS[i % LIST_COLORS.length];
             return (
-              <div key={list.id} className="flex items-center gap-1.25">
+              <div key={list.id} className="flex items-center gap-[5px] shrink-0">
                 <div
-                  className="w-1.25 h-1.25 rounded-full"
+                  className="w-[5px] h-[5px] rounded-full shrink-0"
                   style={{ background: col, boxShadow: isDark ? `0 0 4px ${col}66` : "none" }}
                 />
-                <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/28">
-                  {list.title} ·{" "}
+                <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/28 whitespace-nowrap">
+                  {/* Show full list name on sm+, just the count on mobile */}
+                  <span className="hidden sm:inline">{list.title} · </span>
                   <span className="text-[#6B6560] dark:text-white/45 font-medium">
                     {list.cards.length}
                   </span>
@@ -403,10 +405,11 @@ export const ListContainer = ({
             );
           })}
         </div>
-        <div className="flex items-center gap-1.5">
+        {/* Auto-save indicator — hidden on mobile to keep footer uncluttered */}
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
           <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/20">Auto-save</span>
           <div
-            className="animate-pulse-dot w-1.25 h-1.25 rounded-full bg-[#059669] dark:bg-[#4FFFB0] shadow-[0_0_4px_rgba(5,150,105,0.4)] dark:shadow-[0_0_4px_rgba(79,255,176,0.5)]"
+            className="animate-pulse-dot w-[5px] h-[5px] rounded-full bg-[#059669] dark:bg-[#4FFFB0] shadow-[0_0_4px_rgba(5,150,105,0.4)] dark:shadow-[0_0_4px_rgba(79,255,176,0.5)]"
           />
         </div>
       </div>

@@ -396,13 +396,13 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="table" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
+        <TabsContent value="table" className="mt-0 p-3 sm:p-6 pt-3 sm:pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <TableView lists={filteredListsForView} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="calendar" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
+        <TabsContent value="calendar" className="mt-0 p-2 sm:p-6 pt-2 sm:pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <CalendarView cards={filteredCards} boardId={boardId} />
           </ErrorBoundary>
@@ -414,13 +414,13 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="sprints" className="mt-0 p-6 pt-4 max-w-3xl flex-1 overflow-y-auto">
+        <TabsContent value="sprints" className="mt-0 p-3 sm:p-6 pt-3 sm:pt-4 max-w-3xl flex-1 overflow-y-auto">
           <ErrorBoundary>
             <SprintPanel boardId={boardId} />
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="workload" className="mt-0 p-6 pt-4 flex-1 overflow-y-auto">
+        <TabsContent value="workload" className="mt-0 p-3 sm:p-6 pt-3 sm:pt-4 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <WorkloadView boardId={boardId} lists={filteredListsForView} />
           </ErrorBoundary>

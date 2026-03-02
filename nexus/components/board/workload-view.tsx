@@ -269,8 +269,8 @@ function MemberRow({ member }: { member: WorkloadMember }) {
           </div>
         </div>
 
-        {/* Badges */}
-        <div className="flex items-center gap-2">
+        {/* Badges — hidden on mobile to prevent header row overflow */}
+        <div className="hidden sm:flex items-center gap-2">
           {urgentCount > 0 && (
             <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs h-5 px-1.5">
               <Flag className="h-2.5 w-2.5 mr-1" />
@@ -549,8 +549,8 @@ export function WorkloadView({ boardId: _boardId, lists }: WorkloadViewProps) {
             </p>
           </div>
 
-          {/* Legend */}
-          <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
+          {/* Legend — hidden on mobile to prevent header overflow */}
+          <div className="ml-auto hidden sm:flex items-center gap-4 text-xs text-muted-foreground">
             {Object.entries(CAPACITY_CONFIG).map(([key, val]) => (
               <span key={key} className="flex items-center gap-1.5">
                 <span className={cn("h-2 w-2 rounded-full", val.barColor)} />
