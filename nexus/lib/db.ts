@@ -10,6 +10,27 @@ declare global {
 export type { PrismaClient };
 
 /**
+ * Shard-aware database client accessor.
+ *
+ * Prefer `getDbForOrg(orgId)` over `db` in any code that already has an orgId.
+ * It returns the Prisma client for the shard that owns that org's data, with
+ * automatic failover if the assigned shard is unhealthy.
+ *
+ * In single-shard mode (no SHARD_n_DATABASE_URL env vars) this is identical
+ * to importing `db` directly — zero overhead.
+ *
+ * See lib/shard-router.ts for the full routing architecture.
+ */
+export {
+  getDbForOrg,
+  getShardIndex,
+  getShardCount,
+  getShardHealthMap,
+  getShardClient,
+  invalidateShardHealthCache,
+} from "@/lib/shard-router";
+
+/**
  * Standard database client — used by all server actions and API routes.
  * Row-Level Security is enforced by PostgreSQL when this client executes queries
  * through the unprivileged application role (DATABASE_URL should use the app role,

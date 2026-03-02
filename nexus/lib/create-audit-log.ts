@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { db, getDbForOrg } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { captureSentryException } from "@/lib/sentry-helpers";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
@@ -33,7 +33,12 @@ export const createAuditLog = async (props: Props) => {
     // Extract IP and User-Agent for compliance
     const reqCtx = await getRequestContext();
 
-    await db.auditLog.create({
+    // Route to the shard that owns this org's data.
+    // In single-shard mode (no SHARD_n_DATABASE_URL vars) this resolves to
+    // the primary DATABASE_URL — identical to using `db` directly.
+    const shardClient = await getDbForOrg(orgId);
+
+    await shardClient.auditLog.create({
       data: {
         orgId,
         entityId,
