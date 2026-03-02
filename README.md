@@ -2632,7 +2632,7 @@ flowchart LR
 - User grabs a card — `@dnd-kit` starts tracking the drag; a ghost copy (`DragOverlay`) follows the cursor
 - The UI updates **immediately** (optimistic update) — the card appears in its new position before any server call is made. This makes the app feel instant.
 - When the user drops the card, `LexoRank` calculates the new `order` string based on the cards above and below the drop position
-- A server action (`update-card-order`) fires — it validates the input, checks the user has permission to move cards on this board, then writes exactly **one row** to the database (just the moved card's `order` field)
+- A server action (`update-card-order`) fires — it validates the input, checks the user has at least the `MEMBER` org role, guards against LexoRank DoS (order strings capped at 64 chars), then batch-updates the affected card rows in the database
 - The event bus fires — it checks if any automation rules match (e.g. "when a card is moved to Done, assign the owner") and sends outbound webhooks
 - Supabase detects the database change via `postgres_changes` and broadcasts it over the WebSocket channel for this board
 - Every other user who has this board open receives the event and their UI updates in real time — they see the card move without refreshing
@@ -2654,8 +2654,8 @@ sequenceDiagram
     U->>DND: Drops card in new position
     DND->>OptUI: Update local state immediately (0ms delay)
     DND->>SA: Call update-card-order(cardId, newOrder)
-    SA->>SA: Validate input via Zod schema
-    SA->>SA: getTenantContext() — check auth + MOVE_CARD permission
+    SA->>SA: Validate input + LexoRank order length guard
+    SA->>SA: getTenantContext() + requireRole("MEMBER")
     SA->>DB: UPDATE card SET order = newLexoRank WHERE id = cardId
     DB-->>SA: Success
     SA->>EB: emitCardEvent(CARD_MOVED)
@@ -2673,58 +2673,62 @@ sequenceDiagram
 
 ### 4. Server Action Execution Flow
 
-**What this diagram shows:** The exact lifecycle every server action follows — from the user clicking a button to the database being updated and other users being notified. This is the same pattern used by all 40 server actions in the codebase.
+**What this diagram shows:** The exact lifecycle every server action follows — from the user clicking a button to the database being updated and other users being notified. This is the same pattern used by all 42 server actions in the codebase.
 
 **Step by step:**
 - User does something in the UI (e.g. creates a card, adds a label, invites a member)
 - The browser calls a Next.js Server Action directly — no `fetch()` to a REST endpoint needed
-- `createSafeAction` (the shared wrapper) first validates the input using a Zod schema — if validation fails, field errors are returned immediately with no DB involvement
-- `getTenantContext()` runs — it reads the Clerk JWT to get `userId` and `orgId`, then verifies the user is an active organization member. If this fails, a 403 error is returned.
-- The RBAC permission check runs — the specific permission needed for this action is checked against the user's board role and any custom permission scheme
-- Prisma runs the database mutation, scoped to `orgId` — it is impossible for a bug to accidentally write to another tenant's data because every query includes the `orgId` filter
-- `emitCardEvent()` fires asynchronously — automations and outbound webhooks run in parallel without slowing down the response
-- `createAuditLog()` writes an immutable record of what happened
-- The result is returned to the browser — on success the UI confirms; on failure the error is user-safe (internal IDs and stack traces are never sent to the client)
+- `createSafeAction` (the shared wrapper) validates the input using a Zod schema — if validation fails, field errors are returned immediately with no DB involvement. If a `TenantError` is thrown later, the wrapper maps it to a safe, generic client message (never leaking internal IDs or stack traces).
+- Inside the handler, `getTenantContext()` runs — it calls `auth()` to read the Clerk JWT for `userId` and `orgId`, then verifies the user is an active organization member. If this fails, a `TenantError` is thrown.
+- The handler calls `createDAL(ctx)` — this sets the PostgreSQL session variable `app.current_org_id` for Row-Level Security, then returns a data-access layer scoped to the tenant
+- The RBAC permission check runs — the specific permission needed for this action (e.g. `CARD_EDIT`, `BOARD_DELETE`) is checked via `requireBoardPermission()` against the user's board role and any custom permission scheme
+- Prisma runs the database mutation, scoped to `orgId` — every query includes the `orgId` filter at the application level, and RLS policies provide a database-level safety net
+- `emitCardEvent()` fires asynchronously via `after()` — automations and outbound webhooks run in parallel without slowing down the response
+- Audit logging is performed by the handler (either via `dal.auditLogs.create()` or `createAuditLog()`) — it writes an immutable record of what happened
+- The result is returned to the browser — on success the UI confirms; on failure the error is user-safe
 
 ```mermaid
 sequenceDiagram
     participant Client as Browser
-    participant SA as Server Action
     participant CSA as createSafeAction wrapper
     participant ZOD as Zod Schema
-    participant TC as getTenantContext
-    participant RBAC as Permission Check
-    participant DB as PostgreSQL (Prisma)
+    participant Handler as Action Handler
+    participant TC as getTenantContext()
+    participant DAL as createDAL()
+    participant RBAC as requireBoardPermission()
+    participant DB as PostgreSQL (Prisma + RLS)
     participant EB as Event Bus
-    participant AL as Audit Log
     participant RT as Supabase Realtime
 
-    Client->>SA: User triggers action (e.g. createCard)
-    SA->>CSA: Pass raw input
+    Client->>CSA: User triggers action (e.g. createCard)
     CSA->>ZOD: Validate input shape and types
     alt Validation fails
         ZOD-->>Client: Return fieldErrors immediately
     end
     ZOD-->>CSA: Input is valid
-    CSA->>TC: getTenantContext()
-    TC-->>CSA: { userId, orgId, role } OR TenantError
-    alt Not authenticated or suspended
-        TC-->>Client: 403 Forbidden
+    CSA->>Handler: Call handler with validated data
+    Handler->>TC: getTenantContext() — calls auth() internally
+    TC-->>Handler: { userId, orgId, role } OR throws TenantError
+    alt TenantError thrown
+        CSA-->>Client: Safe generic error message (never leaks internals)
     end
-    CSA->>RBAC: Check permission (e.g. CREATE_CARD)
+    Handler->>DAL: createDAL(ctx) — sets app.current_org_id for RLS
+    Handler->>RBAC: Check permission (e.g. CARD_CREATE)
     alt Permission denied
         RBAC-->>Client: 403 Forbidden
     end
-    RBAC-->>CSA: Allowed
-    CSA->>DB: Execute mutation scoped to orgId
-    DB-->>CSA: Saved record
-    CSA->>AL: createAuditLog(action, before, after)
-    CSA->>EB: emitCardEvent()
+    RBAC-->>Handler: Allowed
+    Handler->>DB: Execute mutation scoped to orgId (WHERE clause + RLS)
+    DB-->>Handler: Saved record
+    Handler->>Handler: Audit log via dal.auditLogs.create()
+    Handler->>Handler: after(() => emitCardEvent())
+    Handler-->>Client: { data: result }
+    Note over Handler,EB: after() callback runs asynchronously post-response
+    Handler->>EB: emitCardEvent()
     par Runs in parallel, does not block response
         EB->>EB: runAutomations()
         EB->>EB: fireWebhooks() with HMAC-SHA256 signature
     end
-    CSA-->>Client: { data: result }
     DB->>RT: postgres_changes broadcast to all board subscribers
 ```
 
@@ -2735,42 +2739,44 @@ sequenceDiagram
 **What this diagram shows:** How every single request is authenticated and isolated to the correct tenant — ensuring one organization can never accidentally access another's data.
 
 **Step by step:**
-- Every request (whether a page load, server action, or API call) starts by calling `auth()` from Clerk — this reads the signed session cookie
+- Every request (whether a page load, server action, or API call) starts by calling `getTenantContext()` — this internally calls `auth()` from Clerk to read the signed session cookie
 - Clerk returns the `userId` and `orgId` extracted from the JWT — these are cryptographically signed and cannot be faked or tampered with by the client
-- `getTenantContext()` takes those values and queries the database:
+- `getTenantContext()` queries the database:
   - Looks up the internal `User` record by `clerkUserId` — creates it if not found (first sign-in)
   - Looks up the `OrganizationUser` membership record — creates it if not found (first time joining an org)
   - If the membership exists but `isActive = false` or `status = SUSPENDED`, the request is rejected
-- The `orgId` from the JWT is set as a PostgreSQL session variable — Row-Level Security policies at the database level then automatically filter every query to only return rows belonging to that org
-- All subsequent Prisma queries are scoped by `orgId` both in the application WHERE clauses AND at the database engine level (double protection)
+- The handler then calls `createDAL(ctx)` — this sets the PostgreSQL session variable `app.current_org_id` via `setCurrentOrgId()`, enabling Row-Level Security policies at the database level
+- All subsequent Prisma queries are scoped by `orgId` both in the application WHERE clauses AND at the database engine level via RLS (double protection)
 
 ```mermaid
 sequenceDiagram
     participant Browser
     participant NextJS as Next.js Server
     participant Clerk as Clerk Auth
-    participant App as getTenantContext()
+    participant TC as getTenantContext()
+    participant DAL as createDAL()
     participant PG as PostgreSQL + RLS
 
     Browser->>NextJS: Any request (page / action / API)
-    NextJS->>Clerk: auth() — read signed session cookie
-    Clerk-->>NextJS: { userId, orgId } from JWT claims
-    Note over NextJS: orgId is NEVER read from query params or request body
-    NextJS->>App: getTenantContext(userId, orgId)
-    App->>PG: SELECT User WHERE clerkUserId = userId
+    NextJS->>TC: getTenantContext() — takes no parameters
+    TC->>Clerk: auth() — read signed session cookie
+    Clerk-->>TC: { userId, orgId } from JWT claims
+    Note over TC: orgId is NEVER read from query params or request body
+    TC->>PG: SELECT User WHERE clerkUserId = userId
     alt User not found (first sign-in)
-        App->>PG: INSERT User (healing path)
+        TC->>PG: INSERT User (healing path)
     end
-    App->>PG: SELECT OrganizationUser WHERE userId + orgId
+    TC->>PG: SELECT OrganizationUser WHERE userId + orgId
     alt Membership not found
-        App->>PG: INSERT OrganizationUser (auto-join)
+        TC->>PG: INSERT OrganizationUser (auto-join)
     end
     alt isActive = false OR status = SUSPENDED
-        App-->>Browser: 403 Forbidden
+        TC-->>Browser: TenantError → 403 Forbidden
     end
-    App->>PG: SET app.current_org_id = orgId (RLS session variable)
+    TC-->>NextJS: TenantContext { userId, orgId, role }
+    NextJS->>DAL: createDAL(ctx)
+    DAL->>PG: SET app.current_org_id = orgId (RLS session variable)
     Note over PG: All subsequent queries filtered by RLS policies at DB engine level
-    App-->>NextJS: TenantContext { userId, orgId, role }
     NextJS->>PG: Execute business logic query (scoped by orgId in WHERE + RLS)
     PG-->>NextJS: Data for this org only
     NextJS-->>Browser: Response
@@ -2805,9 +2811,9 @@ sequenceDiagram
 - Everything a Guest can do, plus:
 - Can see card details including attachments, checklists, time logs, and comments
 - Can see who is online on the board via presence avatars
+- Can add comments, edit their own comments, and delete their own comments
+- Can view board analytics
 - Cannot create, edit, move, or delete any cards
-- Cannot add comments
-- Can export visible data to PDF if analytics are enabled
 
 #### Board Member (the standard working role for contributors)
 - Everything a Viewer can do, plus:
@@ -2829,11 +2835,13 @@ sequenceDiagram
 - Can delete any card on the board
 - Can edit board settings (title, background image, description)
 - Can invite members to the board and remove them
-- Can change any members board role (Member ↔ Viewer)
+- Can change any member's board role (Member ↔ Viewer)
 - Can configure custom permission schemes for the board or individual members
 - Can create a public share link with optional password and expiry date
 - Can archive or unarchive any card
 - Can create, start, and complete sprints
+- Can view and manage automation rules on the board
+- Can view board analytics and export reports
 - Cannot delete the board itself
 - Cannot manage organization-level settings
 
@@ -2909,6 +2917,7 @@ graph TB
 
     Viewer --> ViewBoard
     Viewer --> ViewCards
+    Viewer --> Comment
     Viewer --> ViewAnalytics
 
     Member --> ViewBoard
@@ -2923,6 +2932,8 @@ graph TB
     Member --> Deps
     Member --> AICard
 
+    Admin --> ViewBoard
+    Admin --> ViewCards
     Admin --> CreateCard
     Admin --> EditCard
     Admin --> MoveCard
@@ -2931,11 +2942,14 @@ graph TB
     Admin --> Attach
     Admin --> Track
     Admin --> Checklist
+    Admin --> Deps
+    Admin --> AICard
     Admin --> EditSettings
     Admin --> ManageMembers
     Admin --> ConfigPerms
     Admin --> ShareBoard
     Admin --> ManageSprints
+    Admin --> ViewAnalytics
 
     Owner --> CreateBoard
     Owner --> DeleteBoard
@@ -2965,19 +2979,20 @@ graph TB
 | Edit card content | — | — | ✓ | ✓ | ✓ |
 | Drag & drop cards | — | — | ✓ | ✓ | ✓ |
 | Delete cards | — | — | — | ✓ | ✓ |
-| Add comments | — | — | ✓ | ✓ | ✓ |
+| Add comments | — | ✓ | ✓ | ✓ | ✓ |
 | Upload attachments | — | — | ✓ | ✓ | ✓ |
 | Log time | — | — | ✓ | ✓ | ✓ |
 | Use AI features | — | — | ✓ | ✓ | ✓ |
+| View analytics | — | ✓ | ✓ | ✓ | ✓ |
 | Edit board settings | — | — | — | ✓ | ✓ |
 | Manage board members | — | — | — | ✓ | ✓ |
 | Create public share link | — | — | — | ✓ | ✓ |
 | Manage sprints | — | — | — | ✓ | ✓ |
+| Configure automations | — | — | — | ✓ | ✓ |
 | Create new boards | — | — | — | — | ✓ |
 | Delete boards | — | — | — | — | ✓ |
 | Manage org members | — | — | — | — | ✓ |
 | Manage billing | — | — | — | — | ✓ |
-| Configure automations | — | — | — | — | ✓ |
 | Manage webhooks | — | — | — | — | ✓ |
 | Manage API keys | — | — | — | — | ✓ |
 | View audit log | — | — | — | — | ✓ |
