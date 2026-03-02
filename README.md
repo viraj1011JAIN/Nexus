@@ -2342,6 +2342,211 @@ npx prisma migrate deploy
 
 ---
 
+## CI/CD Pipeline
+
+> End-to-end automation from `git push` to live production — every stage is explained below the diagram.
+
+---
+
+### Pipeline Architecture Diagram
+
+```mermaid
+flowchart TD
+    A["👨‍💻 Developer\nlocal machine"] -->|git push| B["GitHub\norigin/feature-branch"]
+
+    B --> C["Vercel Bot\ndetects push to non-main branch"]
+    C --> D["Preview Build Pipeline"]
+
+    subgraph preview ["🔵 Preview Build (every push)"]
+        D --> D1["Install deps\nnpm ci"]
+        D1 --> D2["Type check\nnpx tsc --noEmit"]
+        D2 --> D3["Lint\nnpx eslint ."]
+        D3 --> D4["Next.js Build\nnext build (Turbopack)"]
+        D4 --> D5["Static generation\n39 pages pre-rendered"]
+        D5 --> D6["✅ Preview URL\nhttps://nexus-abc123.vercel.app"]
+    end
+
+    D6 --> E["👀 Team Review\nCode review + QA on preview URL"]
+    E -->|PR approved + merged to main| F["GitHub main branch"]
+
+    F --> G["Vercel Production Pipeline"]
+
+    subgraph prod ["🟢 Production Build (main branch only)"]
+        G --> G1["Install deps\nnpm ci"]
+        G1 --> G2["Type check\nnpx tsc --noEmit"]
+        G2 --> G3["Lint\nnpx eslint ."]
+        G3 --> G4["Next.js Build\nnext build (Turbopack)"]
+        G4 --> G5["Edge runtime bundle\nMiddleware + API routes"]
+        G5 --> G6["🚀 Production deploy\nhttps://nexus.yourdomain.com"]
+    end
+
+    G6 --> H["🗄️ Database Migration\nnpx prisma migrate deploy\n(manual — run before deploy)"]
+    H --> I["✅ Production Live"]
+
+    I --> J1["📊 Sentry\nError & performance monitoring"]
+    I --> J2["⏰ Vercel Cron\n/api/cron/daily-reports\n09:00 UTC daily"]
+    I --> J3["🔄 Supabase Realtime\nWebSocket connections active"]
+    I --> J4["💳 Stripe Webhooks\n/api/webhook/stripe\nlive events flowing"]
+
+    style preview fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style prod   fill:#14532d,stroke:#22c55e,color:#e2e8f0
+```
+
+---
+
+### Stage-by-Stage Breakdown
+
+#### Stage 1 — Local Development
+
+The developer works on a feature branch. The recommended local workflow is:
+
+```bash
+# 1. Start dev server with Turbopack hot-reload
+npm run dev
+
+# 2. Run type-check in watch mode (separate terminal)
+npx tsc --noEmit --watch
+
+# 3. Lint on demand
+npm run lint
+
+# 4. Run unit tests
+npm run test:unit
+
+# 5. Run integration tests (requires running dev server)
+npm run test:integration
+```
+
+Key safety nets active locally:
+- **TypeScript strict mode** — catches type mismatches before the push
+- **ESLint** with custom rules — enforces project conventions
+- **Zod schemas** — validates action inputs at the boundary
+- **React Compiler** — prevents stale closure bugs without manual memoisation
+
+---
+
+#### Stage 2 — Preview Build (every `git push`)
+
+Vercel automatically detects every push on any branch and runs a full preview build:
+
+| Step | Command | What it validates |
+|------|---------|-------------------|
+| Dependency install | `npm ci` | Lockfile integrity, no phantom packages |
+| TypeScript check | `tsc --noEmit` | Zero type errors in strict mode |
+| Lint check | `eslint .` | Code style, no banned patterns |
+| Build | `next build` | All 39 pages compile and pre-render |
+| Edge bundle | automatic | Middleware fits within Vercel Edge 1 MB limit |
+
+**Output:** A unique preview URL (e.g. `nexus-pr-42-xyz.vercel.app`) is posted as a PR comment. The full production-config environment (real Clerk, real Stripe test-mode, real Supabase) is active on the preview, so reviewers test against live services.
+
+---
+
+#### Stage 3 — Code Review & QA
+
+Before merging to `main`, the PR requires:
+
+- At minimum one approving review
+- All Vercel preview build checks green
+- Manual smoke-test on the preview URL covering: sign-in, board create/drag-drop, real-time sync across two browser tabs, billing portal
+
+---
+
+#### Stage 4 — Production Build (merge to `main`)
+
+Merging to `main` triggers an identical build pipeline, but targeting production infrastructure:
+
+```
+main branch push
+  → npm ci
+  → tsc --noEmit
+  → eslint .
+  → next build (Turbopack)
+  → Static pre-rendering (39 pages)
+  → Edge function bundle
+  → Zero-downtime deploy via Vercel's blue/green routing
+```
+
+**Zero-downtime strategy:** Vercel keeps the previous build live and only cuts traffic over once the new build passes all health checks. A failed build never affects the live site.
+
+---
+
+#### Stage 5 — Database Migration (manual gate)
+
+Prisma migrations are intentionally **not** run automatically during deploy. This is a deliberate safety gate — schema changes are applied manually just before a deploy:
+
+```bash
+# Run from your local machine or CI with direct DB access
+npx prisma migrate deploy
+```
+
+Rationale: automatic migration on deploy can cause irreversible data loss if the migration contains a destructive change and the new code is rolled back. The manual step forces explicit sign-off.
+
+---
+
+#### Stage 6 — Post-Deploy Services
+
+Once production is live, four background services activate immediately:
+
+| Service | Trigger | Purpose |
+|---------|---------|---------|
+| **Sentry** | First request | Captures exceptions, performance traces, and Web Vitals |
+| **Vercel Cron** | `0 9 * * *` (09:00 UTC daily) | Runs `/api/cron/daily-reports` — generates digest emails for active orgs |
+| **Supabase Realtime** | Client connects | `postgres_changes` broadcasts to board subscribers (drag-drop, card updates, presence) |
+| **Stripe Webhooks** | Payment events | `/api/webhook/stripe` — processes subscription changes, updates org plan in Prisma |
+
+---
+
+### Testing Pipeline
+
+```mermaid
+flowchart LR
+    A["npm run test:ci"] --> B["Jest: Unit Tests\n__tests__/unit/**"]
+    A --> C["Jest: Integration Tests\n__tests__/integration/**"]
+    B --> D["Coverage report\ncoverage/lcov-report/"]
+    C --> D
+    D --> E["Playwright: E2E\ne2e/*.spec.ts\n(requires running dev server)"]
+    E --> F["All green → PR ready to merge"]
+```
+
+Test priorities (in order of importance):
+1. **Security & auth** — `tenant-context`, RBAC matrix, rate limiting, API key auth
+2. **Billing** — Stripe webhook handlers, checkout session creation, plan sync
+3. **Core algorithms** — LexoRank insert/midpoint/rebalance
+4. **Critical actions** — card CRUD, drag ordering, board member mutations
+5. **Zod schemas** — valid and invalid inputs for every action schema
+
+Coverage targets are secondary to test quality — a brittle high-coverage suite is worse than a robust low-coverage one.
+
+---
+
+### Branch Strategy
+
+```
+main          ← production; never commit directly
+  └─ feature/* ← all new work; opens PR → triggers preview build
+  └─ fix/*     ← hotfixes; same pipeline as feature branches
+  └─ chore/*   ← dependency updates, config — still go through PR review
+```
+
+Direct pushes to `main` are blocked. Every change to production goes through a reviewed PR with a passing Vercel build.
+
+---
+
+### Environment Variables per Stage
+
+| Variable group | Local (`.env.local`) | Preview (Vercel) | Production (Vercel) |
+|---------------|----------------------|------------------|---------------------|
+| `DATABASE_URL` | Local Supabase / Docker | Preview Supabase project | Production Supabase project |
+| `CLERK_SECRET_KEY` | Dev Clerk app | Dev Clerk app | Production Clerk app |
+| `STRIPE_SECRET_KEY` | Test mode key | Test mode key | Live mode key |
+| `STRIPE_WEBHOOK_SECRET` | `stripe listen` CLI | Preview webhook | Production webhook |
+| `CRON_SECRET` | Any random string | Set in Vercel | Set in Vercel |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Preview URL | `https://yourdomain.com` |
+
+> Never commit `.env.local` — it is gitignored. All production secrets live in Vercel's encrypted environment variable store.
+
+---
+
 ## Workflow Diagrams
 
 > These diagrams show the step-by-step paths that data and users follow through the application. Each one is explained in plain English below the diagram.

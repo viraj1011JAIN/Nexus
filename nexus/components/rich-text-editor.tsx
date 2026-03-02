@@ -34,6 +34,12 @@ interface RichTextEditorProps {
   characterLimit?: number;
 }
 
+// Known minHeight values used by callers — add entries if new values are introduced
+const MIN_HEIGHT_MAP: Record<string, string> = {
+  '180px': 'min-h-[180px]',
+  '200px': 'min-h-[200px]',
+};
+
 export function RichTextEditor({
   content,
   onSave,
@@ -234,9 +240,9 @@ export function RichTextEditor({
         className={cn(
           "border border-border rounded-lg overflow-hidden",
           "focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/30",
-          "bg-background transition-colors duration-150"
+          "bg-background transition-colors duration-150",
+          MIN_HEIGHT_MAP[minHeight ?? '200px']
         )}
-        style={{ minHeight }}
       >
         <EditorContent editor={editor} />
         {showToolbar && editable && (

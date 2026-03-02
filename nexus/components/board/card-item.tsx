@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useSyncExternalStore } from "react";
+import { memo, useSyncExternalStore, type CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
@@ -23,12 +23,12 @@ import {
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Priority dot colors for the left accent bar
-const PRIORITY_DOTS: Record<string, { dark: string; light: string }> = {
-  URGENT: { dark: "#FF4365", light: "#EF4444" },
-  HIGH:   { dark: "#FF8C42", light: "#F59E0B" },
-  MEDIUM: { dark: "#F5C518", light: "#06B6D4" },
-  LOW:    { dark: "#4FFFB0", light: "#10B981" },
+// Priority accent bar gradient classes — Tailwind handles dark/light
+const PRIORITY_BAR_CLASSES: Record<string, string> = {
+  URGENT: "bg-gradient-to-b from-[#EF4444] to-[#EF444466] dark:from-[#FF4365] dark:to-[#FF436566]",
+  HIGH:   "bg-gradient-to-b from-[#F59E0B] to-[#F59E0B66] dark:from-[#FF8C42] dark:to-[#FF8C4266]",
+  MEDIUM: "bg-gradient-to-b from-[#06B6D4] to-[#06B6D466] dark:from-[#F5C518] dark:to-[#F5C51866]",
+  LOW:    "bg-gradient-to-b from-[#10B981] to-[#10B98166] dark:from-[#4FFFB0] dark:to-[#4FFFB066]",
 }
 
 interface CardItemProps {
@@ -53,10 +53,8 @@ const CardItemInner = ({
   const isDark = mounted && resolvedTheme === "dark";
   const isSelected = selectedIds.includes(data.id);
 
-  // Priority dot color for accent bar
-  const priorityDot = data.priority
-    ? (isDark ? PRIORITY_DOTS[data.priority]?.dark : PRIORITY_DOTS[data.priority]?.light) ?? null
-    : null;
+  // Priority bar class for accent bar
+  const priorityBarClass = data.priority ? PRIORITY_BAR_CLASSES[data.priority] ?? null : null;
 
   const {
     attributes,
@@ -126,58 +124,54 @@ const CardItemInner = ({
       )}
     >
       {/* Priority left accent bar */}
-      {priorityDot && (
-        <div
-          style={{
-            position: "absolute",
-            left: 0, top: 0, bottom: 0,
-            width: 3,
-            background: `linear-gradient(to bottom, ${priorityDot}, ${priorityDot}66)`,
-            borderRadius: "12px 0 0 12px",
-          }}
-        />
+      {priorityBarClass && (
+        <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-[12px] ${priorityBarClass}`} />
       )}
       {/* Bulk selection checkbox (top-left overlay — visible only in bulk mode) */}
       {isBulkMode && (
-        <div
-          role="checkbox"
-          tabIndex={0}
-          aria-checked={isSelected ? "true" : "false"}
-          aria-label={`Select card: ${data.title}`}
-          className={cn(
-            "absolute top-1.5 left-1.5 z-20 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",
-            isSelected
-              ? "bg-primary border-primary"
-              : "bg-white/90 dark:bg-slate-800/90 border-slate-300 group-hover:border-primary"
-          )}
-          onClick={(e) => { e.stopPropagation(); toggleCard(data.id); }}
+        <label
+          className="absolute top-1.5 left-1.5 z-20 cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.stopPropagation();
-              e.preventDefault();
-              toggleCard(data.id);
-            }
-          }}
         >
-          {isSelected && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
-        </div>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            className="sr-only peer"
+            aria-label={`Select card: ${data.title}`}
+            onChange={() => toggleCard(data.id)}
+          />
+          <div
+            className={cn(
+              "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",
+              isSelected
+                ? "bg-primary border-primary"
+                : "bg-white/90 dark:bg-slate-800/90 border-slate-300 group-hover:border-primary"
+            )}
+          >
+            {isSelected && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
+          </div>
+        </label>
       )}
 
       {/* Cover Image / Color */}
       {(data.coverImageUrl || data.coverColor) && (
         <div
-          className="h-12 w-full rounded-t-lg"
-          style={
+          className={cn(
+            "h-12 w-full rounded-t-lg",
             data.coverImageUrl
-              ? { backgroundImage: `url(${data.coverImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-              : { backgroundColor: data.coverColor ?? undefined }
-          }
+              ? "bg-cover bg-center [background-image:var(--cover-img)]"
+              : "[background-color:var(--cover-bg)]"
+          )}
+          style={{
+            '--cover-img': data.coverImageUrl ? `url(${data.coverImageUrl})` : undefined,
+            '--cover-bg': data.coverColor ?? undefined,
+          } as CSSProperties}
         />
       )}
 
       {/* Card Content */}
-      <div className={cn("py-3 pr-9 space-y-2.5", priorityDot ? "pl-4" : "pl-3")}>
+      <div className={cn("py-3 pr-9 space-y-2.5", priorityBarClass ? "pl-4" : "pl-3")}>
         {/* Title */}
         <p className="text-[13px] font-semibold leading-[1.4] text-[#1A1714] dark:text-[#E8E4F0] group-hover:text-[#7B2FF7] dark:group-hover:text-[#C084FC] transition-colors duration-150 line-clamp-2 pr-1">
           {data.title}
@@ -253,10 +247,10 @@ const CardItemInner = ({
               <div className="flex-1 h-1 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
                 <div
                   className={cn(
-                    "h-full rounded-full transition-[width] duration-500",
+                    "h-full rounded-full transition-[width] duration-500 [width:var(--progress-w)]",
                     pct === 100 ? "bg-emerald-500" : "bg-[#7B2FF7]"
                   )}
-                  style={{ width: `${pct}%` }}
+                  style={{ '--progress-w': `${pct}%` } as CSSProperties}
                 />
               </div>
               <span className="text-[10px] font-medium tabular-nums text-[#9A8F85] dark:text-white/35 shrink-0">{done}/{total}</span>

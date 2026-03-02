@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, type CSSProperties } from "react";
 import { useParams, useRouter } from "next/navigation";
 import NextImage from "next/image";
 import dynamic from "next/dynamic";
@@ -1199,13 +1199,15 @@ export const CardModal = () => {
                       </div>
                       <div className="cm-field-body-wrap">
                         {cardLabels.map((lbl: CardLabel) => (
-                          <span key={lbl.id} style={{
-                            fontSize:9.5, fontWeight:700, padding:"2px 7px", borderRadius:20,
-                            background: lbl.color ? `${lbl.color}18` : T.surface,
-                            color: lbl.color ?? T.textMid,
-                            border:`1px solid ${lbl.color ? `${lbl.color}30` : T.border}`,
-                            letterSpacing:"0.03em", textTransform:"uppercase",
-                          }}>{lbl.name}</span>
+                          <span
+                            key={lbl.id}
+                            className="text-[9.5px] font-bold px-[7px] py-[2px] rounded-[20px] tracking-[0.03em] uppercase [background:var(--lbl-bg)] [color:var(--lbl-color)] [border:1px_solid_var(--lbl-border-color)]"
+                            style={{
+                              '--lbl-bg': lbl.color ? `${lbl.color}18` : T.surface,
+                              '--lbl-color': lbl.color ?? T.textMid,
+                              '--lbl-border-color': lbl.color ? `${lbl.color}30` : T.border,
+                            } as CSSProperties}
+                          >{lbl.name}</span>
                         ))}
                       </div>
                     </div>
@@ -1230,7 +1232,7 @@ export const CardModal = () => {
                           <span className={pct===100 ? "cm-pct-txt-done" : "cm-pct-txt-active"}>{pct}%</span>
                         </div>
                         <div className="cm-progress-track">
-                          <div className={`cm-progress-fill ${pct===100 ? "cm-progress-fill-done" : "cm-progress-fill-active"}`} style={{ width:`${pct}%` }}/>
+                          <div className={`cm-progress-fill ${pct===100 ? "cm-progress-fill-done" : "cm-progress-fill-active"} [width:var(--progress-w)]`} style={{ '--progress-w': `${pct}%` } as CSSProperties}/>
                         </div>
                         <p className="cm-progress-txt">{done} of {total} tasks</p>
                       </div>

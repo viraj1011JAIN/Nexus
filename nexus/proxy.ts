@@ -36,6 +36,10 @@ const isPublicRoute = createRouteMatcher([
   "/privacy",
   "/terms",
   "/shared/(.*)",
+  "/manifest.json",
+  "/favicon.ico",
+  "/robots.txt",
+  "/sitemap.xml",
   "/api/health",
   "/api/webhook/(.*)",
 ]);
@@ -51,16 +55,16 @@ const isPublicRoute = createRouteMatcher([
 
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.clerk.dev https://*.clerk.accounts.dev https://cdn.jsdelivr.net",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.clerk.dev https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://cdn.jsdelivr.net",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' blob: data: https: http:",
-  "connect-src 'self' https://*.clerk.dev https://*.clerk.accounts.dev https://api.clerk.dev https://*.supabase.co wss://*.supabase.co https://sentry.io https://*.sentry.io https://api.unsplash.com https://api.giphy.com https://api.openai.com",
+  "connect-src 'self' https://*.clerk.dev https://*.clerk.accounts.dev https://*.clerk.com https://api.clerk.dev https://clerk-telemetry.com https://challenges.cloudflare.com https://*.supabase.co wss://*.supabase.co https://sentry.io https://*.sentry.io https://api.unsplash.com https://api.giphy.com https://api.openai.com",
   "media-src 'self' blob:",
-  "frame-src 'self' https://js.clerk.dev https://*.clerk.accounts.dev",
+  "frame-src 'self' https://js.clerk.dev https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://*.clerk.accounts.dev https://*.clerk.com",
   "base-uri 'self'",
 ].join("; ");
 
@@ -84,30 +88,36 @@ function applySecurityHeaders(res: NextResponse): NextResponse {
 // ─── Proxy handler ──────────────────────────────────────────────────────────
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
-  // ── Layer 0: Public routes ─────────────────────────────────────────────
+  // ── Layer 0: Resolve auth on EVERY route (including public) ────────────
+  // This call MUST happen before any early-return so that Clerk's dev-browser
+  // handshake can complete. In development mode, the first request has no
+  // `__clerk_db_jwt` cookie; calling auth() here lets clerkMiddleware detect
+  // "dev-browser-missing" and issue the redirect to Clerk FAPI that
+  // establishes the cookie. Without this, public routes would return
+  // NextResponse.next() immediately, the handshake would never fire, and
+  // Clerk JS would receive "An unexpected response was received from the
+  // server" on every sign-in / sign-up attempt.
+  //
+  // Clerk caches the resolved auth state per-request, so calling auth()
+  // here and again below for protected routes adds zero extra latency.
+  const authObj = await auth();
+
+  // ── Layer 1: Public routes ─────────────────────────────────────────────
   if (isPublicRoute(req)) {
     // Fast-path: redirect authenticated users from the landing page to the
     // app WITHOUT rendering the page component at all. Previously, the request
     // fell through to app/page.tsx which triggered a full RSC render + a
     // second auth() call just to issue a 307. Moving the redirect here
     // eliminates that render entirely (~500 ms saved on every authed / hit).
-    //
-    // For unauthenticated visitors the auth() call on Edge is effectively free
-    // (~5 ms) — Clerk just reads the absence of a session cookie and returns.
-    if (req.nextUrl.pathname === "/") {
-      const { userId } = await auth();
-      if (userId) {
-        const url = req.nextUrl.clone();
-        url.pathname = "/dashboard";
-        return applySecurityHeaders(NextResponse.redirect(url, 307));
-      }
+    if (req.nextUrl.pathname === "/" && authObj.userId) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return applySecurityHeaders(NextResponse.redirect(url, 307));
     }
     return applySecurityHeaders(NextResponse.next());
   }
 
-  // ── Layer 1: Authentication ────────────────────────────────────────────
-  // Resolve auth state exactly once — Clerk caches this per request.
-  const authObj = await auth();
+  // ── Layer 2: Authentication ────────────────────────────────────────────
   const { userId, orgId, orgRole } = authObj;
 
   // No session → redirect to sign-in via Clerk's built-in helper.
@@ -117,7 +127,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     return authObj.redirectToSignIn({ returnBackUrl: req.url });
   }
 
-  // ── Layer 2: Organisation gate ─────────────────────────────────────────
+  // ── Layer 3: Organisation gate ─────────────────────────────────────────
   // Authenticated but no active org → send to org picker.
   // Guard against an infinite redirect on /select-org itself.
   if (!orgId && !req.nextUrl.pathname.startsWith("/select-org")) {
@@ -126,7 +136,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     return NextResponse.redirect(url);
   }
 
-  // ── Layer 2b: PENDING membership gate ──────────────────────────────────
+  // ── Layer 3b: PENDING membership gate ──────────────────────────────────
   // If the user's org membership is PENDING (set by org admin requiring
   // approval), redirect to /pending-approval. This is a soft gate — the
   // hard enforcement is in getTenantContext() which throws FORBIDDEN.
@@ -155,7 +165,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     }
   }
 
-  // ── Layer 3: Inject verified tenant identity headers ───────────────────
+  // ── Layer 4: Inject verified tenant identity headers ───────────────────
   // These headers are set here (server-side, in the trusted proxy runtime)
   // so downstream Server Components and Route Handlers can read the tenant
   // context without calling auth() again.
@@ -168,7 +178,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   if (orgId) requestHeaders.set("x-tenant-id", orgId);
   if (orgRole) requestHeaders.set("x-org-role", orgRole);
 
-  // ── Layer 4: Security headers on the response ──────────────────────────
+  // ── Layer 5: Security headers on the response ──────────────────────────
   return applySecurityHeaders(
     NextResponse.next({ request: { headers: requestHeaders } })
   );

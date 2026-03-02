@@ -1,7 +1,7 @@
 "use client";
 
 import { List, Card } from "@prisma/client";
-import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore, type CSSProperties } from "react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import {
@@ -344,8 +344,8 @@ export const ListContainer = ({
 
           {/* Add new list column */}
           <div
-            className="animate-list-enter w-66.25 shrink-0"
-            style={{ animationDelay: `${orderedData.length * 0.08}s` }}
+            className="animate-list-enter w-66.25 shrink-0 [animation-delay:var(--enter-delay)]"
+            style={{ '--enter-delay': `${orderedData.length * 0.08}s` } as CSSProperties}
           >
             <form
               action={async (formData) => {
@@ -386,13 +386,18 @@ export const ListContainer = ({
         {/* List indicators: dot+count on mobile, full name+count on sm+ */}
         <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto flex-1 min-w-0">
           {orderedData.map((list, i) => {
-            const LIST_COLORS = ["#7C3AED","#D97706","#8B5CF6","#059669","#1A73E8","#E0284A"];
-            const col = LIST_COLORS[i % LIST_COLORS.length];
+            const DOT_CLASSES = [
+              "bg-[#7C3AED] dark:shadow-[0_0_4px_#7C3AED66]",
+              "bg-[#D97706] dark:shadow-[0_0_4px_#D9770666]",
+              "bg-[#8B5CF6] dark:shadow-[0_0_4px_#8B5CF666]",
+              "bg-[#059669] dark:shadow-[0_0_4px_#05966966]",
+              "bg-[#1A73E8] dark:shadow-[0_0_4px_#1A73E866]",
+              "bg-[#E0284A] dark:shadow-[0_0_4px_#E0284A66]",
+            ];
             return (
               <div key={list.id} className="flex items-center gap-[5px] shrink-0">
                 <div
-                  className="w-[5px] h-[5px] rounded-full shrink-0"
-                  style={{ background: col, boxShadow: isDark ? `0 0 4px ${col}66` : "none" }}
+                  className={`w-[5px] h-[5px] rounded-full shrink-0 ${DOT_CLASSES[i % DOT_CLASSES.length]}`}
                 />
                 <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/28 whitespace-nowrap">
                   {/* Show full list name on sm+, just the count on mobile */}

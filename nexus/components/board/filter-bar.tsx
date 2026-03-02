@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, type CSSProperties } from "react";
 import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { 
@@ -547,7 +547,7 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
                   className="text-emerald-900 dark:text-emerald-100"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
+                    <span className="h-3 w-3 rounded-full shrink-0 bg-[var(--dot-bg)]" style={{ '--dot-bg': l.color } as CSSProperties} />
                     {l.name}
                   </span>
                 </DropdownMenuCheckboxItem>

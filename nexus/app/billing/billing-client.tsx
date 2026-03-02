@@ -119,6 +119,10 @@ export default function BillingClient({
   const renewalDate = formatDate(organization.stripeCurrentPeriodEnd);
   const isStripeConfigured = isStripeConfiguredProp;
 
+  // Single source of truth for currency display
+  const CURRENCY_SYMBOL = "£";
+  const formatPrice = (amount: number) => `${CURRENCY_SYMBOL}${amount}`;
+
   const freeFeatures = [
     "Up to 50 boards",
     "500 cards per board",
@@ -297,7 +301,7 @@ export default function BillingClient({
               <h3 className="text-[20px] font-bold text-slate-900 dark:text-white">Free</h3>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-[42px] font-bold text-slate-900 dark:text-white tracking-tight">$0</span>
+              <span className="text-[42px] font-bold text-slate-900 dark:text-white tracking-tight">{formatPrice(0)}</span>
               <span className="text-[15px] text-slate-500 dark:text-slate-400 font-medium">/month</span>
             </div>
             <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5">
@@ -318,10 +322,20 @@ export default function BillingClient({
 
           <Button
             variant="outline"
-            disabled={plan === "FREE"}
+            disabled={plan === "FREE" || loading}
+            onClick={plan !== "FREE" ? handleManageBilling : undefined}
             className="w-full rounded-[12px] min-h-[44px] text-[14px] font-semibold border-slate-200 dark:border-white/[0.1] hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all duration-200"
           >
-            {plan === "FREE" ? "Current Plan" : "Downgrade"}
+            {plan === "FREE" ? (
+              "Current Plan"
+            ) : loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-[16px] w-[16px] animate-spin" />
+                Processing...
+              </div>
+            ) : (
+              "Manage / Downgrade"
+            )}
           </Button>
         </div>
 
@@ -350,7 +364,7 @@ export default function BillingClient({
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-[42px] font-bold text-slate-900 dark:text-white tracking-tight">
-                  £{billingPeriod === "monthly" ? "9" : "90"}
+                  {formatPrice(billingPeriod === "monthly" ? 9 : 90)}
                 </span>
                 <span className="text-[15px] text-slate-500 dark:text-slate-400 font-medium">
                   /{billingPeriod === "monthly" ? "month" : "year"}
@@ -358,7 +372,7 @@ export default function BillingClient({
               </div>
               {billingPeriod === "yearly" ? (
                 <p className="text-[13px] text-emerald-600 dark:text-emerald-400 mt-1.5 font-medium">
-                  That&apos;s just £7.50/month — Save 17%
+                  That&apos;s just {CURRENCY_SYMBOL}7.50/month — Save 17%
                 </p>
               ) : (
                 <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5">
@@ -392,7 +406,7 @@ export default function BillingClient({
                 "Configure Stripe First"
               ) : plan === "FREE" ? (
                 <div className="flex items-center gap-2">
-                  <span>Upgrade to Pro — £{billingPeriod === "monthly" ? "9/mo" : "90/yr"}</span>
+                  <span>Upgrade to Pro — {CURRENCY_SYMBOL}{billingPeriod === "monthly" ? "9/mo" : "90/yr"}</span>
                   <ArrowRight className="h-[14px] w-[14px]" />
                 </div>
               ) : (
