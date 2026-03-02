@@ -3108,6 +3108,7 @@ graph TB
 - **Supabase Realtime RLS** — requires manual one-time SQL execution in Supabase Dashboard (`supabase-realtime-rls.sql`) and Clerk JWT template configuration
 - **Prisma cold starts on Vercel** — first request after a cold function start incurs a ~1–3 s connection overhead; mitigated by `instrumentation.ts` pre-warm and pgBouncer pooling on `DATABASE_URL` (port 6543)
 - **LexoRank string growth** — addressed by the weekly `/api/cron/lexorank-rebalance` job; lists where any card order string exceeds 20 characters are fully re-normalised to single-character keys automatically
+- **Shard 0 is the catalog shard** — `User` rows are not org-scoped and cannot be distributed across shards. They live on the primary `DATABASE_URL` (shard 0). If shard 0 is unavailable, `getTenantContext()` fails for **all** users — not just those in shard 0 orgs — because user resolution always executes against shard 0. In single-shard mode this is identical to today's failure surface. In multi-shard deployments, treat shard 0 as a globally-critical dependency and provision it with high-availability replicas or promote the `users` table to a dedicated catalog database (CockroachDB / PlanetScale)
 
 ### Potential Roadmap Items
 
@@ -3118,6 +3119,7 @@ graph TB
 - **AI-powered task prioritisation and workload balancing**
 - **Board activity heatmaps and historical analytics**
 - **Granular notification controls** — per-board, per-event-type email / push preferences
+- **Catalog DB HA** — promote the `users` table to a separate globally-replicated database (CockroachDB or PlanetScale) so shard 0 downtime no longer affects authentication for users whose orgs live on other shards
 
 ---
 
@@ -3127,6 +3129,11 @@ graph TB
 
 | Date | Commit | Change |
 |---|---|---|
+| 2026-03-02 | `88dd67e` | Feat: `lib/shard-router.ts` — FNV-1a 32-bit consistent-hashing shard router with per-shard PrismaClient pool, 30 s health cache, automatic failover to next healthy shard, fail-open to shard 0 on total outage; `getDbForOrg(orgId)` is the public API |
+| 2026-03-02 | `88dd67e` | Feat: `app/api/health/shards/route.ts` — `GET /api/health/shards` endpoint (Bearer `CRON_SECRET`); returns per-shard health map with HTTP 200 (all healthy), 207 (partial), or 503 (all down) |
+| 2026-03-02 | `88dd67e` | Feat: `lib/shard-router.ts` `verifyAllShardConnectionStrings()` — PgBouncer guard logs WARN at module-load time if any `SHARD_n_DATABASE_URL` lacks port 6543 or `?pgbouncer=true`; prevents connection-limit exhaustion under serverless load |
+| 2026-03-02 | `88dd67e` | Feat: `scripts/migrate-org-to-shard.ts` — dual-write window migration script; copies all 38 org-scoped tables (FK-dependency order, batches of 100 rows, `ON CONFLICT DO NOTHING` idempotent) from source shard to target shard before env-var cutover; dry-run by default, `--execute` to write |
+| 2026-03-02 | `88dd67e` | Feat: `scripts/test-shard-failover.ts` — 4-step shard failover test: distribution audit → parallel health probes → per-shard direct queries → failover simulation; runnable with `npm run test:shards` |
 | 2026-03-02 | `973751a` | Fix: `hooks/use-realtime-board.ts` — per-card 2-second suppression window (`Map<cardId, suppressUntil>` ref + `markLocalCardUpdate()`) prevents remote Supabase UPDATE broadcasts from snapping dragged cards back to their old position during concurrent drags |
 | 2026-03-02 | `973751a` | Fix: `actions/delete-card.ts` — Supabase Storage `remove()` called in `after()` async callback cleans orphaned attachment blobs when a card is deleted; Prisma cascade handles DB rows, this handles the physical files |
 | 2026-03-02 | `973751a` | Security: `app/shared/[token]/page.tsx` + `actions/board-share-actions.ts` — explicit Prisma `select` whitelist on all unauthenticated shared-board queries; `orgId`, `createdById`, and all non-display columns structurally excluded (not just hidden) |

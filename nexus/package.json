@@ -14,7 +14,8 @@
     "test:integration": "jest --testPathPattern=__tests__/integration",
     "db:seed": "tsx scripts/seed-demo.ts",
     "setup:storage": "tsx scripts/setup-storage.ts",
-    "test:shards": "dotenv -e .env.local -e .env -- tsx scripts/test-shard-failover.ts"
+    "test:shards": "dotenv -e .env.local -e .env -- tsx scripts/test-shard-failover.ts",
+    "migrate:shard": "dotenv -e .env.local -e .env -- tsx scripts/migrate-org-to-shard.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

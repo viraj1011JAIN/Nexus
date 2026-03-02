@@ -124,12 +124,75 @@ export function getShardIndex(orgId: string): number {
   return hash % getShardCount();
 }
 
+// ── PgBouncer connection string validation ───────────────────────────────────
+
+/**
+ * Validates that a shard's connection string is routed via PgBouncer (the
+ * Supabase Session Pooler, port 6543). Without connection pooling:
+ *
+ *   • Each PrismaClient opens its own persistent connection pool.
+ *   • Supabase's direct connection limit (25–100 per tier) depletes under
+ *     concurrent serverless/edge invocations or Next.js hot reloads.
+ *   • Symptoms: "too many connections" Postgres errors under any real load.
+ *
+ * Required URL format (Supabase pooler):
+ *   postgres://postgres.<ref>:<pass>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true
+ *
+ * Suppresses the warning for localhost / 127.0.0.1 to keep local dev clean.
+ * Logs via the structured logger so Sentry captures it in production.
+ */
+function verifyPgBouncerUrl(shardIndex: number, url: string): void {
+  const isLocal =
+    url.includes("localhost") ||
+    url.includes("127.0.0.1") ||
+    url.includes("host.docker.internal");
+  if (isLocal) return;
+
+  const hasPoolerPort    = url.includes(":6543/");
+  const hasPgBouncerParam = url.includes("pgbouncer=true");
+
+  if (!hasPoolerPort || !hasPgBouncerParam) {
+    const missing: string[] = [];
+    if (!hasPoolerPort)    missing.push("port 6543");
+    if (!hasPgBouncerParam) missing.push("?pgbouncer=true param");
+
+    logger.warn(
+      `[SHARD_ROUTER] Shard ${shardIndex} connection string is missing: ` +
+      `${missing.join(", ")}. Without PgBouncer pooling, Postgres connection ` +
+      `limits will be exhausted under concurrent serverless invocations. ` +
+      `Set SHARD_${shardIndex}_DATABASE_URL to the Supabase Session Pooler URL ` +
+      `(port 6543, ?pgbouncer=true). ` +
+      `See: https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooler`,
+      { shardIndex, missingParams: missing },
+    );
+  }
+}
+
+/**
+ * Validates PgBouncer configuration for every active shard at once.
+ *
+ * Called automatically on module initialisation so misconfigured shards
+ * surface in server logs at startup — not silently on first user request.
+ * May also be called from health endpoints to surface config drift.
+ */
+export function verifyAllShardConnectionStrings(): void {
+  const count = getShardCount();
+  for (let i = 0; i < count; i++) {
+    const url = process.env[`SHARD_${i}_DATABASE_URL`] ?? process.env.DATABASE_URL ?? "";
+    verifyPgBouncerUrl(i, url);
+  }
+}
+
 // ── Client factory ────────────────────────────────────────────────────────────
 
 /** Builds a new PrismaClient pointed at the given shard's connection string. */
 function buildShardClient(shardIndex: number): PrismaClient {
   const url =
     process.env[`SHARD_${shardIndex}_DATABASE_URL`] ?? process.env.DATABASE_URL!;
+
+  // Verify pooler configuration on first client construction for this shard.
+  // This fires once per shard per process lifetime — effectively at cold start.
+  verifyPgBouncerUrl(shardIndex, url);
 
   return new PrismaClient({
     datasources: { db: { url } },
@@ -252,3 +315,8 @@ export function invalidateShardHealthCache(shardIndex?: number): void {
     healthCache.clear();
   }
 }
+
+// ── Module initialisation side-effect ────────────────────────────────────────
+// Validate all shard connection strings at module load time so misconfiguration
+// surfaces in server logs immediately on cold start — not on the first query.
+verifyAllShardConnectionStrings();
