@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/daily-reports",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/lexorank-rebalance",
+      "schedule": "0 3 * * 0"
     }
   ],
   "functions": {
@@ -14,6 +18,9 @@
     },
     "app/api/cron/daily-reports/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/cron/lexorank-rebalance/route.ts": {
+      "maxDuration": 120
     }
   }
 }

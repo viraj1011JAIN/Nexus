@@ -88,6 +88,29 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ---
 
+## Why NEXUS Isn't a Tutorial Clone
+
+The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Here is what NEXUS adds that tutorials never cover:
+
+| Non-Tutorial Feature | Where It Lives | Why It Matters |
+|---|---|---|
+| **Dual-Gate RBAC** | `lib/board-permissions.ts` | Org owners still need an explicit `BoardMember` row — org role alone grants zero board access |
+| **LexoRank Ordering + Auto-Rebalancer** | `lib/lexorank.ts` + `/api/cron/lexorank-rebalance` | String-based card ordering with a weekly cron job that re-normalises long order strings before the 64-char DoS limit is hit |
+| **SSRF Blocklist on Webhooks** | `lib/webhook-delivery.ts` | User-supplied webhook URLs are validated against RFC-1918 + loopback ranges before any outbound HTTP call |
+| **Audit Log with Diffs** | `lib/create-audit-log.ts` | Every mutation records `previousValues` / `newValues` diffs — not just "action taken" |
+| **Stripe Idempotency Guard** | `app/api/webhook/stripe/route.ts` | `ProcessedStripeEvent` table + Prisma `P2002` guard prevents double-processing replayed webhooks |
+| **Supabase Channel Pre-Flight** | `hooks/use-presence.ts` | Calls `/api/realtime-auth` before opening any WebSocket channel — board membership verified server-side |
+| **Presence Throttle + Visibility API** | `hooks/use-presence.ts` | Presence unsubscribes immediately when the user switches away from the tab; throttled state sync prevents N² event storms |
+| **AI Prompt Injection Protection** | `lib/automation-engine.ts` | `sanitizeForPrompt()` strips control characters; all OpenAI calls use `system`/`user` role separation |
+| **Rate Limiter (Redis + In-Memory)** | `lib/action-protection.ts` | Sliding-window via Upstash Redis when configured; automatic in-memory fallback so local dev needs no Redis |
+| **RLS at Database Level** | `prisma/migrations/rls_policies.sql` | Row-Level Security policies on every tenant-scoped table — application-layer bypasses are blocked at the DB |
+| **Full-Board CSV + JSON Export** | `actions/import-export-actions.ts` | Complete board snapshots including checklists, labels, and assignees — not just a title list |
+| **Public REST API with Scoped Keys** | `app/api/v1/` | Per-scope API keys (`nxk_` prefix) stored as SHA-256 hashes — never retrievable after creation |
+
+> If you are a recruiter or technical reviewer: the files above are the non-standard work in this project. The `lib/` directory is where bespoke business logic lives — not boilerplate.
+
+---
+
 ## Screenshots
 
 > All screenshots are located in the `Web-screenshort/` folder.  
@@ -3031,21 +3054,23 @@ graph TB
 ### Current Limitations
 
 - **Rate limiting** — Distributed Upstash Redis when env vars are set; falls back to single-instance in-memory Map when running without Upstash credentials (e.g. local dev or deployments that haven't configured Upstash yet)
-- **Test coverage is ~19.5%** — Core paths (auth, billing, RBAC) are covered; UI components are not
-- **No offline support** — Service Worker handles push notifications only, not offline caching
+- **Test coverage is ~19.5%** — Core paths (auth, billing, RBAC) are covered; UI components are not. E2E golden-path suite (`e2e/golden-path.spec.ts`) covers the five critical user journeys end-to-end
+- **No offline support** — Service Worker handles push notifications only; no IndexedDB write-ahead buffer. Cards dragged during a 2-second connectivity drop will fail to sync
 - **No native mobile app** — Web UI is responsive, but no iOS/Android app exists
-- **No SSO/SAML** — Enterprise authentication not yet implemented
+- **No SSO/SAML** — Enterprise single sign-on not yet implemented; custom Clerk JWT templates can partially cover this use case today
 - **Supabase Realtime RLS** — requires manual one-time SQL execution in Supabase Dashboard (`supabase-realtime-rls.sql`) and Clerk JWT template configuration
+- **Prisma cold starts on Vercel** — first request after a cold function start incurs a ~1–3 s connection overhead; mitigated by `instrumentation.ts` pre-warm and pgBouncer pooling on `DATABASE_URL` (port 6543)
+- **LexoRank string growth** — addressed by the weekly `/api/cron/lexorank-rebalance` job; lists where any card order string exceeds 20 characters are fully re-normalised to single-character keys automatically
 
 ### Potential Roadmap Items
 
-- Offline-first support with background sync
-- Native mobile application (React Native or enhanced PWA)
-- SSO/SAML for enterprise authentication
-- Google Calendar and Outlook integration
-- AI-powered task prioritization and workload balancing
-- Board activity heatmaps
-- Advanced historical analytics with trend predictions
+- **SSO / SAML** — Okta, Azure AD, and Google Workspace integration for enterprise teams (most-requested enterprise blocker)
+- **Offline-first support** — IndexedDB write-ahead buffer with background sync so card moves survive connectivity drops
+- **Native mobile application** — React Native or enhanced PWA
+- **Google Calendar and Outlook integration** — sync due dates bidirectionally
+- **AI-powered task prioritisation and workload balancing**
+- **Board activity heatmaps and historical analytics**
+- **Granular notification controls** — per-board, per-event-type email / push preferences
 
 ---
 

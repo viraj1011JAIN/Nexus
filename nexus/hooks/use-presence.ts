@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { getAuthenticatedSupabaseClient } from "@/lib/supabase/client";
 import { boardPresenceChannel } from "@/lib/realtime-channels";
@@ -16,46 +16,31 @@ export interface PresenceUser {
 
 interface UsePresenceOptions {
   boardId: string;
-  /** orgId is required — presence channels without orgId allow cross-tenant user tracking */
+  /** orgId is required â€” presence channels without orgId allow cross-tenant user tracking */
   orgId: string;
   enabled?: boolean;
 }
 
 /**
- * Presence tracking hook - Shows who's online on the board
- * 
+ * Presence tracking hook â€” Shows who's online on the board.
+ *
  * Uses Supabase Presence to track users viewing the same board in real-time.
  * Each user broadcasts their info, and the hook aggregates all online users.
- * 
- * Features:
- * - Real-time online user list
- * - Auto-join/leave on mount/unmount
- * - Unique colors for each user
- * - Connection status monitoring
- * 
+ *
+ * Bandwidth optimisations:
+ * - Presence sync updates are throttled to at most one React re-render per 500 ms
+ *   to prevent the NÂ² event storm that occurs when many users are on the same board.
+ * - The Visibility API is used to automatically unsubscribe from the Supabase channel
+ *   the moment the user switches away from the browser tab, and to re-subscribe when
+ *   they return. This eliminates "ghost" presence entries and reduces quota usage.
+ *
  * @example
  * ```typescript
- * const { onlineUsers, isTracking } = usePresence({ 
+ * const { onlineUsers, isTracking } = usePresence({
  *   boardId: "board-123",
- *   enabled: true 
+ *   orgId: "org-456",
+ *   enabled: true
  * });
- * 
- * return (
- *   <div className="flex -space-x-2">
- *     {onlineUsers.map(user => (
- *       <img 
- *         key={user.userId}
- *         src={user.userAvatar}
- *         alt={user.userName}
- *         className="w-8 h-8 rounded-full border-2"
- *         style={{ borderColor: user.color }}
- *       />
- *     ))}
- *     <span className="ml-2 text-sm text-gray-600">
- *       {onlineUsers.length} online
- *     </span>
- *   </div>
- * );
  * ```
  */
 export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptions) {
@@ -64,6 +49,15 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Stable refs so the visibilitychange listener can call cleanup/setup without
+  // capturing stale closure values from the initial render.
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const supabaseRef = useRef<ReturnType<typeof getAuthenticatedSupabaseClient> | null>(null);
+  // Timestamp of the last time setOnlineUsers was called â€” used for throttling.
+  const lastSyncRef = useRef<number>(0);
+  /** Min ms between React state updates from Supabase presence sync events. */
+  const SYNC_THROTTLE_MS = 500;
 
   // Generate a consistent color for the current user
   const getUserColor = useCallback((userId: string) => {
@@ -87,64 +81,83 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
       return;
     }
 
-    // Channel name includes orgId — prevents cross-tenant presence tracking
+    // Channel name includes orgId â€” prevents cross-tenant presence tracking
     const channelName = boardPresenceChannel(orgId, boardId);
-    let channel: RealtimeChannel;
-    let supabase: ReturnType<typeof getAuthenticatedSupabaseClient> | undefined;
 
+    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    /** Untrack, remove channel, and reset state. */
+    const cleanup = () => {
+      if (channelRef.current && supabaseRef.current) {
+        channelRef.current.untrack();
+        supabaseRef.current.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      setIsTracking(false);
+      setOnlineUsers([]);
+    };
+
+    /** Subscribe to the Supabase presence channel and start tracking. */
     const setupPresence = async () => {
       try {
-        // ── Board membership pre-flight ───────────────────────────────────────
+        // â”€â”€ Board membership pre-flight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Verify the caller still has an active BoardMember row for this board
-        // before opening a Supabase channel.  The Clerk JWT only encodes
-        // org-level membership; this check adds the board-level gate.
-        // Fail closed: if the server returns anything other than 200, abort.
+        // before opening a Supabase channel. The Clerk JWT only encodes org-level
+        // membership; this check adds the board-level gate. Fail closed.
         try {
           const preflight = await fetch(
             `/api/realtime-auth?boardId=${encodeURIComponent(boardId)}`,
             { cache: "no-store" },
           );
           if (!preflight.ok) {
-            setError("Board access denied — you may have been removed from this board");
+            setError("Board access denied â€” you may have been removed from this board");
             return;
           }
         } catch {
-          // Network error during preflight — fail open so the app stays usable
-          // on transient connectivity issues; the channel-name orgId prefix still
+          // Network error during preflight â€” fail open so the app stays usable
+          // on transient connectivity issues; org-scoped channel name still
           // provides defence-in-depth isolation.
         }
-        // Falls back to null if no 'supabase' JWT template is configured in the
-        // Clerk dashboard — Presence will still work via channel-name isolation.
+
         let token: string | null = null;
         try {
           token = await getToken({ template: "supabase" });
         } catch {
-          // Template not configured — degrade gracefully to anon key
+          // Template not configured â€” degrade gracefully to anon key
         }
-        supabase = getAuthenticatedSupabaseClient(token);
-        channel = supabase.channel(channelName, {
-          config: {
-            presence: {
-              key: user.id, // Use Clerk user ID as unique key
-            },
-          },
-        });
 
-        // Handle presence sync (initial state + updates)
+        const supabase = getAuthenticatedSupabaseClient(token);
+        supabaseRef.current = supabase;
+
+        const channel = supabase.channel(channelName, {
+          config: { presence: { key: user.id } },
+        });
+        channelRef.current = channel;
+
+        // â”€â”€ Presence sync â€” throttled â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // With N users on one board, Supabase fires a "sync" event on every
+        // individual join/leave, producing O(NÂ²) events under load. We cap the
+        // React re-render rate at one per SYNC_THROTTLE_MS using a timestamp guard.
         channel.on("presence", { event: "sync" }, () => {
+          const now = Date.now();
+          if (now - lastSyncRef.current < SYNC_THROTTLE_MS) return;
+          lastSyncRef.current = now;
+
           const state = channel.presenceState();
           const seen = new Set<string>();
           const users: PresenceUser[] = [];
 
-          // Each key in presenceState is the Clerk user ID (set via config.presence.key).
-          // state[key] is an array — one entry per open connection (tab) for that user.
-          // Take only presences[0] to avoid duplicate userId entries when a user has
-          // multiple tabs open.
           Object.keys(state).forEach((key) => {
-            const presence = state[key][0] as unknown as { userId?: string; userName?: string; userAvatar?: string; joinedAt?: string; color?: string };
+            const presence = state[key][0] as unknown as {
+              userId?: string;
+              userName?: string;
+              userAvatar?: string;
+              joinedAt?: string;
+              color?: string;
+            };
             if (!presence) return;
             const uid: string = presence.userId ?? key;
-            if (seen.has(uid)) return; // safety-net dedup
+            if (seen.has(uid)) return;
             seen.add(uid);
             users.push({
               userId: uid,
@@ -158,63 +171,70 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
           setOnlineUsers(users);
         });
 
-        // Handle user joining
-        channel.on("presence", { event: "join" }, ({ key: _key, newPresences: _newPresences }) => {
-          // User joined - state updated via sync event
+        channel.on("presence", { event: "join" }, () => {
+          // Handled via throttled sync event above
         });
 
-        // Handle user leaving
-        channel.on("presence", { event: "leave" }, ({ key: _key2, leftPresences: _leftPresences }) => {
-          // User left - state updated via sync event
+        channel.on("presence", { event: "leave" }, () => {
+          // Handled via throttled sync event above
         });
 
-        // Subscribe to channel
         channel.subscribe(async (status) => {
           if (status === "SUBSCRIBED") {
-            // Track current user
-            const currentUserPresence = {
+            await channel.track({
               userId: user.id,
               userName: user.fullName || user.firstName || "Anonymous",
               userAvatar: user.imageUrl,
               joinedAt: new Date().toISOString(),
               color: getUserColor(user.id),
-            };
-
-            await channel.track(currentUserPresence);
+            });
             setIsTracking(true);
             setError(null);
           } else if (status === "CHANNEL_ERROR") {
             setIsTracking(false);
             setError("Failed to start presence tracking");
-            // Error state set - no console output needed
           }
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
-        // Error state set - no console output needed
       }
     };
 
-    setupPresence();
-
-    // Cleanup: untrack and unsubscribe
-    return () => {
-      if (channel && supabase) {
-        channel.untrack();
-        supabase.removeChannel(channel);
-        setIsTracking(false);
-        setOnlineUsers([]);
+    // â”€â”€ Visibility API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // When the user navigates away from the browser tab the board is in:
+    //   - Immediately unsubscribe so the user doesn't appear "online" to others.
+    //   - Re-subscribe when the tab becomes visible again.
+    //
+    // This eliminates "ghost" presence entries and dramatically reduces Supabase
+    // quota consumption during multi-user spikes (each hidden tab previously
+    // continued broadcasting heartbeats indefinitely).
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cleanup();
+      } else {
+        // Re-subscribe when user returns to the tab
+        setupPresence();
       }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Initial subscribe â€” only if the tab is already visible
+    if (!document.hidden) {
+      setupPresence();
+    }
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      cleanup();
     };
   // getToken is intentionally excluded from the dependency array.
   // Clerk guarantees that getToken's function reference is identity-stable across
-  // renders — adding it would cause unnecessary channel teardowns on every auth
-  // state change without any behavioural benefit.
+  // renders â€” adding it would cause unnecessary channel teardowns.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId, orgId, enabled, user, getUserColor]);
 
   return {
-    // All viewers including self — counted and displayed consistently
     onlineUsers,
     currentUser: onlineUsers.find((u) => u.userId === user?.id),
     totalOnline: onlineUsers.length,
@@ -222,3 +242,4 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
     error,
   };
 }
+
