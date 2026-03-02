@@ -146,6 +146,7 @@ jest.mock("@/lib/db", () => ({
   systemDb: {
     organization: {
       update:     jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findUnique: jest.fn(),
     },
   },
@@ -171,7 +172,7 @@ function makeWebhookReq(body = "raw-stripe-body"): NextRequest {
 }
 
 function getDb() {
-  return (jest.requireMock("@/lib/db") as { systemDb: { organization: { update: jest.Mock; findUnique: jest.Mock } } }).systemDb;
+  return (jest.requireMock("@/lib/db") as { systemDb: { organization: { update: jest.Mock; updateMany: jest.Mock; findUnique: jest.Mock } } }).systemDb;
 }
 
 function getStripe() {
@@ -191,12 +192,21 @@ function resetMocks() {
   getStripe().webhooks.constructEvent.mockReturnValue(makeCheckoutCompletedEvent());
   getStripe().subscriptions.retrieve.mockResolvedValue(MOCK_SUBSCRIPTION);
   getDb().organization.update.mockResolvedValue({});
+  getDb().organization.updateMany.mockResolvedValue({ count: 1 });
   getDb().organization.findUnique.mockResolvedValue({ id: ORG_ID, stripeCustomerId: CUSTOMER_ID });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("Section 11B — Stripe Webhook Handler", () => {
+  beforeAll(() => {
+    process.env.STRIPE_WEBHOOK_SECRET = "test-webhook-secret";
+  });
+
+  afterAll(() => {
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+  });
+
   beforeEach(() => {
     jest.resetAllMocks();
     resetMocks();
@@ -545,9 +555,9 @@ describe("Section 11B — Stripe Webhook Handler", () => {
 
       await POST(makeWebhookReq());
 
-      expect(getDb().organization.update).toHaveBeenCalledWith(
+      expect(getDb().organization.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: ORG_ID },
+          where: expect.objectContaining({ id: ORG_ID }),
           data:  expect.objectContaining({ subscriptionPlan: "FREE" }),
         }),
       );
@@ -564,7 +574,7 @@ describe("Section 11B — Stripe Webhook Handler", () => {
 
       await POST(makeWebhookReq());
 
-      expect(getDb().organization.update).toHaveBeenCalledWith(
+      expect(getDb().organization.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ stripeSubscriptionId: null }),
         }),
@@ -578,7 +588,7 @@ describe("Section 11B — Stripe Webhook Handler", () => {
 
       await POST(makeWebhookReq());
 
-      expect(getDb().organization.update).toHaveBeenCalledWith(
+      expect(getDb().organization.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ stripePriceId: null }),
         }),
@@ -592,7 +602,7 @@ describe("Section 11B — Stripe Webhook Handler", () => {
 
       await POST(makeWebhookReq());
 
-      expect(getDb().organization.update).toHaveBeenCalledWith(
+      expect(getDb().organization.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ stripeCurrentPeriodEnd: null }),
         }),
@@ -606,7 +616,7 @@ describe("Section 11B — Stripe Webhook Handler", () => {
 
       await POST(makeWebhookReq());
 
-      expect(getDb().organization.update).toHaveBeenCalledWith(
+      expect(getDb().organization.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ stripeSubscriptionStatus: "canceled" }),
         }),
@@ -638,9 +648,9 @@ describe("Section 11B — Stripe Webhook Handler", () => {
 
       await POST(makeWebhookReq());
 
-      expect(getDb().organization.update).toHaveBeenCalledWith(
+      expect(getDb().organization.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: ORG_ID },
+          where: expect.objectContaining({ id: ORG_ID }),
           data:  expect.objectContaining({ subscriptionPlan: "FREE" }),
         }),
       );

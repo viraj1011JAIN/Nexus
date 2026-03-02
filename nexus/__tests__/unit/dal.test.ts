@@ -56,6 +56,10 @@ jest.mock("@/lib/db", () => ({
       create: jest.fn(),
       deleteMany: jest.fn(),
     },
+    boardMember: {
+      findUnique: jest.fn(),
+      create:     jest.fn(),
+    },
     $transaction: jest.fn(),
   },
   setCurrentOrgId: jest.fn().mockResolvedValue(undefined),
@@ -125,6 +129,9 @@ beforeEach(() => {
 
   // Default: the caller belongs to ORG_A
   mockGetTenantContext.mockResolvedValue(callerContext());
+
+  // Default: board member exists so verifyBoardMembership passes for ORG_A boards
+  (db.boardMember.findUnique as jest.Mock).mockResolvedValue({ id: "bm-default" });
 
   // Restore setCurrentOrgId to return a resolved Promise after resetAllMocks() clears it.
   // It is a named module export (not a property of `db`), so we cast the import directly.

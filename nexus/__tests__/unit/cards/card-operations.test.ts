@@ -49,6 +49,10 @@ jest.mock("@/lib/db", () => ({
     list: {
       findMany: jest.fn(),
     },
+    boardMember: {
+      findUnique: jest.fn(),
+      create:     jest.fn(),
+    },
     $transaction: jest.fn(),
   },
   setCurrentOrgId: jest.fn().mockResolvedValue(undefined),
@@ -608,6 +612,9 @@ describe("Section 5.3 — DAL Card Security", () => {
 
     // Board ownership verification: board belongs to ORG_ID ✓
     boardFindUnique.mockResolvedValue({ id: BOARD_ID, orgId: ORG_ID });
+
+    // Board membership: current user is an explicit member ✓
+    (db.boardMember.findUnique as jest.Mock).mockResolvedValue({ id: "bm-default" });
 
     // Build a real DAL instance bound to baseCtx (db.* calls are all mocked).
     realDAL = await createDAL(baseCtx);

@@ -62,6 +62,9 @@ jest.mock("lucide-react", () => ({
   Loader2:     () => <span data-testid="icon-loader" />,
   CheckCircle: () => <span data-testid="icon-check-circle" />,
   XCircle:     () => <span data-testid="icon-x-circle" />,
+  Sparkles:    () => <span data-testid="icon-sparkles" />,
+  ArrowRight:  () => <span data-testid="icon-arrow-right" />,
+  Shield:      () => <span data-testid="icon-shield" />,
 }));
 
 // ─── Imports after mocks ───────────────────────────────────────────────────────
@@ -222,7 +225,7 @@ describe("Section 11D — BillingClient Component", () => {
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
-      expect(screen.getByText("Free Plan")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Free" })).toBeInTheDocument();
     });
   });
 
@@ -233,7 +236,7 @@ describe("Section 11D — BillingClient Component", () => {
       await renderAndMount(
         <BillingClient organization={PRO_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
-      expect(screen.getByText("Pro Plan")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Pro" })).toBeInTheDocument();
     });
 
     it("renders Crown icon for PRO plan", async () => {
@@ -367,7 +370,7 @@ describe("Section 11D — BillingClient Component", () => {
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
-      const upgradeBtn = screen.getByText(/Upgrade to Pro/i);
+      const upgradeBtn  = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/stripe/checkout",
@@ -385,7 +388,7 @@ describe("Section 11D — BillingClient Component", () => {
       );
       const yearlyBtn  = screen.getByRole("button", { name: /yearly/i });
       await act(async () => { fireEvent.click(yearlyBtn); });
-      const upgradeBtn = screen.getByText(/Upgrade to Pro/i);
+      const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/stripe/checkout",
@@ -407,7 +410,7 @@ describe("Section 11D — BillingClient Component", () => {
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
-      const upgradeBtn = screen.getByText(/Upgrade to Pro/i);
+      const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
       // Navigation was attempted: fetch was called and no error toast was shown.
       // jsdom logs "not implemented" for external navigation but does not throw;
@@ -430,7 +433,7 @@ describe("Section 11D — BillingClient Component", () => {
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
-      const upgradeBtn = screen.getByText(/Upgrade to Pro/i);
+      const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
@@ -448,7 +451,7 @@ describe("Section 11D — BillingClient Component", () => {
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
-      const upgradeBtn = screen.getByText(/Upgrade to Pro/i);
+      const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
@@ -582,7 +585,7 @@ describe("Section 11D — BillingClient Component", () => {
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured={true} priceIds={EMPTY_PRICE_IDS} />
       );
-      const upgradeBtn = screen.getByText(/Upgrade to Pro/i);
+      const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
