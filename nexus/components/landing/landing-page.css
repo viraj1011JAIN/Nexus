@@ -29,9 +29,9 @@
 
 /* ─── Custom Cursor ─── */
 /*
- * The .has-cursor class is added to <html> so the native cursor
- * is hidden across the ENTIRE viewport — including parent wrappers
- * from layout.tsx (#main-content, body, providers, portals, etc).
+ * .has-cursor on <html> hides the native cursor everywhere.
+ * Cursor elements are appended directly to document.body via JS
+ * so they escape layout.tsx's contain-layout on #main-content.
  */
 html.has-cursor,
 html.has-cursor * {
@@ -40,32 +40,50 @@ html.has-cursor * {
 
 #nexus-cursor {
   position: fixed;
-  width: 12px;
-  height: 12px;
-  background: #8b5cf6;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  /* Pink → Blue gradient dot */
+  background: linear-gradient(135deg, #ec4899, #6366f1, #3b82f6);
   border-radius: 50%;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 99999;
   transform: translate(-50%, -50%);
-  transition: transform 0.15s ease, background 0.2s ease;
-  will-change: left, top;
-  /* No mix-blend-mode — keeps dot visible on all backgrounds */
+  /* No transition on left/top — dot follows mouse INSTANTLY */
+  transition: transform 0.12s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  will-change: left, top, transform;
+  box-shadow:
+    0 0 8px rgba(236, 72, 153, 0.6),
+    0 0 20px rgba(99, 102, 241, 0.3);
 }
 #nexus-cursor.hover {
-  transform: translate(-50%, -50%) scale(2.5);
-  background: #ec4899;
+  transform: translate(-50%, -50%) scale(2.8);
+  background: linear-gradient(135deg, #f472b6, #818cf8, #60a5fa);
+  box-shadow:
+    0 0 14px rgba(236, 72, 153, 0.8),
+    0 0 35px rgba(99, 102, 241, 0.5),
+    0 0 60px rgba(59, 130, 246, 0.3);
 }
 
 #nexus-cursor-trail {
   position: fixed;
-  width: 40px;
-  height: 40px;
-  border: 1px solid rgba(139, 92, 246, 0.4);
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid rgba(236, 72, 153, 0.35);
+  background: radial-gradient(
+    circle,
+    rgba(99, 102, 241, 0.06) 0%,
+    transparent 70%
+  );
   border-radius: 50%;
   pointer-events: none;
-  z-index: 9998;
+  z-index: 99998;
   transform: translate(-50%, -50%);
-  transition: left 0.12s ease-out, top 0.12s ease-out;
+  /* No CSS transition — position is lerped in JS for buttery smoothness */
+  transition: opacity 0.25s ease;
   will-change: left, top;
 }
 

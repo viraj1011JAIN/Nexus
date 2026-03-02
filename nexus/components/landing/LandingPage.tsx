@@ -144,8 +144,6 @@ const TECH_ITEMS = [
 export default function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cursorRef = useRef<HTMLDivElement>(null);
-  const trailRef = useRef<HTMLDivElement>(null);
   const mainBoardRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -156,57 +154,94 @@ export default function LandingPage() {
   }, []);
 
   // ── Custom cursor (desktop only) ──
+  // Cursor elements are appended to document.body to escape
+  // layout.tsx's contain-layout on #main-content, which breaks
+  // position:fixed inside child components.
+  const cursorDotRef = useRef<HTMLDivElement | null>(null);
+  const cursorRingRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
-    const root = rootRef.current;
-    const cursor = cursorRef.current;
-    const trail = trailRef.current;
-    if (!root || !cursor || !trail) return;
+    // Skip on touch devices
+    const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+    if (isTouch) return;
 
-    // Only enable custom cursor on non-touch devices
-    const isTouch =
-      "ontouchstart" in window || navigator.maxTouchPoints > 0;
-    if (isTouch) {
-      cursor.style.display = "none";
-      trail.style.display = "none";
-      return;
-    }
+    // Create cursor elements directly on document.body
+    const dot = document.createElement("div");
+    dot.id = "nexus-cursor";
+    const ring = document.createElement("div");
+    ring.id = "nexus-cursor-trail";
+    document.body.appendChild(dot);
+    document.body.appendChild(ring);
+    cursorDotRef.current = dot;
+    cursorRingRef.current = ring;
 
-    // Add to <html> so cursor:none covers the ENTIRE viewport
-    // (body, #main-content, providers, portals — everything)
     document.documentElement.classList.add("has-cursor");
 
+    // Track mouse with zero delay on the dot,
+    // smooth lerp on the trailing ring
+    let mx = 0;
+    let my = 0;
+    let rx = 0;
+    let ry = 0;
+    let rafId = 0;
+
     function onMove(e: MouseEvent) {
-      requestAnimationFrame(() => {
-        cursor!.style.left = `${e.clientX}px`;
-        cursor!.style.top = `${e.clientY}px`;
-        trail!.style.left = `${e.clientX}px`;
-        trail!.style.top = `${e.clientY}px`;
-      });
+      mx = e.clientX;
+      my = e.clientY;
+      // Dot follows instantly — no transition, no RAF delay
+      dot.style.left = `${mx}px`;
+      dot.style.top = `${my}px`;
     }
 
-    function onEnterInteractive() {
-      cursor!.classList.add("hover");
+    // Lerp loop for the trailing ring — silky 60 fps
+    function lerpRing() {
+      rx += (mx - rx) * 0.18;
+      ry += (my - ry) * 0.18;
+      ring.style.left = `${rx}px`;
+      ring.style.top = `${ry}px`;
+      rafId = requestAnimationFrame(lerpRing);
     }
-    function onLeaveInteractive() {
-      cursor!.classList.remove("hover");
-    }
+    rafId = requestAnimationFrame(lerpRing);
 
     document.addEventListener("mousemove", onMove);
 
-    // Listen on all interactive elements across the entire page
-    const interactives = document.querySelectorAll("a, button, [role='button'], input, textarea, select, label");
-    interactives.forEach((el) => {
-      el.addEventListener("mouseenter", onEnterInteractive);
-      el.addEventListener("mouseleave", onLeaveInteractive);
-    });
+    // Hover detection — expand dot + shift color on interactive elements
+    function onEnter() { dot.classList.add("hover"); }
+    function onLeave() { dot.classList.remove("hover"); }
+
+    // Use event delegation on the entire document for bullet-proof coverage
+    const INTERACTIVE_SELECTOR = "a, button, [role='button'], input, textarea, select, label";
+    function onOver(e: MouseEvent) {
+      if ((e.target as Element)?.closest?.(INTERACTIVE_SELECTOR)) onEnter();
+    }
+    function onOut(e: MouseEvent) {
+      if ((e.target as Element)?.closest?.(INTERACTIVE_SELECTOR)) onLeave();
+    }
+    document.addEventListener("mouseover", onOver);
+    document.addEventListener("mouseout", onOut);
+
+    // Hide cursor when mouse leaves the window
+    function onLeaveWindow() {
+      dot.style.opacity = "0";
+      ring.style.opacity = "0";
+    }
+    function onEnterWindow() {
+      dot.style.opacity = "1";
+      ring.style.opacity = "1";
+    }
+    document.addEventListener("mouseleave", onLeaveWindow);
+    document.addEventListener("mouseenter", onEnterWindow);
 
     return () => {
+      cancelAnimationFrame(rafId);
       document.removeEventListener("mousemove", onMove);
-      interactives.forEach((el) => {
-        el.removeEventListener("mouseenter", onEnterInteractive);
-        el.removeEventListener("mouseleave", onLeaveInteractive);
-      });
+      document.removeEventListener("mouseover", onOver);
+      document.removeEventListener("mouseout", onOut);
+      document.removeEventListener("mouseleave", onLeaveWindow);
+      document.removeEventListener("mouseenter", onEnterWindow);
       document.documentElement.classList.remove("has-cursor");
+      dot.remove();
+      ring.remove();
     };
   }, []);
 
@@ -325,9 +360,6 @@ export default function LandingPage() {
 
   return (
     <div className="landing-root" ref={rootRef}>
-      {/* Custom cursor */}
-      <div id="nexus-cursor" ref={cursorRef} />
-      <div id="nexus-cursor-trail" ref={trailRef} />
 
       {/* Canvas background */}
       <canvas className="nebula-canvas" ref={canvasRef} />
