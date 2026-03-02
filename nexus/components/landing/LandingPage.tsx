@@ -171,14 +171,17 @@ export default function LandingPage() {
       return;
     }
 
-    root.classList.add("has-cursor");
+    // Add to <html> so cursor:none covers the ENTIRE viewport
+    // (body, #main-content, providers, portals — everything)
+    document.documentElement.classList.add("has-cursor");
 
     function onMove(e: MouseEvent) {
-      cursor!.style.left = `${e.clientX}px`;
-      cursor!.style.top = `${e.clientY}px`;
-      // Trail follows with slight delay via CSS transition
-      trail!.style.left = `${e.clientX}px`;
-      trail!.style.top = `${e.clientY}px`;
+      requestAnimationFrame(() => {
+        cursor!.style.left = `${e.clientX}px`;
+        cursor!.style.top = `${e.clientY}px`;
+        trail!.style.left = `${e.clientX}px`;
+        trail!.style.top = `${e.clientY}px`;
+      });
     }
 
     function onEnterInteractive() {
@@ -190,7 +193,8 @@ export default function LandingPage() {
 
     document.addEventListener("mousemove", onMove);
 
-    const interactives = root!.querySelectorAll("a, button");
+    // Listen on all interactive elements across the entire page
+    const interactives = document.querySelectorAll("a, button, [role='button'], input, textarea, select, label");
     interactives.forEach((el) => {
       el.addEventListener("mouseenter", onEnterInteractive);
       el.addEventListener("mouseleave", onLeaveInteractive);
@@ -202,7 +206,7 @@ export default function LandingPage() {
         el.removeEventListener("mouseenter", onEnterInteractive);
         el.removeEventListener("mouseleave", onLeaveInteractive);
       });
-      root?.classList.remove("has-cursor");
+      document.documentElement.classList.remove("has-cursor");
     };
   }, []);
 

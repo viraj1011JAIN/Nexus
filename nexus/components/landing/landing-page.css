@@ -22,29 +22,34 @@
   color: var(--text);
   font-family: var(--font-outfit), "Outfit", system-ui, sans-serif;
   overflow-x: hidden;
+  /* Ensure landing root covers full viewport — no gap for parent cursor */
+  min-height: 100vh;
+  position: relative;
 }
 
 /* ─── Custom Cursor ─── */
-.landing-root.has-cursor {
-  cursor: none;
-}
-.landing-root.has-cursor a,
-.landing-root.has-cursor button {
-  cursor: none;
+/*
+ * The .has-cursor class is added to <html> so the native cursor
+ * is hidden across the ENTIRE viewport — including parent wrappers
+ * from layout.tsx (#main-content, body, providers, portals, etc).
+ */
+html.has-cursor,
+html.has-cursor * {
+  cursor: none !important;
 }
 
 #nexus-cursor {
   position: fixed;
   width: 12px;
   height: 12px;
-  background: var(--violet);
+  background: #8b5cf6;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
-  transition: transform 0.1s, background 0.2s;
-  mix-blend-mode: screen;
+  transition: transform 0.15s ease, background 0.2s ease;
   will-change: left, top;
+  /* No mix-blend-mode — keeps dot visible on all backgrounds */
 }
 #nexus-cursor.hover {
   transform: translate(-50%, -50%) scale(2.5);
