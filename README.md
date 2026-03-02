@@ -78,6 +78,7 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 - TypeScript: **0 errors** across all 100 components, 42 server actions, and 35 lib modules
 - ESLint: **0 warnings** — all Tailwind v4 utilities, a11y rules, and import rules pass cleanly
 - Hydration: **0 mismatches** — all CSS utilities use bracket syntax (`gap-[5px]`, `h-[30px]`) for consistency between server and client renders
+- Tests: **1,349 passing, 0 failing** across 43 test suites (Jest 30 + ts-jest)
 
 **What makes the architecture distinct:**
 - `orgId` is **always** extracted from the Clerk JWT — never accepted from client parameters
@@ -2067,6 +2068,7 @@ stripe listen --forward-to localhost:3001/api/webhook/stripe
 | Metric | Value |
 |---|---|
 | Unit test files | 43 |
+| Unit tests passing | 1,349 / 1,349 |
 | E2E test specs | 6 |
 | Files with coverage | 241 |
 | Statement coverage | ~19.5% |
@@ -3053,6 +3055,7 @@ graph TB
 
 | Date | Commit | Change |
 |---|---|---|
+| 2026-03-02 | `7272611` | Test: All 43 unit test suites fixed — 1,349 / 1,349 tests passing (0 failing); root causes: missing `board-permissions` mock, `jest.resetAllMocks()` stripping `clerkClient` implementation, incorrect `auth` vs `getTenantContext` mock targets, wrong MIME type / file size fixture values |
 | 2026-03-02 | `2550b71` | Security: `lib/rate-limit.ts` rewritten async — Upstash Redis sliding-window when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set; in-memory fallback on Redis error (fail-open) |
 | 2026-03-02 | `2550b71` | Security: Stripe idempotency — `ProcessedStripeEvent` model + Prisma `P2002` guard before webhook `switch`; duplicate Stripe events silently ack'd without re-processing |
 | 2026-03-02 | `2550b71` | Security: `app/api/realtime-auth` — new GET endpoint verifying org membership + `BoardMember` row before any Supabase channel subscription; fail-closed on DB error |
