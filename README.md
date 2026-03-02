@@ -94,6 +94,26 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ---
 
+### Landing Page
+
+![Landing Page](Web-screenshort/Landing%20Page.png)
+
+- Dark-theme marketing landing page at `/` — the first thing visitors see
+- **Canvas nebula background** — animated starfield with drifting orbs and constellation lines, rendered on a full-viewport `<canvas>` element at 60 fps
+- **Custom cursor** — pink-to-blue gradient dot with a trailing ring that follows via lerp animation; scales up with glow on hover over interactive elements; auto-hidden on touch devices
+- **Hero section** — "Your team's work, beautifully connected" headline with live badge ("Supabase Realtime · Now Live"), stats bar (10K+ teams, 99.9% SLA, <50ms sync), and primary CTA
+- **3D parallax board showcase** — three floating mock browser windows (Kanban, Dashboard, Analytics) that tilt on mouse movement via `rotateX`/`rotateY` transforms
+- **Bento feature grid** — 7 cards covering: Real-time Collaboration, LexoRank Ordering, Analytics, Dual-gate RBAC, Audit Logs, Stripe Billing, and Command Palette (⌘K) — each with animated mini-demos
+- **Draggable screenshot carousel** — horizontal scroll track with mock screenshots of Dashboard, Kanban Board, Analytics, Activity Feed, and Billing views; drag to scroll with grab/grabbing cursor
+- **Workflow steps** — 4-step guide: Create Workspace → Build Boards → Collaborate Live → Track Progress
+- **Tech stack ticker** — infinite-scrolling marquee of the 10 core technologies (Next.js 16, TypeScript, Supabase, Prisma, Clerk, Stripe, Tailwind, shadcn/ui, Vercel Edge, LexoRank)
+- **CTA section** — gradient call-to-action ("Ship faster. Build together.") with sign-up and sign-in buttons
+- **Footer** — branding, copyright, and quick links (Privacy, Terms, GitHub, Get Started)
+- **Performance** — scroll reveal via `IntersectionObserver`, `will-change` hints on animated elements, `prefers-reduced-motion` support for accessibility
+- Server Component wrapper at `page.tsx` — checks auth server-side and redirects signed-in users to `/dashboard`; all interactive content lives in a `"use client"` component
+
+---
+
 ### Sign In
 
 ![Sign In](Web-screenshort/Signin.png)
