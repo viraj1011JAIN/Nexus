@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth }                      from "@clerk/nextjs/server";
 import { suggestPriority, generateCardDescription, suggestChecklists } from "@/actions/ai-actions";
+import { rateLimit }                 from "@/lib/rate-limit";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,16 @@ const Schema = z.discriminatedUnion("action", [
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate-limit: 20 AI requests per user per minute (protects OpenAI spend)
+  const rl = rateLimit(`ai:${userId}`, 20, 60_000);
+  if (!rl.ok) {
+    const retryAfterSec = Math.ceil(rl.retryAfterMs / 1000);
+    return NextResponse.json(
+      { error: "Too many requests. Please wait before making another AI request." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } },
+    );
+  }
 
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: "AI features not configured." }, { status: 503 });

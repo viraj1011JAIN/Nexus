@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { CreditCard, Check, Zap, Crown, Loader2, CheckCircle, XCircle } from "lucide-react";
@@ -169,7 +169,7 @@ export default function BillingClient({
       )}
 
       {/* Current Plan */}
-      <div className="bg-linear-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 p-6 mb-8">
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 p-6 mb-8">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mb-1">
@@ -272,7 +272,7 @@ export default function BillingClient({
         </div>
 
         {/* Pro Plan */}
-        <div className="bg-linear-to-br from-indigo-600 to-purple-600 rounded-xl p-6 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-6 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
           

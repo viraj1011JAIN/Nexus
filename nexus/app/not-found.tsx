@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ export default function NotFound() {
   const router = useRouter();
   
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background orbs */}
       <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
       <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
@@ -22,7 +22,7 @@ export default function NotFound() {
 
         {/* 404 Illustration */}
         <div className="mb-8">
-          <div className="text-9xl font-bold bg-linear-to-br from-slate-200 to-slate-300 bg-clip-text text-transparent">404</div>
+          <div className="text-9xl font-bold bg-gradient-to-br from-slate-200 to-slate-300 bg-clip-text text-transparent">404</div>
           <Search className="h-24 w-24 text-indigo-300 mx-auto -mt-12" />
         </div>
 

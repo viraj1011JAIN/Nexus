@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -164,7 +164,7 @@ export function SharedBoardView({ board, share }: SharedBoardViewProps) {
   const totalCards = board.lists.reduce((s, l) => s + l.cards.length, 0);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
       <div
         className="relative h-36 flex items-end overflow-hidden"

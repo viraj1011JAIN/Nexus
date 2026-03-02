@@ -64,7 +64,7 @@ function ThemeButton({
         "absolute inset-0 opacity-0 transition-opacity duration-500",
         isActive && "opacity-100"
       )}>
-        <div className="absolute inset-0 bg-linear-to-br from-primary/10 via-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
       </div>
 
       {/* Icon Container */}

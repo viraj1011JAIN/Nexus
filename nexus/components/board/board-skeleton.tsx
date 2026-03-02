@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 export function BoardCardSkeleton() {
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden h-80">
-      <div className="h-32 bg-linear-to-br from-gray-200 to-gray-300 animate-pulse" />
+      <div className="h-32 bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse" />
       <div className="p-6 space-y-4">
         <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4" />
         <div className="flex items-center gap-4">

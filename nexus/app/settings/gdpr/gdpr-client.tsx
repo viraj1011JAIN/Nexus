@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import type { ElementType } from "react";
@@ -152,7 +152,7 @@ export default function GdprClient({ userEmail, userName }: GdprClientProps) {
     <div className="max-w-2xl mx-auto space-y-6 py-8 px-4">
       {/* Page header */}
       <div className="flex items-center gap-3 mb-2">
-        <div className="h-10 w-10 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
           <Shield className="h-5 w-5 text-white" />
         </div>
         <div>

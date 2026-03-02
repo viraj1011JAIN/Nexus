@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -85,7 +85,7 @@ export function ProUpgradeModal({
 
         <div className="space-y-6 py-4">
           {/* Pricing */}
-          <div className="relative text-center p-8 bg-linear-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-xl overflow-hidden">
+          <div className="relative text-center p-8 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-xl overflow-hidden">
             {/* Animated shine */}
             <div className="absolute inset-0 -translate-x-full animate-shimmer bg-linear-to-r from-transparent via-white/20 to-transparent" />
             <div className="relative z-10">
@@ -110,7 +110,7 @@ export function ProUpgradeModal({
               "Team collaboration tools",
             ].map((feature) => (
               <div key={feature} className="flex items-center gap-x-3 group">
-                <div className="shrink-0 w-6 h-6 bg-linear-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="shrink-0 w-6 h-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Check className="h-3.5 w-3.5 text-indigo-600 font-bold" />
                 </div>
                 <span className="text-sm text-slate-700 font-medium group-hover:text-slate-900 transition-colors">{feature}</span>

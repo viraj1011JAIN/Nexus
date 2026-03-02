@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { SignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -36,7 +36,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-indigo-50 to-purple-50 px-4 py-8 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 px-4 py-8 sm:p-6 relative overflow-hidden">
       {/* Animated background orbs */}
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />

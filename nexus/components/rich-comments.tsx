@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
@@ -275,7 +275,7 @@ function CommentItem({
           {comment.userImage ? (
             <Image src={comment.userImage} alt={comment.userName} width={32} height={32} className="rounded-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold">
               {comment.userName[0].toUpperCase()}
             </div>
           )}
