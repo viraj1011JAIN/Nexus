@@ -67,10 +67,24 @@ jest.mock("lucide-react", () => ({
   Shield:      () => <span data-testid="icon-shield" />,
 }));
 
+// Step-up auth: mock useReverification as a transparent passthrough so component
+// tests can verify that the underlying server action is called with the right args
+// without triggering the real Clerk modal or its edge-only imports.
+jest.mock("@clerk/nextjs", () => ({
+  useReverification: (action: (...args: unknown[]) => unknown) => action,
+}));
+
+// Mock the billing server actions (previously raw fetch calls to Stripe API routes)
+jest.mock("@/actions/billing-step-up", () => ({
+  initCheckoutSession: jest.fn(),
+  initBillingPortal:   jest.fn(),
+}));
+
 // ─── Imports after mocks ───────────────────────────────────────────────────────
 
 import BillingClient from "@/app/billing/billing-client";
 import { toast }     from "sonner";
+import { initCheckoutSession, initBillingPortal } from "@/actions/billing-step-up";
 
 // ─── Test fixtures ─────────────────────────────────────────────────────────────
 
@@ -122,6 +136,13 @@ beforeEach(() => {
   jest.clearAllMocks();
   // Restore default (empty) search params before each test
   (useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams());
+  // Default happy-path return values for billing server actions
+  (initCheckoutSession as jest.Mock).mockResolvedValue({
+    data: { url: "https://checkout.stripe.com/test-session" },
+  });
+  (initBillingPortal as jest.Mock).mockResolvedValue({
+    data: { url: "https://billing.stripe.com/portal-xyz" },
+  });
   global.fetch = jest.fn().mockResolvedValue({
     ok:   true,
     json: async () => ({ url: "https://checkout.stripe.com/test-session" }),
@@ -363,23 +384,18 @@ describe("Section 11D — BillingClient Component", () => {
     });
   });
 
-  // ─── 11.64 handleUpgrade posts correct priceId ────────────────────────────
+  // ─── 11.64 handleUpgrade calls initCheckoutSession ───────────────────────
 
-  describe("11.64 handleUpgrade POSTs to /api/stripe/checkout with correct priceId", () => {
-    it("calls fetch with the monthly priceId by default", async () => {
+  describe("11.64 handleUpgrade calls initCheckoutSession with correct priceId", () => {
+    it("calls initCheckoutSession with the monthly priceId by default", async () => {
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
-      const upgradeBtn  = screen.getByRole("button", { name: /Upgrade to Pro/i });
+      const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/stripe/checkout",
-        expect.objectContaining({
-          method:  "POST",
-          headers: expect.objectContaining({ "Content-Type": "application/json" }),
-          body:    JSON.stringify({ priceId: DEFAULT_PRICE_IDS.monthly }),
-        })
-      );
+      await waitFor(() => {
+        expect(initCheckoutSession).toHaveBeenCalledWith({ priceId: DEFAULT_PRICE_IDS.monthly });
+      });
     });
 
     it("sends yearly priceId when Yearly period is selected", async () => {
@@ -390,46 +406,39 @@ describe("Section 11D — BillingClient Component", () => {
       await act(async () => { fireEvent.click(yearlyBtn); });
       const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/stripe/checkout",
-        expect.objectContaining({
-          body: JSON.stringify({ priceId: DEFAULT_PRICE_IDS.yearly }),
-        })
-      );
+      await waitFor(() => {
+        expect(initCheckoutSession).toHaveBeenCalledWith({ priceId: DEFAULT_PRICE_IDS.yearly });
+      });
     });
   });
 
   // ─── 11.65 handleUpgrade navigates to checkout URL ────────────────────────
 
   describe("11.65 handleUpgrade navigates to returned URL (window.location.href)", () => {
-    it("navigates to checkout URL: no error toast + fetch called with correct endpoint", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok:   true,
-        json: async () => ({ url: "https://checkout.stripe.com/session-abc" }),
+    it("navigates to checkout URL: no error toast + server action called with priceId", async () => {
+      (initCheckoutSession as jest.Mock).mockResolvedValueOnce({
+        data: { url: "https://checkout.stripe.com/session-abc" },
       });
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
       const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Pro/i });
       await act(async () => { fireEvent.click(upgradeBtn); });
-      // Navigation was attempted: fetch was called and no error toast was shown.
-      // jsdom logs "not implemented" for external navigation but does not throw;
-      // the observable proof of navigation is: no error toast + fetch was called.
+      // The observable proof of navigation: action was called and no error toast was fired.
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith("/api/stripe/checkout", expect.anything());
+        expect(initCheckoutSession).toHaveBeenCalledWith(
+          expect.objectContaining({ priceId: expect.any(String) })
+        );
         expect(toast.error).not.toHaveBeenCalled();
       });
     });
   });
 
-  // ─── 11.66 handleUpgrade shows toast.error on non-ok response ──────────────
+  // ─── 11.66 handleUpgrade shows toast.error on action error ────────────────
 
-  describe("11.66 handleUpgrade shows toast.error when fetch returns non-ok status", () => {
-    it("renders toast.error on API failure", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok:   false,
-        json: async () => ({ error: "Checkout failed" }),
-      });
+  describe("11.66 handleUpgrade shows toast.error when server action returns error", () => {
+    it("renders toast.error when initCheckoutSession returns { error }", async () => {
+      (initCheckoutSession as jest.Mock).mockResolvedValueOnce({ error: "Checkout failed" });
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
@@ -443,11 +452,8 @@ describe("Section 11D — BillingClient Component", () => {
       });
     });
 
-    it("shows fallback error message when no error property in response", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok:   false,
-        json: async () => ({}),
-      });
+    it("shows 'Something went wrong' toast when initCheckoutSession throws", async () => {
+      (initCheckoutSession as jest.Mock).mockRejectedValueOnce(new Error("Network error"));
       await renderAndMount(
         <BillingClient organization={FREE_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
@@ -455,51 +461,44 @@ describe("Section 11D — BillingClient Component", () => {
       await act(async () => { fireEvent.click(upgradeBtn); });
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
-          "Failed to start checkout",
+          "Something went wrong",
           expect.anything()
         );
       });
     });
   });
 
-  // ─── 11.67 handleManageBilling POSTs to /api/stripe/portal ────────────────
+  // ─── 11.67 handleManageBilling calls initBillingPortal ───────────────────
 
-  describe("11.67 handleManageBilling POSTs to /api/stripe/portal", () => {
-    it("calls fetch with POST /api/stripe/portal", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok:   true,
-        json: async () => ({ url: "https://billing.stripe.com/portal-xyz" }),
+  describe("11.67 handleManageBilling calls initBillingPortal server action", () => {
+    it("calls initBillingPortal when Manage Billing button is clicked", async () => {
+      (initBillingPortal as jest.Mock).mockResolvedValueOnce({
+        data: { url: "https://billing.stripe.com/portal-xyz" },
       });
       await renderAndMount(
         <BillingClient organization={PRO_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
       const manageBtn = screen.getByRole("button", { name: /manage billing/i });
       await act(async () => { fireEvent.click(manageBtn); });
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/stripe/portal",
-        expect.objectContaining({ method: "POST" })
-      );
+      expect(initBillingPortal).toHaveBeenCalledWith({});
     });
   });
 
   // ─── 11.68 handleManageBilling navigates to portal URL ────────────────────
 
   describe("11.68 handleManageBilling navigates to portal URL", () => {
-    it("navigates to portal URL: no error toast + fetch called with correct endpoint", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok:   true,
-        json: async () => ({ url: "https://billing.stripe.com/portal-xyz" }),
+    it("navigates to portal URL: no error toast + server action called", async () => {
+      (initBillingPortal as jest.Mock).mockResolvedValueOnce({
+        data: { url: "https://billing.stripe.com/portal-xyz" },
       });
       await renderAndMount(
         <BillingClient organization={PRO_ORG} isStripeConfigured priceIds={DEFAULT_PRICE_IDS} />
       );
       const manageBtn = screen.getByRole("button", { name: /manage billing/i });
       await act(async () => { fireEvent.click(manageBtn); });
-      // Navigation was attempted: fetch was called and no error toast was shown.
-      // jsdom logs "not implemented" for external navigation but does not throw;
-      // the observable proof of navigation is: no error toast + fetch was called.
+      // The observable proof of navigation: action was called and no error toast was fired.
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith("/api/stripe/portal", expect.anything());
+        expect(initBillingPortal).toHaveBeenCalled();
         expect(toast.error).not.toHaveBeenCalled();
       });
     });
@@ -593,8 +592,8 @@ describe("Section 11D — BillingClient Component", () => {
           expect.objectContaining({ description: expect.stringContaining("STRIPE_SETUP") })
         );
       });
-      // fetch should NOT have been called — early exit before API call
-      expect(global.fetch).not.toHaveBeenCalled();
+      // initCheckoutSession should NOT have been called — early exit before action call
+      expect(initCheckoutSession).not.toHaveBeenCalled();
     });
   });
 

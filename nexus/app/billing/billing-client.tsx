@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Organization } from "@prisma/client";
 import { useSearchParams } from "next/navigation";
+import { useReverification } from "@clerk/nextjs";
+import { initCheckoutSession, initBillingPortal } from "@/actions/billing-step-up";
 
 export default function BillingClient({ 
   organization,
@@ -21,6 +23,11 @@ export default function BillingClient({
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const plan = organization.subscriptionPlan;
+
+  // Step-up auth: Clerk will show a biometric / TOTP challenge when the
+  // moderate reverification window (1 hour) has expired before billing changes.
+  const protectedCheckout = useReverification(initCheckoutSession);
+  const protectedPortal = useReverification(initBillingPortal);
 
   useEffect(() => {
     setMounted(true);
@@ -57,23 +64,27 @@ export default function BillingClient({
         setLoading(false);
         return;
       }
-      
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId }),
-      });
-      
-      if (res.ok) {
-        const { url } = await res.json();
-        if (url) {
-          window.location.href = url;
-        }
-      } else {
-        const errorData = await res.json();
-        toast.error(errorData.error || "Failed to start checkout", {
+
+      // protectedCheckout intercepts the reverificationError response and shows
+      // Clerk's biometric / TOTP modal.  Returns null if the user cancels.
+      const result = await protectedCheckout({ priceId });
+
+      if (!result) {
+        // User dismissed the step-up challenge — abort silently
+        setLoading(false);
+        return;
+      }
+
+      if (result.error) {
+        toast.error(result.error, {
           description: "Please check your Stripe configuration or contact support.",
         });
+        setLoading(false);
+        return;
+      }
+
+      if (result.data?.url) {
+        window.location.href = result.data.url;
       }
     } catch {
       toast.error("Something went wrong", {
@@ -87,17 +98,23 @@ export default function BillingClient({
   const handleManageBilling = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/stripe/portal", {
-        method: "POST",
-      });
-      
-      if (res.ok) {
-        const { url } = await res.json();
-        if (url) {
-          window.location.href = url;
-        }
-      } else {
-        toast.error("Failed to open billing portal");
+      // protectedPortal intercepts the reverificationError response and shows
+      // Clerk's biometric / TOTP modal.  Returns null if the user cancels.
+      const result = await protectedPortal({});
+
+      if (!result) {
+        setLoading(false);
+        return; // user dismissed step-up challenge
+      }
+
+      if (result.error) {
+        toast.error(result.error || "Failed to open billing portal");
+        setLoading(false);
+        return;
+      }
+
+      if (result.data?.url) {
+        window.location.href = result.data.url;
       }
     } catch {
       toast.error("Something went wrong");

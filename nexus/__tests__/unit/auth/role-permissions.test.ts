@@ -32,12 +32,21 @@ jest.mock("react", () => ({
   cache: (fn: (...args: unknown[]) => unknown) => fn,
 }));
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: jest.fn(),
-  clerkClient: jest.fn().mockResolvedValue({
-    users: { getUser: jest.fn().mockResolvedValue({ id: "user_test", firstName: "Test", emailAddresses: [] }) },
-  }),
-}));
+jest.mock("@clerk/nextjs/server", () => {
+  // auth must be callable (used by getTenantContext → auth()) AND have a
+  // protect() method (used by createStepUpAction → auth.protect()).
+  // By default, protect() reports the reverification window as fresh (passes)
+  // so these tests exercise RBAC logic, not the step-up gate.
+  const authFn = jest.fn();
+  authFn.protect = jest.fn().mockResolvedValue({ has: jest.fn().mockReturnValue(true) });
+  return {
+    auth: authFn,
+    reverificationError: jest.fn((level: string) => ({ __clerk_reverification_required: true, level })),
+    clerkClient: jest.fn().mockResolvedValue({
+      users: { getUser: jest.fn().mockResolvedValue({ id: "user_test", firstName: "Test", emailAddresses: [] }) },
+    }),
+  };
+});
 
 jest.mock("@/lib/db", () => ({
   db: {

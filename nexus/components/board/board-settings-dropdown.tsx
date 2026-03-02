@@ -16,6 +16,7 @@
 
 import { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useReverification } from "@clerk/nextjs";
 import {
   Settings, ChevronRight, Pencil, Check, X, Image as ImageIcon,
   Link2, Copy, FileJson, FileSpreadsheet, Trash2, Settings2,
@@ -99,6 +100,13 @@ export function BoardSettingsDropdown({
   // Transitions
   const [isPending, startTransition] = useTransition();
   const [exportPending, setExportPending] = useState<"json" | "csv" | null>(null);
+
+  // ── Step-up auth — Clerk reverification gate for destructive delete ──────
+  // useReverification wraps the Server Action.  When the action returns a
+  // reverificationError response, Clerk automatically shows a biometric /
+  // TOTP / OTP challenge modal before transparently retrying the action.
+  // If the user cancels the modal, the hook returns null.
+  const protectedDeleteBoard = useReverification(deleteBoard);
 
   // ── Close on outside click ──────────────────────────────────────────────
   useEffect(() => {
@@ -271,7 +279,11 @@ export function BoardSettingsDropdown({
       return;
     }
     startTransition(async () => {
-      const res = await deleteBoard({ id: boardId });
+      // protectedDeleteBoard will show a Clerk biometric / TOTP challenge if
+      // the user's strict reverification window (10 min) has expired.
+      // Returns null if the user dismisses the modal.
+      const res = await protectedDeleteBoard({ id: boardId });
+      if (!res) return; // user cancelled step-up challenge
       if (res.error) {
         toast.error(res.error);
         return;
@@ -280,7 +292,7 @@ export function BoardSettingsDropdown({
       closeDropdown();
       router.push("/");
     });
-  }, [deleteConfirmText, boardTitle, boardId, router]);
+  }, [deleteConfirmText, boardTitle, boardId, protectedDeleteBoard, router]);
 
   // ── Styles ───────────────────────────────────────────────────────────────
   const surface = isDark

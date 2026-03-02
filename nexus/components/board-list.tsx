@@ -11,6 +11,7 @@ import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
+import { useReverification } from "@clerk/nextjs";
 import { UnsplashPicker, type UnsplashPhoto } from "@/components/board/unsplash-picker";
 import { TemplatePicker } from "@/components/board/template-picker";
 import { type TemplateSummary } from "@/actions/template-actions";
@@ -74,6 +75,10 @@ export function BoardList() {
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const { theme, setTheme } = useTheme();
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Step-up auth: Clerk will show a biometric / TOTP challenge if the user's
+  // strict reverification window (10 min) has expired before a board delete.
+  const protectedDeleteBoard = useReverification(deleteBoard);
 
   const fetchBoards = useCallback(async () => {
     try {
@@ -163,7 +168,9 @@ export function BoardList() {
 
   const handleDeleteBoard = async (id: string, boardTitle: string) => {
     startTransition(async () => {
-      const result = await deleteBoard({ id });
+      // protectedDeleteBoard handles the Clerk challenge modal; returns null if cancelled.
+      const result = await protectedDeleteBoard({ id });
+      if (!result) return; // user cancelled step-up challenge
 
       if (result.error) {
         toast.error(result.error);
