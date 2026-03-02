@@ -689,10 +689,19 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ### Security & Compliance
 
-- Sliding-window rate limiting per action (in-memory)
+- Sliding-window rate limiting per action (in-memory) via `lib/action-protection.ts`
+- Route-level rate limiting via `lib/rate-limit.ts` — AI endpoint capped at 20 req/user/min with 429 + `Retry-After`
+- HSTS (2-year `max-age`, `includeSubDomains`, `preload`) in production
+- `Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Resource-Policy: same-origin` + `X-Permitted-Cross-Domain-Policies: none`
 - Audit logs with IP address and User-Agent forensics
 - Before/after value snapshots in audit trail
 - SSRF protection on all outbound webhook deliveries
+- Stripe webhook replay guard (300 s staleness check)
+- Stripe TOCTOU protection: `updateMany` with subscription ID guard prevents stale plan downgrades
+- RBAC auto-heal wrapped in `db.$transaction()` — atomic, suspension-aware
+- Realtime WebSocket subscriptions authenticated with Clerk JWT
+- LexoRank DoS guard: order strings > 64 chars rejected
+- AI prompt injection protection: `sanitizeForPrompt()` + `system`/`user` role separation
 - GDPR data export endpoint
 - GDPR account deletion endpoint
 - Demo mode read-only protection
@@ -1797,7 +1806,8 @@ nexus/
 │   ├── db.ts                        # Prisma client (db + systemDb)
 │   ├── tenant-context.ts            # Multi-tenant auth resolution
 │   ├── board-permissions.ts         # RBAC permission matrix
-│   ├── action-protection.ts         # Rate limiting + demo guard
+│   ├── rate-limit.ts                # Route-level sliding-window rate limiter (used by /api/ai)
+│   ├── action-protection.ts         # Action-level rate limiting + demo guard
 │   ├── create-safe-action.ts        # Server action wrapper
 │   ├── create-audit-log.ts          # Audit trail
 │   ├── event-bus.ts                 # Card event emission
@@ -1858,7 +1868,7 @@ nexus/
 | Pages | 24 pages |
 | API Routes | 31 routes |
 | Server Actions | 40 files |
-| Lib Modules | 34 files |
+| Lib Modules | 35 files |
 | Test Files | 43 files |
 | E2E Specs | 7 files |
 | Email Templates | 6 files |
@@ -2100,7 +2110,7 @@ npx playwright test boards.spec.ts
 
 ### Rate Limiting
 
-Implementation in `lib/action-protection.ts`:
+**Action-level limiting** — `lib/action-protection.ts`:
 
 - Sliding-window limiter using in-memory `Map<string, number[]>` with 60-second windows
 - Per-action limits:
@@ -2108,6 +2118,12 @@ Implementation in `lib/action-protection.ts`:
   - Card reorder: 120 requests/minute
   - Default: 30 requests/minute
 - Returns `{ allowed, remaining, retryAfter }` for client-side handling
+
+**Route-level limiting** — `lib/rate-limit.ts`:
+
+- In-memory sliding-window implementation with GC every 200 calls
+- Applied to `/api/ai`: 20 requests per user per minute; returns 429 + `Retry-After` header on breach
+- Note: in-memory store resets on cold-start. For multi-instance production deployments, replace with Redis/Upstash.
 
 ### Webhook Security
 
@@ -2138,7 +2154,16 @@ Configured in `next.config.ts` for all routes:
 X-Content-Type-Options: nosniff
 X-Frame-Options: DENY
 Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: camera=(), microphone=(), geolocation=()
+Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+X-Permitted-Cross-Domain-Policies: none
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+```
+
+Production-only (HTTPS required):
+
+```
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 ```
 
 ### Input Validation
@@ -2146,6 +2171,35 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 - All Server Actions validate input via Zod schemas before any processing
 - Prisma uses parameterized queries throughout — SQL injection is not possible
 - `TenantError` messages are mapped to generic client-safe strings — internal IDs and stack traces never reach the client
+
+### RBAC Atomicity
+
+The auto-heal path in `lib/tenant-context.ts` runs inside `db.$transaction()`. When a missing `OrganizationUser` row is created, the operation:
+1. Re-checks for an existing row **inside the transaction** to defeat concurrent duplicate inserts
+2. Uses the actual DB `isActive` and `status` values from the healed row — never trusts JWT defaults
+3. Throws `TenantError FORBIDDEN` immediately if the healed row has `isActive = false` or `status = SUSPENDED`
+
+This prevents a race condition where two parallel requests could both pass the membership check before either write committed.
+
+### Realtime Channel Authentication
+
+`hooks/use-realtime-analytics.ts` now uses `getAuthenticatedSupabaseClient(token)` with a Clerk JWT fetched via `getToken({ template: "supabase" })`. This matches the security posture already in place for `use-realtime-board.ts` and `use-presence.ts`. If the Clerk JWT template is not configured, the hook falls back gracefully to the anonymous key.
+
+### LexoRank DoS Guard
+
+`actions/update-card-order.ts` and `actions/update-list-order.ts` reject any order string exceeding 64 characters with a safe error message. Normal LexoRank strings max out at ~32 characters; this cap only triggers on malformed or malicious payloads.
+
+### Stripe Replay Attack + TOCTOU
+
+`app/api/webhook/stripe/route.ts` now:
+- **Replay guard**: Events older than 300 seconds (`event.created` vs `Date.now()`) are silently rejected with HTTP 200 — Stripe’s default `stripe-signature` tolerance is 300 s, so legitimate retries won’t be affected
+- **TOCTOU fix**: The `customer.subscription.deleted` handler uses `db.organization.updateMany()` with a `WHERE stripeSubscriptionId = subscription.id` guard instead of `update()`. This prevents a stale deletion from overwriting a newly-granted PRO status when a delete event arrives out of order
+
+### AI Prompt Injection
+
+`actions/ai-actions.ts` now:
+- `sanitizeForPrompt()` strips control characters (`\x00`–`\x1F`), collapses excessive line padding, and trims whitespace before any user content reaches OpenAI
+- All three OpenAI calls (`suggestPriority`, `generateCardDescription`, `suggestChecklists`) split input into a **`system`** role message (fixed instructions) and a **`user`** role message (sanitized user-supplied content only). The model gives higher authority to `system` messages, preventing instruction injection via card titles or descriptions
 
 ---
 
@@ -2714,14 +2768,26 @@ graph TB
 
 ### Latest Updates
 
-| Date | Change |
-|---|---|
-| 2025-07 | Fixed file upload route (`POST /api/upload`) — proper try/catch error handling, `sb_secret_*` key format support |
-| 2025-07 | Eliminated React hydration mismatch in `board-header.tsx` — replaced all Tailwind v4-only shorthands with bracket equivalents |
-| 2025-07 | Mass Tailwind/a11y fix: replaced all `bg-linear-to-*` → `bg-gradient-to-*`, non-standard spacing tokens → bracket values, added missing `aria-label` attributes across 19 files |
-| 2025-07 | Card modal delete flow wired end-to-end — `handleDeleteCard` connected to both dropdown and sidebar delete buttons |
-| 2025-07 | Removed render-blocking `@import url(fonts.googleapis.com/...)` from card modal — fonts load globally via `next/font` |
-| 2025-07 | Fixed board tab icon visibility — added `group` + `group-data-[state=active]:opacity-100` pattern for active state |
+| Date | Commit | Change |
+|---|---|---|
+| 2026-03-02 | `503c1c8` | Security: RBAC desync fixed — `lib/tenant-context.ts` healing path wrapped in `db.$transaction()`, uses real DB `isActive`/`status`, immediately throws `FORBIDDEN` for suspended rows |
+| 2026-03-02 | `503c1c8` | Security: Realtime auth — `hooks/use-realtime-analytics.ts` now uses `getAuthenticatedSupabaseClient(token)` with Clerk JWT (was unauthenticated) |
+| 2026-03-02 | `503c1c8` | Security: LexoRank DoS guard — `update-card-order.ts` + `update-list-order.ts` reject order strings > 64 chars |
+| 2026-03-02 | `503c1c8` | Security: Stripe replay guard (300 s staleness check) + TOCTOU fix (`updateMany` with subscription ID guard) in webhook handler |
+| 2026-03-02 | `503c1c8` | Security: AI prompt injection protection — `sanitizeForPrompt()` strips control chars; all 3 OpenAI calls now use `system`/`user` role separation |
+| 2026-02 | `9c8591c` | Security: `lib/rate-limit.ts` — new in-memory sliding-window rate limiter; applied to `/api/ai` at 20 req/user/min with 429 + `Retry-After` |
+| 2026-02 | `9c8591c` | Security: HSTS + `Cross-Origin-Opener-Policy` + `Cross-Origin-Resource-Policy` + `X-Permitted-Cross-Domain-Policies` added to `next.config.ts` |
+| 2026-02 | `9c8591c` | Security: Vercel function `maxDuration` explicit timeouts added to `vercel.json` (upload=60 s, ai=30 s, cron=300 s) |
+| 2026-02 | `9c8591c` | Fix: Mass `bg-linear-to-*` → `bg-gradient-to-*` correction across 20+ files (invalid Tailwind v4 class that silently produced no gradients) |
+| 2026-02-24 | `ecf5122` | Fix: Mobile view — `sidebar.tsx` + `mobile-nav.tsx` Clerk components (`OrganizationSwitcher`, `UserButton`) loaded via `dynamic({ ssr: false })` with skeleton placeholders; eliminates hydration mismatch and CLS |
+| 2026-02-24 | `ecf5122` | Fix: `AriaLiveRegion` hydration mismatch — `mounted` guard added; component returns `null` until after first client render |
+| 2026-02-24 | — | Fix: Unsplash `/api/unsplash` 500 → 200 — null-check guard returns `{ photos: [], unconfigured: true }` when key missing; unified `UNSPLASH_ACCESS_KEY` key handling; removed dangerous `NEXT_PUBLIC_` server fallback |
+| 2026-02-24 | — | Fix: Board creation flow — `fieldErrors.title` branch added to handler; templates seeded with 8 professional templates |
+| 2025-07 | — | Fixed file upload route (`POST /api/upload`) — proper try/catch error handling, `sb_secret_*` key format support |
+| 2025-07 | — | Eliminated React hydration mismatch in `board-header.tsx` — replaced all Tailwind v4-only shorthands with bracket equivalents |
+| 2025-07 | — | Card modal delete flow wired end-to-end — `handleDeleteCard` connected to both dropdown and sidebar delete buttons |
+| 2025-07 | — | Removed render-blocking `@import url(fonts.googleapis.com/...)` from card modal — fonts load globally via `next/font` |
+| 2025-07 | — | Fixed board tab icon visibility — added `group` + `group-data-[state=active]:opacity-100` pattern for active state |
 
 ---
 
