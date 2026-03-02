@@ -1,22 +1,13 @@
-﻿import dynamic from "next/dynamic";
-
-/**
- * Sign-up page — Server Component (no "use client").
+﻿/**
+ * Sign-up page — Server Component.
  *
- * SignUpContent is loaded with ssr: false for the same reason as the sign-in
- * page: the canvas particle animation uses Math.random() and
- * window.devicePixelRatio — both non-deterministic on the server — which
- * makes any SSR attempt a guaranteed hydration mismatch.  With ssr: false the
- * server emits only the static shell; React mounts the full component on the
- * client with nothing to reconcile.
+ * The dynamic import with ssr:false must live in a Client Component
+ * (Next.js App Router restriction).  SignUpLoader is that thin client
+ * boundary; it owns the dynamic call and the loading skeleton.  All
+ * interactive UI is in sign-up-content.tsx and is never SSR-ed.
  */
-const SignUpContent = dynamic(() => import("./sign-up-content"), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-[100dvh] bg-[#0D0C14]" aria-hidden="true" />
-  ),
-});
+import SignUpLoader from "./sign-up-loader";
 
 export default function SignUpPage() {
-  return <SignUpContent />;
+  return <SignUpLoader />;
 }
