@@ -25,6 +25,15 @@ export async function updateCardOrder(items: CardUpdate[], boardId: string) {
       return { success: false, error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
     }
 
+    // Guard against LexoRank DoS: an attacker could move a card between two positions
+    // thousands of times, inflating the order string until it hits the DB column limit
+    // or causes string-sort lag. 64 chars is far above the normal maximum (32) used by
+    // automation-engine.ts, so this only fires for maliciously crafted payloads.
+    const MAX_ORDER_LEN = 64;
+    if (items.some((i) => typeof i.order !== "string" || i.order.length > MAX_ORDER_LEN)) {
+      return { success: false, error: "Invalid order values — please reload the page." };
+    }
+
     const dal = await createDAL(ctx);
 
     if (isDemoContext(ctx)) {

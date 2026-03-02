@@ -24,6 +24,14 @@ export async function updateListOrder(items: ListUpdate[], boardId: string) {
       return { success: false, error: `Too many requests. Try again in ${Math.ceil(rl.resetInMs / 1000)}s.` };
     }
 
+    // Guard against LexoRank DoS: reject abnormally long order strings.
+    // Normal LexoRank strings are 1–32 chars. Anything beyond the cap is either a bug
+    // or a deliberate attempt to poison the ordering system for all board members.
+    const MAX_ORDER_LEN = 64;
+    if (items.some((i) => typeof i.order !== "string" || i.order.length > MAX_ORDER_LEN)) {
+      return { success: false, error: "Invalid order values — please reload the page." };
+    }
+
     const dal = await createDAL(ctx);
 
     if (isDemoContext(ctx)) {

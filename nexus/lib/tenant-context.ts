@@ -185,24 +185,63 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     });
 
     if (orgExists) {
-      await db.organizationUser
-        .create({
+      // ── Atomic check-then-create (RBAC desync hardening) ──────────────────
+      // Wrap in a transaction so it's all-or-nothing.
+      //
+      // Without a transaction the following race is possible:
+      //   1. Both requests pass the outer membership=null check.
+      //   2. An admin creates the row with isActive=false between our check and create.
+      //   3. Our bare .create() overwrites the admin's row → ghost membership bypass.
+      //
+      // Inside the transaction we:
+      //   a) Re-check for an existing row (prevents TOCTOU).
+      //   b) If found — use its actual DB-stored isActive/status, never JWT defaults.
+      //   c) If not found — create it and return the new row.
+      const healedMembership = await db.$transaction(async (tx) => {
+        // Re-check inside the transaction — atomic
+        const existing = await tx.organizationUser.findFirst({
+          where: { userId: user!.id, organizationId: orgId },
+          select: { id: true, isActive: true, status: true, role: true },
+        });
+        if (existing) return existing; // Row exists — return actual DB values
+
+        // Row doesn't exist yet — create it
+        return tx.organizationUser.create({
           data: {
-            userId: user.id,
+            userId: user!.id,
             organizationId: orgId,
             role: tenantRole,
             isActive: true,
             status: "ACTIVE",
             joinedAt: new Date(),
           },
-        })
-        .catch((err: unknown) => {
-          // Only swallow unique-constraint violations — two concurrent requests both
-          // tried to create the same row; the second fails safely because the first
-          // already created it. Re-throw all other errors (connection failures, etc.)
-          const message = err instanceof Error ? err.message : String(err);
-          if (!message.toLowerCase().includes("unique constraint")) throw err;
+          select: { id: true, isActive: true, status: true, role: true },
         });
+      }).catch(async (err: unknown) => {
+        // Re-throw TenantErrors as-is
+        if (err instanceof TenantError) throw err;
+        // Swallow unique-constraint only — extreme race: two concurrent requests both
+        // passed the inner findFirst check simultaneously. Re-fetch to get actual state.
+        const message = err instanceof Error ? err.message : String(err);
+        if (!message.toLowerCase().includes("unique constraint")) throw err;
+        return db.organizationUser.findFirst({
+          where: { userId: user!.id, organizationId: orgId },
+          select: { id: true, isActive: true, status: true, role: true },
+        });
+      });
+
+      // Enforce the actual DB-stored state — prevents ghost membership bypass
+      if (healedMembership) {
+        if (!healedMembership.isActive) {
+          throw new TenantError("FORBIDDEN", "Not an active member of this organization");
+        }
+        if (healedMembership.status === "SUSPENDED") {
+          throw new TenantError("FORBIDDEN", "Your organization membership has been suspended");
+        }
+        // Use DB-stored role + status, not JWT-derived defaults
+        tenantRole = healedMembership.role as TenantRole;
+        memberStatus = healedMembership.status as MembershipStatus;
+      }
     }
   }
 

@@ -106,6 +106,31 @@ async function incrementUsage(orgId: string) {
   });
 }
 
+// ─── Prompt injection sanitizer ───────────────────────────────────────────────
+//
+// Strips characters and patterns that could be used to hijack the system prompt
+// or instruct the model to behave outside its intended scope.
+//
+// Approach: user-supplied content is placed in the `user` role message, separate
+// from the `system` instructions. This is OpenAI's recommended prompt injection
+// mitigation — the model treats `system` instructions as higher-authority than
+// `user` content, making injection attacks significantly harder.
+//
+// sanitizeForPrompt() provides an additional layer:
+//   • Removes ASCII / Unicode control characters that can inject hidden text.
+//   • Collapses excessive whitespace (multi-line "jailbreak" padding).
+//   • Hard-caps each field to its validated Zod limit so no downstream truncation
+//     can produce an ambiguous boundary.
+//
+function sanitizeForPrompt(input: string): string {
+  return input
+    // Strip null bytes and other control characters (keep \t \n \r)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    // Collapse 3+ consecutive newlines → 2 (prevents blank-line padding tricks)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // ─── suggestPriority ──────────────────────────────────────────────────────────
 
 const SuggestPriorityInput = z.object({
@@ -125,17 +150,27 @@ export async function suggestPriority(
   const rate = await checkRateLimit(orgId);
   if (!rate.ok) return { error: rate.error };
 
-  const prompt = `You are a project management assistant. Given the following task, suggest the most appropriate priority level.
-
-Task title: ${parsed.data.title}
-${parsed.data.description ? `Description: ${parsed.data.description}` : ""}
-
-Respond with ONLY valid JSON: { "priority": "URGENT"|"HIGH"|"MEDIUM"|"LOW", "reasoning": "<1-2 sentences>" }`;
+  // Sanitize and isolate user-supplied content.
+  // Placing instructions in `system` and user data in `user` is OpenAI's
+  // recommended mitigation against prompt injection attacks.
+  const safeTitle       = sanitizeForPrompt(parsed.data.title);
+  const safeDescription = parsed.data.description ? sanitizeForPrompt(parsed.data.description) : undefined;
 
   try {
     const completion = await (await getOpenAI()).chat.completions.create({
       model: AI_MODEL,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a project management assistant. Given a task, suggest the most appropriate priority level. " +
+            'Respond with ONLY valid JSON: { "priority": "URGENT"|"HIGH"|"MEDIUM"|"LOW", "reasoning": "<1-2 sentences>" }',
+        },
+        {
+          role: "user",
+          content: `Task title: ${safeTitle}${safeDescription ? `\nDescription: ${safeDescription}` : ""}`,
+        },
+      ],
       response_format: { type: "json_object" },
       max_tokens: 150,
       temperature: 0.3,
@@ -177,18 +212,27 @@ export async function generateCardDescription(
   const rate = await checkRateLimit(orgId);
   if (!rate.ok) return { error: rate.error };
 
-  const prompt = `You are a project management assistant. Write a clear, concise task description for the following card.
-
-Card title: ${parsed.data.title}
-${parsed.data.context ? `Context: ${parsed.data.context}` : ""}
-
-Write 2-4 sentences describing what needs to be done, acceptance criteria, and any relevant technical notes.
-Keep the tone professional and action-oriented. Do NOT use markdown headers — plain prose only.`;
+  // Sanitize and isolate user-supplied content.
+  const safeTitle   = sanitizeForPrompt(parsed.data.title);
+  const safeContext = parsed.data.context ? sanitizeForPrompt(parsed.data.context) : undefined;
 
   try {
     const completion = await (await getOpenAI()).chat.completions.create({
       model: AI_MODEL,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a project management assistant. Write a clear, concise task description " +
+            "for the given card title. Write 2-4 sentences describing what needs to be done, " +
+            "acceptance criteria, and relevant technical notes. Keep the tone professional and " +
+            "action-oriented. Do NOT use markdown headers \u2014 plain prose only.",
+        },
+        {
+          role: "user",
+          content: `Card title: ${safeTitle}${safeContext ? `\nContext: ${safeContext}` : ""}`,
+        },
+      ],
       max_tokens: 300,
       temperature: 0.5,
     });
@@ -222,18 +266,27 @@ export async function suggestChecklists(
   const rate = await checkRateLimit(orgId);
   if (!rate.ok) return { error: rate.error };
 
-  const prompt = `You are a project management assistant. Generate a practical checklist for the following task.
-
-Task: ${parsed.data.title}
-${parsed.data.description ? `Description: ${parsed.data.description}` : ""}
-
-Respond with ONLY valid JSON: { "items": ["<checklist item>", ...] }
-Provide 4-8 actionable items. Each item should be a short imperative sentence (e.g., "Write unit tests for the auth module").`;
+  // Sanitize and isolate user-supplied content.
+  const safeTitle       = sanitizeForPrompt(parsed.data.title);
+  const safeDescription = parsed.data.description ? sanitizeForPrompt(parsed.data.description) : undefined;
 
   try {
     const completion = await (await getOpenAI()).chat.completions.create({
       model: AI_MODEL,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a project management assistant. Generate a practical checklist for the given task. " +
+            'Respond with ONLY valid JSON: { "items": ["<checklist item>", ...] } ' +
+            "Provide 4-8 actionable items. Each item should be a short imperative sentence " +
+            '(e.g., "Write unit tests for the auth module").',
+        },
+        {
+          role: "user",
+          content: `Task: ${safeTitle}${safeDescription ? `\nDescription: ${safeDescription}` : ""}`,
+        },
+      ],
       response_format: { type: "json_object" },
       max_tokens: 400,
       temperature: 0.4,

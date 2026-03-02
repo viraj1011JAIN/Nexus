@@ -36,7 +36,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Handle different event types
+  // ── Replay attack guard ─────────────────────────────────────────────────────────
+  // Reject events more than 5 minutes old. Stripe's own SDK already verifies the
+  // `stripe-signature` timestamp within ±300 s, but that window is only enforced
+  // when STRIPE_WEBHOOK_TOLERANCE_S is set. Explicitly checking here ensures that
+  // an attacker who captures a valid payload — even a checkout.completed event
+  // — cannot replay it later to reinstate a cancelled subscription.
+  const EVENT_MAX_AGE_S = 300;
+  const eventAgeSec = Math.floor(Date.now() / 1000) - event.created;
+  if (eventAgeSec > EVENT_MAX_AGE_S) {
+    logger.warn(`[WEBHOOK] Stale event rejected: ${event.type} age=${eventAgeSec}s id=${event.id}`);
+    // Return 200 so Stripe doesn't keep retrying — this is a policy rejection, not an error.
+    return NextResponse.json({ received: true });
+  }
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -197,8 +209,11 @@ export async function POST(req: NextRequest) {
         });
 
         if (org) {
-          await db.organization.update({
-            where: { id: org.id },
+          // TOCTOU guard: only downgrade if THIS subscription is still the active one.
+          // Prevents a replay race where subscription.deleted (old sub) processes AFTER
+          // checkout.session.completed (new sub), wiping the newly-granted PRO status.
+          await db.organization.updateMany({
+            where: { id: org.id, stripeSubscriptionId: subscription.id },
             data: {
               subscriptionPlan: "FREE",
               stripeSubscriptionStatus: "canceled",
@@ -211,8 +226,9 @@ export async function POST(req: NextRequest) {
           logger.webhook("customer.subscription.deleted", "success", { orgId: org.id });
         }
       } else {
-        await db.organization.update({
-          where: { id: orgId },
+        // TOCTOU guard: only downgrade if THIS subscription is still the active one.
+        await db.organization.updateMany({
+          where: { id: orgId, stripeSubscriptionId: subscription.id },
           data: {
             subscriptionPlan: "FREE",
             stripeSubscriptionStatus: "canceled",
