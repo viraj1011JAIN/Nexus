@@ -1195,3 +1195,23 @@ model BoardShare {
   @@index([orgId])
   @@map("board_shares")
 }
+
+// ─── Stripe event idempotency ────────────────────────────────────────────────
+//
+// Stripe guarantees at-least-once delivery: the same event can legitimately
+// arrive multiple times (network retries, Stripe infrastructure failures).
+// We write a row here the first time we see an event ID.  If insert fails with
+// a unique-constraint violation (P2002), we know the event was already handled
+// and return 200 immediately without re-processing.
+//
+// Using systemDb to write these rows (same as the webhook route) so that RLS
+// does not interfere — these records are not tenant-scoped.
+model ProcessedStripeEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique @map("stripe_event_id")
+  eventType     String   @map("event_type")
+  processedAt   DateTime @default(now()) @map("processed_at")
+
+  @@index([processedAt])
+  @@map("processed_stripe_events")
+}

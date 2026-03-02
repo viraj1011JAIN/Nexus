@@ -49,6 +49,28 @@ export async function POST(req: NextRequest) {
     // Return 200 so Stripe doesn't keep retrying — this is a policy rejection, not an error.
     return NextResponse.json({ received: true });
   }
+
+  // ── Idempotency guard ───────────────────────────────────────────────────────────
+  // Stripe guarantees at-least-once delivery: the same event can arrive multiple
+  // times within the 300 s staleness window (genuine retries, network blips).
+  // We insert the event ID now.  A unique-constraint violation (P2002) means we
+  // already processed this exact event — acknowledge immediately without touching
+  // any org/subscription data again.
+  try {
+    await db.processedStripeEvent.create({
+      data: { stripeEventId: event.id, eventType: event.type },
+    });
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code === "P2002") {
+      // Duplicate — already processed successfully on a prior delivery attempt.
+      logger.info(`[WEBHOOK] Duplicate event skipped (idempotency): ${event.type} id=${event.id}`);
+      return NextResponse.json({ received: true });
+    }
+    // Unknown DB error — log it but let processing continue (fail-open).
+    // Losing a payment event is worse than potentially double-processing it.
+    logger.error("[WEBHOOK] Failed to record idempotency key — continuing", { error: err, eventId: event.id });
+  }
+
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;

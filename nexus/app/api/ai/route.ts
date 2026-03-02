@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Rate-limit: 20 AI requests per user per minute (protects OpenAI spend)
-  const rl = rateLimit(`ai:${userId}`, 20, 60_000);
+  const rl = await rateLimit(`ai:${userId}`, 20, 60_000);
   if (!rl.ok) {
     const retryAfterSec = Math.ceil(rl.retryAfterMs / 1000);
     return NextResponse.json(

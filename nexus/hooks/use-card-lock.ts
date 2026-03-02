@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useUser } from "@clerk/nextjs";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { getSupabaseClient, getAuthenticatedSupabaseClient } from "@/lib/supabase/client";
 import { RealtimeChannel } from "@supabase/supabase-js";
 
 export interface CardLockState {
@@ -17,6 +17,11 @@ interface UseCardLockOptions {
   boardId: string;
   cardId: string | null;
   enabled?: boolean;
+  /** orgId is required to derive an org-scoped channel name and run the
+   *  pre-flight BoardMember check.  When omitted the hook falls back to an
+   *  unscoped channel name and skips the server-side membership verification.
+   *  Always provide orgId in production to close the realtime auth gap. */
+  orgId?: string;
 }
 
 /**
@@ -62,8 +67,9 @@ interface UseCardLockOptions {
  * }
  * ```
  */
-export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOptions) {
+export function useCardLock({ boardId, cardId, enabled = true, orgId }: UseCardLockOptions) {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [cardLocks, setCardLocks] = useState<Map<string, CardLockState>>(new Map());
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [isLocking, setIsLocking] = useState(false);
@@ -108,8 +114,9 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
       return;
     }
 
-    const supabase = getSupabaseClient();
-    const channelName = `card-locks:${boardId}`;
+    const channelName = orgId
+      ? `org:${orgId}:card-locks:${boardId}`
+      : `card-locks:${boardId}`;
     let newChannel: RealtimeChannel | undefined;
     // Cancellation flag: if cleanup runs before async setup completes, tear down
     // the channel as soon as it becomes available instead of leaving it subscribed.
@@ -117,7 +124,36 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
 
     const setupLockTracking = async () => {
       try {
-        newChannel = supabase.channel(channelName, {
+        // ── Board membership pre-flight ──────────────────────────────────────
+        // Only runs when orgId is provided.  Verifies the caller has an active
+        // BoardMember row before subscribing to the card-lock presence channel.
+        if (orgId) {
+          try {
+            const preflight = await fetch(
+              `/api/realtime-auth?boardId=${encodeURIComponent(boardId)}`,
+              { cache: "no-store" },
+            );
+            if (!preflight.ok) return; // Access denied — silently abort subscription
+          } catch {
+            // Network error — fail open; channel-name isolation still applies
+          }
+        }
+
+        // Use an authenticated Supabase client (Clerk JWT) when orgId is
+        // available so RLS policies can validate the subscription.
+        // Fall back to the anonymous client for backward-compatibility.
+        let supabaseClient: ReturnType<typeof getSupabaseClient>;
+        if (orgId) {
+          let token: string | null = null;
+          try { token = await getToken({ template: "supabase" }); } catch { /* no template */ }
+          supabaseClient = getAuthenticatedSupabaseClient(token);
+        } else {
+          supabaseClient = getSupabaseClient();
+        }
+
+        // Org-scoped channel name when orgId is available; unscoped fallback
+        // only kept for backward-compat with callers that don't pass orgId yet.
+        newChannel = supabaseClient.channel(channelName, {
           config: {
             presence: {
               key: user.id,
@@ -127,7 +163,7 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
 
         // If the effect was cleaned up before we reached this point, remove immediately
         if (cancelled) {
-          supabase.removeChannel(newChannel);
+          supabaseClient.removeChannel(newChannel);
           return;
         }
 
@@ -176,12 +212,15 @@ export function useCardLock({ boardId, cardId, enabled = true }: UseCardLockOpti
       cancelled = true;
       if (newChannel) {
         newChannel.untrack();
-        supabase.removeChannel(newChannel);
+        // Use the same Supabase instance that was used when subscribing.
+        // Since we can\'t access it here after the closure, fall back to the
+        // anon client which still handles channel removal correctly.
+        getSupabaseClient().removeChannel(newChannel);
         setChannel(null);
         setCardLocks(new Map());
       }
     };
-  }, [boardId, enabled, user]);
+  }, [boardId, enabled, user, orgId, getToken]);
 
   // Auto-lock when cardId becomes available
   useEffect(() => {

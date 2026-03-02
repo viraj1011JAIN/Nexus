@@ -94,7 +94,25 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
 
     const setupPresence = async () => {
       try {
-        // Attempt to get a Supabase-scoped JWT from Clerk.
+        // ── Board membership pre-flight ───────────────────────────────────────
+        // Verify the caller still has an active BoardMember row for this board
+        // before opening a Supabase channel.  The Clerk JWT only encodes
+        // org-level membership; this check adds the board-level gate.
+        // Fail closed: if the server returns anything other than 200, abort.
+        try {
+          const preflight = await fetch(
+            `/api/realtime-auth?boardId=${encodeURIComponent(boardId)}`,
+            { cache: "no-store" },
+          );
+          if (!preflight.ok) {
+            setError("Board access denied — you may have been removed from this board");
+            return;
+          }
+        } catch {
+          // Network error during preflight — fail open so the app stays usable
+          // on transient connectivity issues; the channel-name orgId prefix still
+          // provides defence-in-depth isolation.
+        }
         // Falls back to null if no 'supabase' JWT template is configured in the
         // Clerk dashboard — Presence will still work via channel-name isolation.
         let token: string | null = null;
