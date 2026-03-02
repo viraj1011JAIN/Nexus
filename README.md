@@ -98,6 +98,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 | **LexoRank Ordering + Auto-Rebalancer** | `lib/lexorank.ts` + `/api/cron/lexorank-rebalance` | String-based card ordering with a weekly cron job that re-normalises long order strings before the 64-char DoS limit is hit |
 | **SSRF Blocklist on Webhooks** | `lib/webhook-delivery.ts` | User-supplied webhook URLs are validated against RFC-1918 + loopback ranges before any outbound HTTP call |
 | **Audit Log with Diffs** | `lib/create-audit-log.ts` | Every mutation records `previousValues` / `newValues` diffs — not just "action taken" |
+| **Immutable Forensic Audit Sink** | `lib/audit-sink.ts` + `supabase-audit-immutability.sql` | Dual-write: every audit event is streamed to Axiom (append-only, no delete API) via `after()` + a Postgres `BEFORE DELETE OR UPDATE` trigger blocks mutations from all roles including `service_role` — attacker can't erase evidence even with a leaked DB credential |
 | **Stripe Idempotency Guard** | `app/api/webhook/stripe/route.ts` | `ProcessedStripeEvent` table + Prisma `P2002` guard prevents double-processing replayed webhooks |
 | **Supabase Channel Pre-Flight** | `hooks/use-presence.ts` | Calls `/api/realtime-auth` before opening any WebSocket channel — board membership verified server-side |
 | **Presence Throttle + Visibility API** | `hooks/use-presence.ts` | Presence unsubscribes immediately when the user switches away from the tab; throttled state sync prevents N² event storms |
@@ -2222,7 +2223,29 @@ Every mutation captured via `createAuditLog()`:
 
 Failures captured in Sentry — never silently swallowed.
 
-### Security Headers
+### Audit Forensic Integrity (Immutable Append-Only Logging)
+
+Storing audit logs exclusively in the same database they monitor creates a forensic gap: a compromised credential can `DELETE FROM audit_logs` and erase evidence of the breach. NEXUS addresses this with three independent layers of protection:
+
+**Layer 1 — Prisma (in-app)** — `lib/create-audit-log.ts`
+The existing Postgres write to the org's shard. Used for the in-app audit trail UI (activity feed, org admin history). Present on every shard.
+
+**Layer 2 — Axiom (forensic copy)** — `lib/audit-sink.ts`
+Every audit event is streamed to Axiom (append-only cloud log store) via `after()` — the call runs after the response is already sent and never delays the parent server action. Axiom's ingest API has no DELETE operation; the application token is scoped to Ingest-Only, so even a fully leaked `AXIOM_API_KEY` can only append new events, never erase existing ones. Set `AXIOM_DATASET` and `AXIOM_API_KEY` to enable.
+
+**Layer 3 — Postgres trigger** — `supabase-audit-immutability.sql`
+A `BEFORE DELETE OR UPDATE` trigger (`enforce_audit_log_immutability`) fires before any mutation on `audit_logs` and raises a `restrict_violation` exception (SQLSTATE 23001). This runs for **all** Postgres roles including `service_role` — it cannot be bypassed by any application-tier credential. Only a Postgres superuser with direct server access could disable it.
+
+Testing the guard:
+```sql
+-- Should throw: "NEXUS: audit_logs.DELETE is forbidden"
+DELETE FROM audit_logs LIMIT 1;
+
+-- Should throw: "NEXUS: audit_logs.UPDATE is forbidden"
+UPDATE audit_logs SET entity_title = 'tampered' WHERE id = (SELECT id FROM audit_logs LIMIT 1);
+```
+
+
 
 Configured in `next.config.ts` for all routes:
 
@@ -3129,6 +3152,11 @@ graph TB
 
 | Date | Commit | Change |
 |---|---|---|
+| 2026-03-02 | `5394b76` | Feat: `lib/audit-sink.ts` (NEW) — immutable append-only audit log sink; streams every audit event to Axiom via `after()` (non-blocking, post-response); Axiom ingest token is Ingest-Only scoped so a leaked key can append but never delete; graceful no-op when unconfigured, production `logger.warn` + Sentry capture on sink failure |
+| 2026-03-02 | `5394b76` | Security: `lib/create-audit-log.ts` — dual-write: Prisma shard write (existing) + `streamToAuditSink()` via `after()` so forensic copy is always attempted without delaying the parent server action |
+| 2026-03-02 | `5394b76` | Security: `supabase-audit-immutability.sql` (NEW) — `BEFORE DELETE OR UPDATE` Postgres trigger `enforce_audit_log_immutability` on `audit_logs`; fires for all DB roles including `service_role`; raises SQLSTATE `restrict_violation` (23001); idempotent (`CREATE OR REPLACE` + `DROP TRIGGER IF EXISTS`) |
+| 2026-03-02 | `5394b76` | Test: `__tests__/unit/audit/audit-forensic-integrity.test.ts` (NEW, 13 cases) — covers: isAuditSinkConfigured, silent dev skip, production warn, correct HTTP request, `_time` ISO serialisation, change-delta forwarding, HTTP 4xx/network-error graceful handling, Sentry capture, DB trigger error simulation for DELETE and UPDATE |
+| 2026-03-02 | `5394b76` | Feat: dual-write migration script (`scripts/migrate-org-to-shard.ts`) + PgBouncer guard (`lib/shard-router.ts` `verifyAllShardConnectionStrings`) + README master-shard catalog docs |
 | 2026-03-02 | `88dd67e` | Feat: `lib/shard-router.ts` — FNV-1a 32-bit consistent-hashing shard router with per-shard PrismaClient pool, 30 s health cache, automatic failover to next healthy shard, fail-open to shard 0 on total outage; `getDbForOrg(orgId)` is the public API |
 | 2026-03-02 | `88dd67e` | Feat: `app/api/health/shards/route.ts` — `GET /api/health/shards` endpoint (Bearer `CRON_SECRET`); returns per-shard health map with HTTP 200 (all healthy), 207 (partial), or 503 (all down) |
 | 2026-03-02 | `88dd67e` | Feat: `lib/shard-router.ts` `verifyAllShardConnectionStrings()` — PgBouncer guard logs WARN at module-load time if any `SHARD_n_DATABASE_URL` lacks port 6543 or `?pgbouncer=true`; prevents connection-limit exhaustion under serverless load |

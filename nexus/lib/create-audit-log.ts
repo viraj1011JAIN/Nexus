@@ -1,9 +1,11 @@
+import { after } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db, getDbForOrg } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { captureSentryException } from "@/lib/sentry-helpers";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
 import { getRequestContext } from "@/lib/request-context";
+import { streamToAuditSink } from "@/lib/audit-sink";
 
 interface Props {
   entityId: string;
@@ -38,7 +40,7 @@ export const createAuditLog = async (props: Props) => {
     // the primary DATABASE_URL — identical to using `db` directly.
     const shardClient = await getDbForOrg(orgId);
 
-    await shardClient.auditLog.create({
+    const log = await shardClient.auditLog.create({
       data: {
         orgId,
         entityId,
@@ -55,6 +57,30 @@ export const createAuditLog = async (props: Props) => {
         newValues: props.newValues ? (props.newValues as Record<string, string>) : undefined,
       },
     });
+
+    // ── Layer 2: Immutable forensic copy via Axiom ────────────────────────
+    // Runs after the response is already sent (non-blocking via `after()`).
+    // A sink failure never rolls back or delays the parent server action.
+    // See lib/audit-sink.ts for the full architecture rationale.
+    after(() =>
+      streamToAuditSink({
+        id:             log.id,
+        orgId,
+        boardId:        props.boardId ?? null,
+        action,
+        entityId,
+        entityType,
+        entityTitle,
+        userId:         user.id,
+        userName:       `${user.firstName} ${user.lastName}`,
+        userImage:      user.imageUrl,
+        ipAddress:      reqCtx.ipAddress,
+        userAgent:      reqCtx.userAgent,
+        previousValues: props.previousValues ?? null,
+        newValues:      props.newValues ?? null,
+        createdAt:      log.createdAt,
+      }),
+    );
     
   } catch (error) {
     // Audit log failure is a compliance gap — log loudly and alert via Sentry.
