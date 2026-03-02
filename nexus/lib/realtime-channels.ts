@@ -72,6 +72,24 @@ export function boardAnalyticsChannel(orgId: string, boardId: string): string {
   return `org:${orgId}:analytics:${boardId}`;
 }
 
+// ── Card-level channels ────────────────────────────────────────────────────
+
+/**
+ * Yjs CRDT broadcast channel for a specific card's rich-text description.
+ *
+ * All connected clients subscribed to this channel exchange Y.js encoded
+ * state updates via Supabase Realtime broadcast so that concurrent edits
+ * are merged automatically without data loss.
+ *
+ * @example
+ * const channel = supabase.channel(cardYjsChannel(orgId, cardId));
+ */
+export function cardYjsChannel(orgId: string, cardId: string): string {
+  validateOrgId(orgId);
+  validateEntityId(cardId, "cardId");
+  return `org:${orgId}:card:${cardId}:yjs`;
+}
+
 // ── Organisation-level channels ────────────────────────────────────────────
 
 /**

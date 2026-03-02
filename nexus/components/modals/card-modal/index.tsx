@@ -45,7 +45,7 @@ import { getCard } from "@/actions/get-card";
 import { updateCard } from "@/actions/update-card";
 import { Activity } from "./activity";
 import { getAuditLogs } from "@/actions/get-audit-logs";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { CollaborativeRichTextEditor } from "@/components/collaborative-rich-text-editor";
 // Dynamic imports for components that directly import server actions.
 // Static imports would pull server-action stub chunks into the client bundle;
 // when Turbopack invalidates those stubs on HMR the factory becomes stale,
@@ -970,7 +970,10 @@ export const CardModal = () => {
                           </button>
                         </div>
                         <div className={`cm-editor-wrap ${isDark ? "cm-editor-dark" : "cm-editor-light"}`}>
-                          <RichTextEditor
+                          {/* key={id} forces a full remount when the active card changes,
+                              ensuring each card gets its own Y.Doc + Supabase channel. */}
+                          <CollaborativeRichTextEditor
+                            key={id!}
                             content={cardData.description || ""}
                             onSave={handleSaveDescription}
                             placeholder="Add a detailed description…"
@@ -979,6 +982,8 @@ export const CardModal = () => {
                             showToolbar
                             enableAutoSave
                             characterLimit={10000}
+                            orgId={organizationId}
+                            cardId={id!}
                           />
                         </div>
                         {!cardData.description && (
