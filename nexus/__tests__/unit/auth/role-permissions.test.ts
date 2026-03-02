@@ -34,7 +34,9 @@ jest.mock("react", () => ({
 
 jest.mock("@clerk/nextjs/server", () => ({
   auth: jest.fn(),
-  clerkClient: jest.fn(),
+  clerkClient: jest.fn().mockResolvedValue({
+    users: { getUser: jest.fn().mockResolvedValue({ id: "user_test", firstName: "Test", emailAddresses: [] }) },
+  }),
 }));
 
 jest.mock("@/lib/db", () => ({
@@ -126,6 +128,55 @@ jest.mock("@/lib/stripe", () => ({
 jest.mock("@/actions/template-actions", () => ({
   createBoardFromTemplate: jest.fn(),
 }));
+
+// Board-permissions mock: emulates the real role/permission matrix so that
+// RBAC integration tests pass without hitting the DB.
+jest.mock("@/lib/board-permissions", () => {
+  // Minimum org role required for each board-level permission.
+  const ROLE_HIERARCHY: Record<string, number> = {
+    GUEST: 0, VIEWER: 0, MEMBER: 1, ADMIN: 2, OWNER: 3,
+  };
+  const MIN_ROLE_FOR_PERM: Record<string, string> = {
+    BOARD_VIEW: "MEMBER",
+    BOARD_EDIT_SETTINGS: "ADMIN",
+    BOARD_DELETE: "OWNER",
+    BOARD_SHARE: "ADMIN",
+    BOARD_MANAGE_MEMBERS: "ADMIN",
+    LIST_CREATE: "MEMBER",
+    LIST_EDIT: "MEMBER",
+    LIST_DELETE: "ADMIN",
+    LIST_REORDER: "MEMBER",
+    CARD_CREATE: "MEMBER",
+    CARD_VIEW: "MEMBER",
+    CARD_EDIT: "MEMBER",
+    CARD_DELETE: "ADMIN",
+    CARD_MOVE: "MEMBER",
+    CARD_ASSIGN: "MEMBER",
+    CARD_COMMENT: "MEMBER",
+    CARD_EDIT_OWN_COMMENT: "MEMBER",
+    CARD_DELETE_OWN_COMMENT: "MEMBER",
+    CARD_DELETE_ANY_COMMENT: "ADMIN",
+    AUTOMATION_VIEW: "MEMBER",
+    AUTOMATION_MANAGE: "ADMIN",
+    ANALYTICS_VIEW: "MEMBER",
+    ANALYTICS_EXPORT: "ADMIN",
+  };
+  return {
+    requireBoardPermission: jest.fn().mockImplementation(
+      async (ctx: { membership?: { role?: string } }, _boardId: string, perm: string) => {
+        const { TenantError: TE } = jest.requireActual<typeof import("@/lib/tenant-context")>("@/lib/tenant-context");
+        const role = ctx?.membership?.role ?? "GUEST";
+        const minRole = MIN_ROLE_FOR_PERM[perm] ?? "OWNER";
+        if ((ROLE_HIERARCHY[role] ?? 0) < (ROLE_HIERARCHY[minRole] ?? 3)) {
+          throw new TE("FORBIDDEN", `Requires ${minRole} role or higher`);
+        }
+        return { role, permissions: new Set([perm]) };
+      }
+    ),
+    getBoardMembership: jest.fn().mockResolvedValue(null),
+    clearPermissionCache: jest.fn(),
+  };
+});
 
 // ─── IMPORTS (after all mock declarations) ────────────────────────────────────
 

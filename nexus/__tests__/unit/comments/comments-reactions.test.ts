@@ -142,7 +142,12 @@ jest.mock("@/lib/create-audit-log",  () => ({ createAuditLog: jest.fn().mockReso
 jest.mock("@/lib/email",             () => ({ sendMentionEmail: jest.fn().mockResolvedValue(undefined) }));
 jest.mock("@/lib/event-bus",         () => ({ emitCardEvent: jest.fn() }));
 jest.mock("@/actions/notification-actions", () => ({ createNotification: jest.fn().mockResolvedValue(undefined) }));
-jest.mock("@clerk/nextjs/server",    () => ({ auth: jest.fn().mockResolvedValue({ userId: "user_clerk_0001", orgId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }) }));
+jest.mock("@clerk/nextjs/server",    () => ({
+  auth: jest.fn().mockResolvedValue({ userId: "user_clerk_0001", orgId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }),
+  clerkClient: jest.fn().mockResolvedValue({
+    users: { getUser: jest.fn().mockResolvedValue({ id: "user_clerk_0001", firstName: "Alice", emailAddresses: [] }) },
+  }),
+}));
 jest.mock("next/cache",              () => ({ revalidatePath: jest.fn() }));
 jest.mock("next/server",             () => ({ after: jest.fn((fn: () => void) => fn()) }));
 
@@ -169,6 +174,23 @@ function resetMocks() {
 
   // Restore Promise-returning mocks so `.catch()` calls in the source don't throw TypeError.
   // resetAllMocks() strips implementations; these must be re-established each test.
+
+  // Re-establish Clerk client mock so actions that call clerkClient().users.getUser() work.
+  const clerk = jest.requireMock("@clerk/nextjs/server") as {
+    auth: jest.Mock;
+    clerkClient: jest.Mock;
+  };
+  clerk.auth.mockResolvedValue({ userId: "user_clerk_0001", orgId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
+  clerk.clerkClient.mockResolvedValue({
+    users: {
+      getUser: jest.fn().mockResolvedValue({
+        id: "user_clerk_0001",
+        firstName: "Alice",
+        emailAddresses: [{ emailAddress: "alice@example.com" }],
+      }),
+    },
+  });
+
   const em    = jest.requireMock("@/lib/email") as { sendMentionEmail: jest.Mock };
   em.sendMentionEmail.mockResolvedValue(undefined);
 

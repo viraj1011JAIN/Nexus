@@ -48,6 +48,7 @@ jest.mock("@/lib/db", () => ({
     organization: {
       findUnique: jest.fn(),
       create:     jest.fn(),
+      upsert:     jest.fn(),
     },
     organizationUser: {
       findFirst: jest.fn(),
@@ -75,6 +76,9 @@ jest.mock("@/lib/db", () => ({
     // Default: immediately invokes the callback with the same db mock as the
     // transaction proxy so tests can control tx.attachment.count separately.
     $transaction: jest.fn(),
+    boardMember: {
+      create: jest.fn(),
+    },
   },
   setCurrentOrgId: jest.fn().mockResolvedValue(undefined),
 }));
@@ -182,6 +186,12 @@ jest.mock("@/actions/template-actions", () => ({ createBoardFromTemplate: jest.f
 jest.mock("@/lib/lexorank", () => ({ generateNextOrder: jest.fn().mockReturnValue("m") }));
 jest.mock("@/lib/event-bus", () => ({ emitCardEvent: jest.fn().mockResolvedValue(undefined) }));
 
+jest.mock("@/lib/board-permissions", () => ({
+  requireBoardPermission: jest.fn().mockResolvedValue(undefined),
+  getBoardMembership: jest.fn().mockResolvedValue(null),
+  clearPermissionCache: jest.fn(),
+}));
+
 // ─── REAL IMPORTS (after all mock declarations) ────────────────────────────
 
 import { db }              from "@/lib/db";
@@ -196,6 +206,7 @@ import { POST }            from "@/app/api/upload/route";
 const mockGetTenantContext  = getTenantContext as jest.Mock;
 const mockOrgFindUnique     = db.organization.findUnique as jest.Mock;
 const mockOrgCreate         = db.organization.create     as jest.Mock;
+const mockOrgUpsert         = db.organization.upsert     as jest.Mock;
 const mockAttachmentCount   = db.attachment.count        as jest.Mock;
 const mockCardFindFirst     = db.card.findFirst          as jest.Mock;
 const _mockCardFindUnique    = (db as unknown as { card: { findUnique: jest.Mock } }).card?.findUnique as jest.Mock | undefined;
@@ -324,6 +335,13 @@ beforeEach(() => {
 
   // Default: org exists with 0 boards (FREE)
   mockOrgFindUnique.mockResolvedValue(fakeOrg(0));
+
+  // create-board.ts calls db.organization.upsert — delegate to findUnique so that
+  // tests written against mockOrgFindUnique automatically also control upsert.
+  mockOrgUpsert.mockImplementation(() => mockOrgFindUnique());
+
+  // create-board.ts calls db.boardMember.create after creating the board
+  (db.boardMember.create as jest.Mock).mockResolvedValue({ id: "bm-test" });
 
   // Default: no attachments
   mockAttachmentCount.mockResolvedValue(0);
@@ -591,15 +609,15 @@ describe("4.1 Board Limits", () => {
 
   // -----------------------------------------------------------------------
   describe("4.1.6 Auto-create org when missing", () => {
-    it("creates org row when findUnique returns null, then enforces limit", async () => {
-      mockOrgFindUnique.mockResolvedValue(null);
-      mockOrgCreate.mockResolvedValue(fakeOrg(0, "FREE")); // brand-new org
+    it("creates org row when upsert is called with brand-new org, then succeeds", async () => {
+      // create-board.ts uses db.organization.upsert (handles find-or-create atomically)
+      mockOrgUpsert.mockResolvedValue(fakeOrg(0, "FREE")); // brand-new org
 
       const result = await createBoard({ title: "First Board Ever" });
 
-      expect(mockOrgCreate).toHaveBeenCalledWith(
+      expect(mockOrgUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data:    expect.objectContaining({ id: ORG_ID }),
+          where:   expect.objectContaining({ id: ORG_ID }),
           include: { boards: true },
         })
       );
@@ -608,8 +626,7 @@ describe("4.1 Board Limits", () => {
     });
 
     it("auto-created org with 0 boards succeeds immediately", async () => {
-      mockOrgFindUnique.mockResolvedValue(null);
-      mockOrgCreate.mockResolvedValue(fakeOrg(0, "FREE"));
+      mockOrgUpsert.mockResolvedValue(fakeOrg(0, "FREE"));
 
       const result = await createBoard({ title: "New Org Board" });
 
@@ -1223,10 +1240,10 @@ describe("4.3 Attachment Limits", () => {
       expect((res.body as unknown as { error: string }).error).toMatch(/cardId is required/i);
     });
 
-    it("returns 413 when file exceeds the 10 MB limit", async () => {
-      // Create a file that reports size > 10 MB
+    it("returns 413 when file exceeds the 100 MB limit", async () => {
+      // Create a file that reports size > 100 MB (the actual production limit)
       const bigFile = new File(["x"], "big.pdf", { type: "application/pdf" });
-      Object.defineProperty(bigFile, "size", { value: 10 * 1024 * 1024 + 1 });
+      Object.defineProperty(bigFile, "size", { value: 100 * 1024 * 1024 + 1 });
 
       const formData = new FormData();
       formData.append("file", bigFile);
@@ -1238,14 +1255,15 @@ describe("4.3 Attachment Limits", () => {
       const res = await POST(req);
 
       expect(res.status).toBe(413);
-      expect((res.body as unknown as { error: string }).error).toMatch(/10 MB/i);
+      expect((res.body as unknown as { error: string }).error).toMatch(/100 MB/i);
     });
 
-    it("returns 415 for disallowed MIME type (e.g. video/mp4)", async () => {
-      const videoFile = new File(["x"], "video.mp4", { type: "video/mp4" });
+    it("returns 415 for disallowed MIME type (e.g. text/html)", async () => {
+      // text/html is not in ALLOWED_MIME_TYPES — it is a security risk if served inline
+      const htmlFile = new File(["x"], "page.html", { type: "text/html" });
 
       const formData = new FormData();
-      formData.append("file", videoFile);
+      formData.append("file", htmlFile);
       formData.append("cardId", CARD_ID);
 
       const req = makeUploadRequest({

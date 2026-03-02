@@ -154,6 +154,20 @@ jest.mock("@clerk/nextjs/server", () => ({
   auth: jest.fn().mockResolvedValue({ userId: "user_clerk_0001", orgId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }),
 }));
 
+// Mock tenant-context so import actions don't hit real DB via db.user.findUnique
+jest.mock("@/lib/tenant-context", () => ({
+  getTenantContext: jest.fn().mockResolvedValue({
+    userId:      "user_clerk_0001",
+    orgId:       "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    orgRole:     "org:admin",
+    internalUserId: "internal-uuid-user-0001",
+    membership:  { role: "ADMIN", isActive: true },
+  }),
+  requireRole:   jest.fn().mockResolvedValue(undefined),
+  isDemoContext: jest.fn().mockReturnValue(false),
+  TenantError:   class TenantError extends Error { constructor(public code: string, msg: string) { super(msg); } },
+}));
+
 jest.mock("@/lib/db", () => ({
   db: {
     board: {
@@ -174,6 +188,9 @@ jest.mock("@/lib/db", () => ({
     checklistItem: {
       create: jest.fn(),
     },
+    boardMember: {
+      create: jest.fn().mockResolvedValue({ id: "bm-import-1" }),
+    },
   },
 }));
 
@@ -184,6 +201,22 @@ jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
 function resetMocks() {
   const { auth } = jest.requireMock("@clerk/nextjs/server") as { auth: jest.Mock };
   auth.mockResolvedValue({ userId: "user_clerk_0001", orgId: ORG_A });
+
+  // Re-establish getTenantContext so importFromJSON works after jest.resetAllMocks().
+  const tenantCtx = jest.requireMock("@/lib/tenant-context") as {
+    getTenantContext: jest.Mock;
+    requireRole: jest.Mock;
+    isDemoContext: jest.Mock;
+  };
+  tenantCtx.getTenantContext.mockResolvedValue({
+    userId: "user_clerk_0001",
+    orgId: ORG_A,
+    orgRole: "org:admin",
+    internalUserId: "internal-uuid-user-0001",
+    membership: { role: "ADMIN", isActive: true },
+  });
+  tenantCtx.requireRole.mockResolvedValue(undefined);
+  tenantCtx.isDemoContext.mockReturnValue(false);
 
   (db.board.findFirst           as jest.Mock).mockResolvedValue(null);
   (db.board.create              as jest.Mock).mockResolvedValue({ id: NEW_BOARD_ID, orgId: ORG_A });
@@ -455,11 +488,12 @@ describe("Section 10A — Import / Export Actions", () => {
   // ─── 10.10 importFromJSON — unauthorized ─────────────────────────────────────
 
   describe("10.10 importFromJSON — unauthorized", () => {
-    it("should return { error: 'Unauthorized' } when no session", async () => {
-      const { auth } = jest.requireMock("@clerk/nextjs/server") as { auth: jest.Mock };
-      auth.mockResolvedValueOnce({ userId: null, orgId: null });
-      const result = await importFromJSON(NEXUS_PAYLOAD);
-      expect(result.error).toBe("Unauthorized");
+    it("throws when getTenantContext rejects (no active session)", async () => {
+      // importFromJSON uses getTenantContext (not auth directly);
+      // simulate unauthenticated by making getTenantContext throw.
+      const tenantCtx = jest.requireMock("@/lib/tenant-context") as { getTenantContext: jest.Mock };
+      tenantCtx.getTenantContext.mockRejectedValueOnce(new Error("UNAUTHENTICATED"));
+      await expect(importFromJSON(NEXUS_PAYLOAD)).rejects.toThrow();
       expect(db.board.create).not.toHaveBeenCalled();
     });
   });
@@ -553,11 +587,11 @@ describe("Section 10A — Import / Export Actions", () => {
       expect(result.error).toBe("Invalid Trello export file.");
     });
 
-    it("should return { error: 'Unauthorized' } when no session", async () => {
-      const { auth } = jest.requireMock("@clerk/nextjs/server") as { auth: jest.Mock };
-      auth.mockResolvedValueOnce({ userId: null, orgId: null });
-      const result = await importFromTrello(TRELLO_PAYLOAD);
-      expect(result.error).toBe("Unauthorized");
+    it("throws when getTenantContext rejects (no active session)", async () => {
+      // importFromTrello uses getTenantContext (not auth directly).
+      const tenantCtx = jest.requireMock("@/lib/tenant-context") as { getTenantContext: jest.Mock };
+      tenantCtx.getTenantContext.mockRejectedValueOnce(new Error("UNAUTHENTICATED"));
+      await expect(importFromTrello(TRELLO_PAYLOAD)).rejects.toThrow();
     });
   });
 
@@ -622,11 +656,11 @@ describe("Section 10A — Import / Export Actions", () => {
       expect(result.error).toBeDefined();
     });
 
-    it("should return { error: 'Unauthorized' } when no session", async () => {
-      const { auth } = jest.requireMock("@clerk/nextjs/server") as { auth: jest.Mock };
-      auth.mockResolvedValueOnce({ userId: null, orgId: null });
-      const result = await importFromJira(JIRA_XML_VALID);
-      expect(result.error).toBe("Unauthorized");
+    it("throws when getTenantContext rejects (no active session)", async () => {
+      // importFromJira uses getTenantContext (not auth directly).
+      const tenantCtx = jest.requireMock("@/lib/tenant-context") as { getTenantContext: jest.Mock };
+      tenantCtx.getTenantContext.mockRejectedValueOnce(new Error("UNAUTHENTICATED"));
+      await expect(importFromJira(JIRA_XML_VALID)).rejects.toThrow();
     });
   });
 

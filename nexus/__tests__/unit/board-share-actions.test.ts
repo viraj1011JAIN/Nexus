@@ -48,9 +48,18 @@ jest.mock("@/lib/db", () => ({
 
 jest.mock("@clerk/nextjs/server", () => ({
   auth: jest.fn().mockResolvedValue({ userId: "user_1", orgId: "org_1" }),
+  clerkClient: jest.fn().mockResolvedValue({
+    users: { getUser: jest.fn().mockResolvedValue({ id: "user_1", firstName: "Test", emailAddresses: [] }) },
+  }),
 }));
 
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
+
+jest.mock("@/lib/board-permissions", () => ({
+  requireBoardPermission: jest.fn().mockResolvedValue(undefined),
+  getBoardMembership: jest.fn().mockResolvedValue(null),
+  clearPermissionCache: jest.fn(),
+}));
 
 // scryptSync is from Node crypto; mock it for password-hash tests
 jest.mock("crypto", () => ({
