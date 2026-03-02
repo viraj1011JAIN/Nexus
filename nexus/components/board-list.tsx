@@ -219,10 +219,10 @@ export function BoardList() {
 
   const healthGradientClass =
     healthScore >= 70
-      ? "bg-linear-to-br from-[#059669] to-[#10B981]"
+      ? "bg-gradient-to-br from-[#059669] to-[#10B981]"
       : healthScore >= 40
-      ? "bg-linear-to-br from-[#D97706] to-[#F59E0B]"
-      : "bg-linear-to-br from-[#C0392B] to-[#F44369]";
+      ? "bg-gradient-to-br from-[#D97706] to-[#F59E0B]"
+      : "bg-gradient-to-br from-[#C0392B] to-[#F44369]";
 
   const maxBoardCards = Math.max(...boards.map((b) => b.cardCount), 1);
 
@@ -308,14 +308,14 @@ export function BoardList() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Name your new board..."
-              className="flex-1 h-10.5 px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
+              className="flex-1 h-[42px] px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
               disabled={isPending}
               autoComplete="off"
             />
             <button
               type="submit"
               disabled={isPending}
-              className="h-10.5 px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
+              className="h-[42px] px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
             >
               {isPending ? (
                 <div className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -328,7 +328,7 @@ export function BoardList() {
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
               aria-label="Toggle advanced options"
-              className="h-10.5 w-10.5 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
+              className="h-[42px] w-[42px] rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
             >
               <ChevronDown className={cn("h-4 w-4 transition-transform", showAdvanced && "rotate-180")} />
             </button>
@@ -644,7 +644,7 @@ export function BoardList() {
                     </div>
                     {/* Avatar stack */}
                     <div className="flex -space-x-1.5">
-                      {(["bg-linear-to-br from-[#7B2FF7] to-[#F107A3]", "bg-linear-to-br from-[#1A73E8] to-[#6C63FF]", "bg-linear-to-br from-[#059669] to-[#10B981]"] as const)
+                      {(["bg-gradient-to-br from-[#7B2FF7] to-[#F107A3]", "bg-gradient-to-br from-[#1A73E8] to-[#6C63FF]", "bg-gradient-to-br from-[#059669] to-[#10B981]"] as const)
                         .slice(0, Math.min(3, Math.max(1, board.listCount)))
                         .map((g, i) => (
                           <div

@@ -19,7 +19,8 @@ export default function DashboardLayout({
       <MobileNav />
       
       {/* Main Content */}
-      <main className="flex-1 h-full overflow-y-auto relative bg-background w-full">
+      {/* pt-16 offsets the fixed mobile header (h-16); removed on lg where sidebar is present */}
+      <main className="flex-1 h-full overflow-y-auto relative bg-background w-full pt-16 lg:pt-0">
         {children}
       </main>
     </div>

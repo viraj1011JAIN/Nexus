@@ -309,27 +309,32 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
         onValueChange={(v) => handleTabChange(v as TabValue)}
         className="w-full relative z-10 flex-1 flex flex-col overflow-hidden"
       >
+        {/* Tab bar: stacks vertically on mobile, side-by-side on sm+ */}
         <div
-          className="px-6 py-2 flex items-center justify-between gap-4 border-b border-black/7 dark:border-white/6 bg-[rgba(255,253,249,0.9)] dark:bg-[rgba(13,12,20,0.75)] backdrop-blur-md"
+          className="px-3 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 border-b border-black/7 dark:border-white/6 bg-[rgba(255,253,249,0.9)] dark:bg-[rgba(13,12,20,0.75)] backdrop-blur-md"
           ref={tabListRef as React.RefObject<HTMLDivElement>}
         >
-          <div className="flex flex-col gap-2">
-            <TabsList
-              className="h-auto p-1 gap-0.5 rounded-[10px] border border-black/7 dark:border-white/7 bg-black/4 dark:bg-white/4"
-            >
-              {TABS.map(({ value, label, Icon }, i) => (
-                <TabsTrigger
-                  key={value}
-                  value={value}
-                  data-value={value}
-                  className="group gap-1.5 text-[12.5px] rounded-[7px] px-3 py-1.5 data-[state=active]:shadow-none font-sans transition-all duration-180 text-[#9A8F85] dark:text-white/38 data-[state=active]:text-[#7B2FF7] dark:data-[state=active]:text-[#C084FC] data-[state=active]:bg-[rgba(123,47,247,0.08)] dark:data-[state=active]:bg-[rgba(123,47,247,0.15)] data-[state=active]:font-semibold"
-                  title={`${label} (${i + 1})`}
-                >
-                  <Icon className="h-3.5 w-3.5 opacity-60 group-data-[state=active]:opacity-100" />
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+          <div className="flex flex-col gap-2 min-w-0 flex-1">
+            {/* Horizontally scrollable on mobile so all 7 tabs are reachable */}
+            <div className="overflow-x-auto -mx-1 px-1">
+              <TabsList
+                className="h-auto p-1 gap-0.5 rounded-[10px] border border-black/7 dark:border-white/7 bg-black/4 dark:bg-white/4 w-max"
+              >
+                {TABS.map(({ value, label, Icon }, i) => (
+                  <TabsTrigger
+                    key={value}
+                    value={value}
+                    data-value={value}
+                    className="group gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12.5px] rounded-[7px] px-2 sm:px-3 py-1.5 data-[state=active]:shadow-none font-sans transition-all duration-180 text-[#9A8F85] dark:text-white/38 data-[state=active]:text-[#7B2FF7] dark:data-[state=active]:text-[#C084FC] data-[state=active]:bg-[rgba(123,47,247,0.08)] dark:data-[state=active]:bg-[rgba(123,47,247,0.15)] data-[state=active]:font-semibold"
+                    title={`${label} (${i + 1})`}
+                  >
+                    <Icon className="h-3.5 w-3.5 opacity-60 group-data-[state=active]:opacity-100 shrink-0" />
+                    {/* Labels hidden on mobile — icons only; visible at sm+ */}
+                    <span className="hidden sm:inline">{label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
             {showFilterBar && (
               <ErrorBoundary fallback={null}>
@@ -339,13 +344,13 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
           </div>
 
           {/* Board stats + filter toggle � right side */}
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             {[
               { label: "Lists",  val: (lists ?? []).length,  colorClass: "text-[#7B2FF7]" },
               { label: "Cards",  val: allCards.length,       colorClass: "text-[#1A73E8]" },
               { label: "Done",   val: doneCount,             colorClass: "text-[#059669]" },
             ].map((s) => (
-              <div key={s.label} className="flex items-center gap-1.5">
+              <div key={s.label} className="hidden sm:flex items-center gap-1.5">
                 <span
                   className={`text-[14px] font-bold leading-none font-display ${s.colorClass}`}
                 >
@@ -365,14 +370,14 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
                 onClick={() => setFilterBarOpen(!isFilterBarOpen)}
                 title="Toggle filters (F)"
                 className={cn(
-                  "relative flex items-center gap-1.25 px-3 py-1.25 rounded-xl text-[12px] font-semibold font-sans cursor-pointer transition-all duration-180",
+                  "relative flex items-center gap-[5px] px-2.5 sm:px-3 py-[5px] rounded-xl text-[12px] font-semibold font-sans cursor-pointer transition-all duration-180",
                   isFilterBarOpen
                     ? "border border-[#00C8FF] bg-[#00C8FF] text-black shadow-[0_0_10px_rgba(0,200,255,0.55),0_0_20px_rgba(0,200,255,0.25)]"
                     : "border border-[rgba(0,200,255,0.45)] bg-[rgba(0,200,255,0.12)] text-[#00C8FF] shadow-[0_0_6px_rgba(0,200,255,0.2)]"
                 )}
               >
                 <Filter className="w-3 h-3" />
-                Filters
+                <span className="hidden sm:inline">Filters</span>
                 {hasActiveFilter && (
                   <span
                     className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#00C8FF] shadow-[0_0_4px_#00C8FF]"

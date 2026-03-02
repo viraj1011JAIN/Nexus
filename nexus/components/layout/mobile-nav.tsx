@@ -156,8 +156,7 @@ export const MobileNav = () => {
         )}
       </AnimatePresence>
 
-      {/* Spacer for mobile header */}
-      <div className="lg:hidden h-16" />
+      {/* Spacer removed — dashboard layout applies pt-16 lg:pt-0 on <main> instead */}
     </>
   );
 };
