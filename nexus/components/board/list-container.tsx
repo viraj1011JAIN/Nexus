@@ -1,7 +1,7 @@
 "use client";
 
 import { List, Card } from "@prisma/client";
-import { useState, useEffect, useRef, useCallback, useSyncExternalStore, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import {
@@ -22,7 +22,6 @@ import {
 
 import { ListItem } from "./list-item";
 import { createList } from "@/actions/create-list";
-import { useTheme } from "@/components/theme-provider";
 import { updateListOrder } from "@/actions/update-list-order"; 
 import { updateCardOrder } from "@/actions/update-card-order"; 
 import { generateNextOrder } from "@/lib/lexorank";
@@ -305,10 +304,6 @@ export const ListContainer = ({
          }
     }
   }, [boardId]);
-
-  const { resolvedTheme } = useTheme();
-  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
-  const isDark = mounted && resolvedTheme === "dark";
 
   if (!isMounted) return null;
 
