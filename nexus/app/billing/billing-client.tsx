@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, Check, Zap, Crown, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { CreditCard, Check, Zap, Crown, Loader2, CheckCircle, XCircle, Sparkles, ArrowRight, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Organization } from "@prisma/client";
@@ -25,7 +25,6 @@ export default function BillingClient({
   useEffect(() => {
     setMounted(true);
     
-    // Handle success/cancel redirects
     const success = searchParams.get("success");
     const canceled = searchParams.get("canceled");
     
@@ -33,7 +32,6 @@ export default function BillingClient({
       toast.success("Subscription activated successfully!", {
         description: "Welcome to Nexus Pro! Your account has been upgraded.",
       });
-      // Clean up URL
       window.history.replaceState({}, "", "/billing");
     }
     
@@ -121,44 +119,72 @@ export default function BillingClient({
   const renewalDate = formatDate(organization.stripeCurrentPeriodEnd);
   const isStripeConfigured = isStripeConfiguredProp;
 
+  const freeFeatures = [
+    "Up to 50 boards",
+    "500 cards per board",
+    "Basic collaboration",
+    "Real-time updates",
+    "Community support",
+  ];
+
+  const proFeatures = [
+    "Unlimited boards",
+    "Unlimited cards",
+    "Advanced collaboration",
+    "Priority support",
+    "Custom integrations",
+    "Advanced analytics",
+    "AI-powered suggestions",
+    "Custom automation rules",
+  ];
+
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-          <CreditCard className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-          Billing & Plans
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-2">
-          Manage your subscription and billing information
-        </p>
+    <div className={`max-w-[1000px] mx-auto px-4 sm:px-6 transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[12px]"}`}>
+      {/* Header */}
+      <div className="mb-8 sm:mb-10">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-[44px] h-[44px] rounded-[12px] bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-purple-500/20">
+            <CreditCard className="h-[22px] w-[22px] text-white" />
+          </div>
+          <div>
+            <h1 className="text-[24px] sm:text-[28px] font-bold text-slate-900 dark:text-white">
+              Billing & Plans
+            </h1>
+            <p className="text-[13px] sm:text-[14px] text-slate-500 dark:text-slate-400">
+              Manage your subscription and billing
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Stripe Configuration Warning - Only show after client-side mount */}
+      {/* Stripe Configuration Warning */}
       {mounted && !isStripeConfigured && (
-        <div className="mb-8 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl p-6">
+        <div className="mb-8 rounded-[16px] bg-amber-50 dark:bg-amber-500/[0.06] border border-amber-200 dark:border-amber-500/[0.15] p-5 animate-auth-fade-up">
           <div className="flex items-start gap-3">
-            <XCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="w-[36px] h-[36px] rounded-[10px] bg-amber-100 dark:bg-amber-500/[0.12] flex items-center justify-center shrink-0">
+              <XCircle className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" />
+            </div>
             <div>
-              <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+              <h3 className="font-semibold text-amber-900 dark:text-amber-200 text-[15px] mb-1">
                 Stripe Not Configured
               </h3>
-              <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+              <p className="text-[13px] text-amber-800 dark:text-amber-300/80 mb-3">
                 To enable Pro plan upgrades, you need to configure Stripe with your Price IDs.
               </p>
-              <div className="flex gap-2 text-sm">
+              <div className="flex items-center gap-3 text-[13px]">
                 <a
                   href="/STRIPE_QUICK_SETUP.md"
                   target="_blank"
-                  className="text-amber-900 dark:text-amber-100 underline hover:no-underline font-medium"
+                  className="text-amber-900 dark:text-amber-200 underline hover:no-underline font-medium inline-flex items-center gap-1"
                 >
-                  📖 Quick Setup Guide (5 min)
+                  📖 Quick Setup Guide
                 </a>
-                <span className="text-amber-600">•</span>
+                <span className="text-amber-400">•</span>
                 <a
                   href="https://dashboard.stripe.com/test/products"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-amber-900 dark:text-amber-100 underline hover:no-underline font-medium"
+                  className="text-amber-900 dark:text-amber-200 underline hover:no-underline font-medium inline-flex items-center gap-1"
                 >
                   🔗 Stripe Dashboard
                 </a>
@@ -168,178 +194,228 @@ export default function BillingClient({
         </div>
       )}
 
-      {/* Current Plan */}
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 p-6 mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mb-1">
-              Current Plan
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-              {plan === "FREE" ? "Free Plan" : "Pro Plan"}
-              {plan === "PRO" && <Crown className="h-6 w-6 text-yellow-500" />}
-            </div>
-            {plan === "PRO" && isActive && renewalDate && (
-              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Active • Renews on {renewalDate}</span>
+      {/* Current Plan Status Card */}
+      <div className="relative rounded-[20px] overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 p-[1px] mb-8 animate-auth-fade-up" style={{ animationDelay: "100ms" }}>
+        <div className="rounded-[19px] bg-gradient-to-br from-indigo-600/95 via-purple-600/95 to-violet-700/95 backdrop-blur-xl p-6 sm:p-7">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-white/[0.06] rounded-full -mr-[80px] -mt-[80px]" />
+          <div className="absolute bottom-0 left-0 w-[120px] h-[120px] bg-white/[0.04] rounded-full -ml-[50px] -mb-[50px]" />
+
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="text-[12px] font-medium text-white/60 uppercase tracking-wider mb-1.5">
+                Current Plan
               </div>
-            )}
-            {plan === "PRO" && !isActive && (
-              <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                <XCircle className="h-4 w-4" />
-                <span>Inactive • Please check your payment method</span>
+              <div className="flex items-center gap-2.5 mb-2">
+                <span className="text-[26px] sm:text-[30px] font-bold text-white">
+                  {plan === "FREE" ? "Free" : "Pro"}
+                </span>
+                {plan === "PRO" && (
+                  <div className="w-[28px] h-[28px] rounded-full bg-yellow-400/20 flex items-center justify-center">
+                    <Crown className="h-[16px] w-[16px] text-yellow-300" />
+                  </div>
+                )}
               </div>
+              {plan === "PRO" && isActive && renewalDate && (
+                <div className="flex items-center gap-2 text-[13px] text-white/70">
+                  <CheckCircle className="h-[14px] w-[14px] text-emerald-300" />
+                  <span>Active • Renews on {renewalDate}</span>
+                </div>
+              )}
+              {plan === "PRO" && !isActive && (
+                <div className="flex items-center gap-2 text-[13px] text-amber-200">
+                  <XCircle className="h-[14px] w-[14px]" />
+                  <span>Inactive • Please check your payment method</span>
+                </div>
+              )}
+              {plan === "FREE" && (
+                <p className="text-[13px] text-white/60">
+                  Upgrade to Pro to unlock all features
+                </p>
+              )}
+            </div>
+            {plan === "PRO" && (
+              <Button
+                onClick={handleManageBilling}
+                disabled={loading}
+                className="bg-white/[0.15] hover:bg-white/[0.2] text-white border border-white/[0.2] rounded-[12px] min-h-[42px] px-5 transition-all duration-200 backdrop-blur-sm"
+              >
+                {loading ? (
+                  <Loader2 className="h-[16px] w-[16px] animate-spin" />
+                ) : (
+                  <>
+                    Manage Billing
+                    <ArrowRight className="h-[14px] w-[14px] ml-2" />
+                  </>
+                )}
+              </Button>
             )}
           </div>
-          {plan === "PRO" && (
-            <Button
-              onClick={handleManageBilling}
-              disabled={loading}
-              variant="outline"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Manage Billing"
-              )}
-            </Button>
-          )}
         </div>
       </div>
 
       {/* Billing Period Toggle */}
       {plan === "FREE" && (
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <Button
-            variant={billingPeriod === "monthly" ? "default" : "outline"}
-            onClick={() => setBillingPeriod("monthly")}
-            className={billingPeriod === "monthly" ? "bg-indigo-600" : ""}
-          >
-            Monthly
-          </Button>
-          <Button
-            variant={billingPeriod === "yearly" ? "default" : "outline"}
-            onClick={() => setBillingPeriod("yearly")}
-            className={billingPeriod === "yearly" ? "bg-indigo-600" : ""}
-          >
-            Yearly
-            <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
-              Save 17%
-            </span>
-          </Button>
+        <div className="flex items-center justify-center gap-2 mb-8 animate-auth-fade-up" style={{ animationDelay: "200ms" }}>
+          <div className="inline-flex items-center rounded-[14px] bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] p-[4px]">
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              className={`relative px-5 py-2.5 rounded-[11px] text-[13px] font-semibold transition-all duration-300 ${
+                billingPeriod === "monthly"
+                  ? "bg-white dark:bg-white/[0.12] text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingPeriod("yearly")}
+              className={`relative px-5 py-2.5 rounded-[11px] text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 ${
+                billingPeriod === "yearly"
+                  ? "bg-white dark:bg-white/[0.12] text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              Yearly
+              <span className="text-[10px] font-bold bg-emerald-500 text-white px-[8px] py-[2px] rounded-full">
+                -17%
+              </span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Plans Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-5 sm:gap-6 animate-auth-fade-up" style={{ animationDelay: "300ms" }}>
         {/* Free Plan */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-          <div className="mb-4">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Free</h3>
-            <div className="text-3xl font-bold text-slate-900 dark:text-white">
-              $0
-              <span className="text-lg font-normal text-slate-600 dark:text-slate-400">/month</span>
+        <div className="relative rounded-[20px] bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] p-6 sm:p-7 transition-all duration-300 hover:border-slate-300 dark:hover:border-white/[0.12] group">
+          <div className="mb-6">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-[38px] h-[38px] rounded-[10px] bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center">
+                <Shield className="h-[18px] w-[18px] text-slate-500 dark:text-slate-400" />
+              </div>
+              <h3 className="text-[20px] font-bold text-slate-900 dark:text-white">Free</h3>
             </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-[42px] font-bold text-slate-900 dark:text-white tracking-tight">$0</span>
+              <span className="text-[15px] text-slate-500 dark:text-slate-400 font-medium">/month</span>
+            </div>
+            <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5">
+              Perfect for personal projects
+            </p>
           </div>
 
-          <ul className="space-y-3 mb-6">
-            <li className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <Check className="h-4 w-4 text-green-500" />
-              Up to 50 boards
-            </li>
-            <li className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <Check className="h-4 w-4 text-green-500" />
-              500 cards per board
-            </li>
-            <li className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <Check className="h-4 w-4 text-green-500" />
-              Basic collaboration
-            </li>
-            <li className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <Check className="h-4 w-4 text-green-500" />
-              Real-time updates
-            </li>
+          <ul className="space-y-3 mb-7">
+            {freeFeatures.map((feature) => (
+              <li key={feature} className="flex items-center gap-2.5 text-[14px] text-slate-600 dark:text-slate-300">
+                <div className="w-[20px] h-[20px] rounded-full bg-emerald-100 dark:bg-emerald-500/[0.12] flex items-center justify-center shrink-0">
+                  <Check className="h-[12px] w-[12px] text-emerald-600 dark:text-emerald-400" />
+                </div>
+                {feature}
+              </li>
+            ))}
           </ul>
 
           <Button
             variant="outline"
             disabled={plan === "FREE"}
-            className="w-full"
+            className="w-full rounded-[12px] min-h-[44px] text-[14px] font-semibold border-slate-200 dark:border-white/[0.1] hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all duration-200"
           >
             {plan === "FREE" ? "Current Plan" : "Downgrade"}
           </Button>
         </div>
 
         {/* Pro Plan */}
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-6 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-          
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-5 w-5" />
-              <span className="text-sm font-semibold">POPULAR</span>
-            </div>
-            
-            <h3 className="text-xl font-bold mb-2">Pro</h3>
-            <div className="text-3xl font-bold mb-1">
-              £{billingPeriod === "monthly" ? "9" : "90"}
-              <span className="text-lg font-normal opacity-90">/{billingPeriod === "monthly" ? "month" : "year"}</span>
-            </div>
-            {billingPeriod === "yearly" && (
-              <div className="text-sm opacity-75 mb-6">That&apos;s just £7.50/month • Save 17%</div>
-            )}
-            {billingPeriod === "monthly" && (
-              <div className="text-sm opacity-75 mb-6">Billed monthly • Cancel anytime</div>
-            )}
+        <div className="relative rounded-[20px] overflow-hidden">
+          {/* Animated gradient border */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-indigo-500 to-violet-600 rounded-[20px] p-[1.5px]">
+            <div className="w-full h-full bg-white dark:bg-[#0D0C14] rounded-[19px]" />
+          </div>
 
-            <ul className="space-y-3 mb-6">
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4" />
-                Unlimited boards
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4" />
-                Unlimited cards
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4" />
-                Advanced collaboration
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4" />
-                Priority support
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4" />
-                Custom integrations
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4" />
-                Advanced analytics
-              </li>
+          <div className="relative p-6 sm:p-7">
+            {/* Popular badge */}
+            <div className="absolute top-5 right-5">
+              <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-purple-500/25">
+                <Sparkles className="h-[12px] w-[12px]" />
+                Popular
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-md shadow-purple-500/20">
+                  <Zap className="h-[18px] w-[18px] text-white" />
+                </div>
+                <h3 className="text-[20px] font-bold text-slate-900 dark:text-white">Pro</h3>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-[42px] font-bold text-slate-900 dark:text-white tracking-tight">
+                  £{billingPeriod === "monthly" ? "9" : "90"}
+                </span>
+                <span className="text-[15px] text-slate-500 dark:text-slate-400 font-medium">
+                  /{billingPeriod === "monthly" ? "month" : "year"}
+                </span>
+              </div>
+              {billingPeriod === "yearly" ? (
+                <p className="text-[13px] text-emerald-600 dark:text-emerald-400 mt-1.5 font-medium">
+                  That&apos;s just £7.50/month — Save 17%
+                </p>
+              ) : (
+                <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5">
+                  Billed monthly • Cancel anytime
+                </p>
+              )}
+            </div>
+
+            <ul className="space-y-3 mb-7">
+              {proFeatures.map((feature) => (
+                <li key={feature} className="flex items-center gap-2.5 text-[14px] text-slate-600 dark:text-slate-300">
+                  <div className="w-[20px] h-[20px] rounded-full bg-purple-100 dark:bg-purple-500/[0.12] flex items-center justify-center shrink-0">
+                    <Check className="h-[12px] w-[12px] text-purple-600 dark:text-purple-400" />
+                  </div>
+                  {feature}
+                </li>
+              ))}
             </ul>
 
             <Button
               onClick={plan === "FREE" ? handleUpgrade : handleManageBilling}
               disabled={loading || !isStripeConfigured}
-              className="w-full bg-white text-indigo-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-[12px] min-h-[44px] text-[14px] font-semibold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-[16px] w-[16px] animate-spin" />
                   Processing...
-                </>
+                </div>
               ) : !isStripeConfigured ? (
                 "Configure Stripe First"
               ) : plan === "FREE" ? (
-                `Upgrade to Pro - £${billingPeriod === "monthly" ? "9/mo" : "90/yr"}`
+                <div className="flex items-center gap-2">
+                  <span>Upgrade to Pro — £{billingPeriod === "monthly" ? "9/mo" : "90/yr"}</span>
+                  <ArrowRight className="h-[14px] w-[14px]" />
+                </div>
               ) : (
                 "Manage Subscription"
               )}
             </Button>
           </div>
+        </div>
+      </div>
+
+      {/* Trust indicators */}
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[12px] text-slate-400 dark:text-slate-500 animate-auth-fade-up" style={{ animationDelay: "400ms" }}>
+        <div className="flex items-center gap-1.5">
+          <Shield className="h-[14px] w-[14px]" />
+          <span>256-bit SSL encryption</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <CheckCircle className="h-[14px] w-[14px]" />
+          <span>Cancel anytime</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <CreditCard className="h-[14px] w-[14px]" />
+          <span>Powered by Stripe</span>
         </div>
       </div>
     </div>

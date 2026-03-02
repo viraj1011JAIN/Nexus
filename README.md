@@ -118,13 +118,18 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ![Sign In](Web-screenshort/Signin.png)
 
-- Clerk-managed authentication page at `/sign-in`
-- Supports email + password login and social OAuth providers (Google, GitHub, etc.)
-- "Continue with…" buttons for one-click social sign-in
-- Branded with Nexus logo and dark background
-- Redirects to Dashboard after successful authentication
-- Includes a "Sign up" link for new users
-- Fully accessible — keyboard navigable, screen-reader friendly
+- Dark-themed authentication page at `/sign-in` with animated particle canvas background
+- **Particle network** — 60 floating particles with connection lines rendered on `<canvas>` at 60 fps; purple-tinted with organic drift
+- **Gradient orbs** — three layered blurred orbs (purple, pink, cyan) with slow floating animations for depth
+- **Split layout** — desktop shows branding + feature highlights on the left, auth card on the right; mobile collapses to single column
+- **Feature highlights** (desktop) — four cards: Real-time collaboration, Enterprise-grade security, Multi-tenant workspaces, Advanced analytics
+- **Social proof** — "Trusted by 2,000+ teams worldwide" with stacked avatar indicators
+- **Clerk `<SignIn>` component** — dark-themed appearance overrides: translucent inputs, purple accent gradients, rounded-[12px] elements
+- **Guest Demo Mode** — amber gradient button to explore the app without signup; sets `sessionStorage` flags and routes to demo org
+- **Demo info banner** — explains guest mode limitations (changes not saved, sign up for full access)
+- **Fully responsive** — mobile header shows NEXUS branding inline; auth card expands to full width; 44px minimum touch targets
+- **Smooth entrance** — opacity + translateY transition on mount, staggered `animate-auth-*` keyframes for each section
+- Grid overlay at 3% opacity for subtle texture
 
 ---
 
@@ -132,8 +137,12 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ![Sign Up](Web-screenshort/Signup.png)
 
-- Clerk-managed registration page at `/sign-up`
-- Email verification step (magic link or OTP sent via Clerk)
+- Dark-themed registration page at `/sign-up` with matching particle canvas and gradient orbs
+- **Split layout** — desktop: branding + benefits checklist + testimonial on left, auth card on right; mobile: single column
+- **Benefits checklist** — four items with green check-circle icons: Unlimited boards on Pro, Real-time collaboration, AI-powered suggestions, Advanced analytics
+- **Testimonial card** — glass-effect quote card with avatar and attribution
+- **Clerk `<SignUp>` component** — same dark appearance as sign-in for visual consistency
+- **Free plan note** (mobile only) — green-tinted banner: "Free plan includes: 50 boards, 500 cards/board, real-time updates"
 - After registration, automatically triggers the "healing" path in `getTenantContext()` — creates `User` and `OrganizationUser` rows
 - Organization creation prompt appears immediately after sign-up if no org exists
 - Redirect URL configurable via `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL`
@@ -278,24 +287,19 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 ![Billing](Web-screenshort/Billing.png)
 
-- Billing management page at `/billing`
-- **Plan overview card:**
-  - Current plan badge (FREE or PRO)
-  - Board usage meter for FREE plan (`X of 50 boards`)
-  - PRO plan benefits listed: unlimited boards, priority support
-- **Upgrade to PRO section:**
-  - Monthly (£9/month) and yearly (£90/year) plan options
-  - "Upgrade" button → creates Stripe Checkout Session → redirects to Stripe-hosted checkout
-  - Promotion code input field
-- **Active subscription card (PRO users):**
-  - Current billing period start/end dates
-  - Next billing date
-  - "Manage Billing" button → creates Stripe Customer Portal Session → self-service portal
-  - Cancel subscription option (handled by Stripe portal)
+- Premium billing management page at `/billing` with smooth entrance animations
+- **Current plan status card** — full-width gradient banner (indigo → purple → violet) showing active plan, Crown icon for Pro, renewal date with green checkmark, or inactive warning; "Manage Billing" button opens Stripe Customer Portal
+- **Billing period toggle** — pill-shaped segmented control (Monthly / Yearly) with emerald "-17%" savings badge; smooth background slide transition
+- **Plans grid** — two-column responsive layout:
+  - **Free card** — clean surface with Shield icon, $0/month pricing, 5 feature items with green checkmarks in circular badges, "Current Plan" disabled state
+  - **Pro card** — gradient border accent (purple → indigo), "Popular" sparkle badge, £9/mo or £90/yr pricing, 8 feature items with purple checkmarks, gradient CTA button with shadow glow
+- **Trust indicators** — footer row: 256-bit SSL encryption, Cancel anytime, Powered by Stripe
+- **Stripe Configuration Warning** — amber alert with setup guide links when Stripe keys not configured; only rendered after client-side mount check
 - **Webhook lifecycle** — all Stripe events processed by `app/api/webhook/stripe/route.ts`:
   - Plan activates immediately on `checkout.session.completed`
   - `invoice.payment_failed` → shows "Past Due" warning banner
   - `customer.subscription.deleted` → resets to FREE silently
+- **Responsive** — stacks to single column on mobile; 44px touch targets; proper spacing
 - UK VAT and Tax ID collection enabled in Stripe configuration
 - `ProUpgradeModal` component shown contextually when FREE plan limits are hit elsewhere in the app
 

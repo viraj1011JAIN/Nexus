@@ -1,7 +1,7 @@
 # NEXUS — PROJECT STATUS
 
 **Last Audited:** March 2, 2026  
-**Last Commit:** `40f81cb` — docs: update README with full project context  
+**Last Commit:** Principal-level UI/UX redesign — auth pages, billing, animations  
 **Prior security commit:** `2550b71` — security: Stripe idempotency, Upstash rate-limit, realtime pre-flight auth, Supabase Realtime RLS  
 **Audited Against:** Live codebase at `c:\Nexus\nexus`  
 **Every fact verified from source files. No estimates, no aspirational claims.**
@@ -692,6 +692,7 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | Sentry + error boundaries | ✅ 100% | Client/server/edge, replay, tracing |
 | Command palette | ✅ 100% | Ctrl+K, board+card search, recent items |
 | Mobile responsive | ✅ 100% | Breakpoints, iOS safe areas, touch targets |
+| UI/UX polish | ✅ 100% | Dark-themed auth pages with particle canvas, premium billing page, auth-specific keyframe animations, split-layout desktop/mobile |
 | PWA manifest + icons | ✅ 100% | manifest.json, 192+512px icons, apple-touch-icon |
 | Board backgrounds (Unsplash) | ✅ 100% | Server-side API, picker UI, next.config.ts remotePatterns |
 | Email delivery (Resend) | ✅ 100% | 4 email types, cron integration, @mention trigger |

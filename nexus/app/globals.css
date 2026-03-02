@@ -348,6 +348,61 @@
   50% { opacity: 0.8; }
 }
 
+/* ============================================================================
+   AUTH PAGE ANIMATIONS
+   Smooth entrance animations for sign-in, sign-up, and billing pages.
+   Respect prefers-reduced-motion via the global media query below.
+   ============================================================================ */
+
+@keyframes auth-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%      { transform: translate(15px, -20px) scale(1.03); }
+  50%      { transform: translate(-10px, 10px) scale(0.98); }
+  75%      { transform: translate(10px, 15px) scale(1.02); }
+}
+
+@keyframes auth-float-delayed {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%      { transform: translate(-12px, 15px) scale(1.02); }
+  50%      { transform: translate(18px, -12px) scale(0.97); }
+  75%      { transform: translate(-8px, -18px) scale(1.03); }
+}
+
+@keyframes auth-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes auth-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes auth-scale-up {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes auth-slide-right {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.animate-auth-float         { animation: auth-float 20s ease-in-out infinite; }
+.animate-auth-float-delayed { animation: auth-float-delayed 25s ease-in-out infinite; }
+.animate-auth-pulse         { animation: auth-pulse 8s ease-in-out infinite; }
+.animate-auth-fade-up       { animation: auth-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-auth-scale-up      { animation: auth-scale-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: 150ms; }
+.animate-auth-slide-right   { animation: auth-slide-right 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Blob animation (used by legacy pages) */
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(20px, -30px) scale(1.1); }
+  66%      { transform: translate(-15px, 15px) scale(0.9); }
+}
+.animate-blob { animation: blob 7s infinite; }
+
 /* Animation Delays */
 .animation-delay-100 { animation-delay: 100ms; }
 .animation-delay-200 { animation-delay: 200ms; }
