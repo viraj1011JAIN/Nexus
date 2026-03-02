@@ -17,7 +17,7 @@ export default function NotFound() {
       <div className="max-w-md w-full text-center relative z-10 glass-effect rounded-2xl p-8 shadow-xl border-2 border-white/20 animate-fadeInUp">
         {/* Logo */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">NEXUS</h1>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">NEXUS</h1>
         </div>
 
         {/* 404 Illustration */}
@@ -39,7 +39,7 @@ export default function NotFound() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             asChild
-            className="bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
           >
             <Link href="/">
               <Home className="h-4 w-4 mr-2" />

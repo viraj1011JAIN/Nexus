@@ -33,7 +33,12 @@ interface UseDemoModeReturn {
 
 export function useDemoMode(): UseDemoModeReturn {
   const pathname = usePathname();
-  const isDemoMode = pathname?.includes(DEMO_ORG_ID) ?? false;
+  // Primary signal: sessionStorage flag set before demo navigation.
+  // Fallback: path still contains the demo org ID (legacy deep-links).
+  const isDemoMode =
+    (typeof window !== "undefined" &&
+      sessionStorage.getItem("demo-mode") === "true") ||
+    (pathname?.includes(DEMO_ORG_ID) ?? false);
 
   useEffect(() => {
     if (isDemoMode) {
