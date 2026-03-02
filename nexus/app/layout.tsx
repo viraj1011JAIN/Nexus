@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, Playfair_Display } from "next/font/google";
+import { DM_Sans, Playfair_Display, Syne, Outfit } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Script from "next/script";
 import { validateEnv } from "@/lib/env";
@@ -29,6 +29,20 @@ const playfairDisplay = Playfair_Display({
   display: "swap",
   variable: "--font-playfair",
   weight: ["600", "700", "800"],
+});
+
+const syne = Syne({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-syne",
+  weight: ["400", "600", "700", "800"],
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-outfit",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -74,7 +88,7 @@ export default function RootLayout({
           {/* Viewport – allow pinch-zoom for accessibility (max-scale ≥ 5) */}
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         </head>
-        <body className={`${dmSans.variable} ${playfairDisplay.variable} ${dmSans.className} antialiased`} suppressHydrationWarning>
+        <body className={`${dmSans.variable} ${playfairDisplay.variable} ${syne.variable} ${outfit.variable} ${dmSans.className} antialiased`} suppressHydrationWarning>
           {/* Skip navigation link — keyboard / screen-reader UX (TASK-036) */}
           <a
             href="#main-content"
