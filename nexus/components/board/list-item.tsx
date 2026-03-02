@@ -152,7 +152,7 @@ const ListItemInner = ({
     >
       {/* List column outer shell */}
       <div
-        className="w-full flex flex-col rounded-3xl overflow-hidden"
+        className="w-full flex flex-col rounded-[16px] overflow-hidden"
         style={{
           background: isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.018)",
           border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.06)",
@@ -225,7 +225,7 @@ const ListItemInner = ({
             <button
               onClick={() => cardInputRef.current?.focus()}
               title="Add card"
-              className="w-7 h-7 rounded-xl border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#9A8F85] dark:text-white/40 hover:scale-105"
+              className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#9A8F85] dark:text-white/40 hover:scale-105"
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.background = `${listColor}28`;
                 (e.currentTarget as HTMLElement).style.color = listColor;
@@ -243,7 +243,7 @@ const ListItemInner = ({
               <DropdownMenuTrigger asChild>
                 <button
                   title="List options"
-                  className="w-7 h-7 rounded-xl border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#BFB9B3] dark:text-white/30 hover:bg-black/8 dark:hover:bg-white/10 hover:text-[#6B6560] dark:hover:text-white/60"
+                  className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#BFB9B3] dark:text-white/30 hover:bg-black/8 dark:hover:bg-white/10 hover:text-[#6B6560] dark:hover:text-white/60"
                 >
                   <MoreHorizontal className="w-3.5 h-3.5" />
                 </button>
@@ -316,7 +316,7 @@ const ListItemInner = ({
                 onChange={handleCardTitleChange}
                 ref={cardInputRef}
                 required
-                className="flex-1 px-3 py-1.75 rounded-[10px] outline-none text-[12.5px] font-medium transition-colors duration-150 bg-black/4 dark:bg-white/5 text-[#1A1714] dark:text-[#E8E4F0] border border-black/8 dark:border-white/8 placeholder:text-black/25 dark:placeholder:text-white/25"
+                className="flex-1 px-3 py-[7px] rounded-[10px] outline-none text-[12.5px] font-medium transition-colors duration-150 bg-black/4 dark:bg-white/5 text-[#1A1714] dark:text-[#E8E4F0] border border-black/8 dark:border-white/8 placeholder:text-black/25 dark:placeholder:text-white/25"
                 onFocus={e => (e.currentTarget.style.borderColor = `${listColor}70`)}
                 onBlur={e => (e.currentTarget.style.borderColor = "")}
               />

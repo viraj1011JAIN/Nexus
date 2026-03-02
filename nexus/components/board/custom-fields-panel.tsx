@@ -613,7 +613,7 @@ export function CustomFieldsPanel({ boardId, cardId, isAdmin = false }: CustomFi
                   </div>
 
                   {/* Field name */}
-                  <label className="shrink-0 text-xs font-medium text-foreground w-22.5 truncate">
+                  <label className="shrink-0 text-xs font-medium text-foreground w-[90px] truncate">
                     {field.name}
                     {field.isRequired && <span className="text-red-500 ml-0.5">*</span>}
                   </label>

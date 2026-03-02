@@ -121,7 +121,7 @@ const CardItemInner = ({
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative text-sm rounded-2xl cursor-pointer animate-card-enter touch-manipulation overflow-hidden kanban-card",
+        "group relative text-sm rounded-[12px] cursor-pointer animate-card-enter touch-manipulation overflow-hidden kanban-card",
         isSelected && "ring-2 ring-primary"
       )}
     >
@@ -142,7 +142,7 @@ const CardItemInner = ({
         <div
           role="checkbox"
           tabIndex={0}
-          aria-checked={isSelected}
+          aria-checked={isSelected ? "true" : "false"}
           aria-label={`Select card: ${data.title}`}
           className={cn(
             "absolute top-1.5 left-1.5 z-20 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",

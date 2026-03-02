@@ -370,9 +370,9 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
                 onClick={() => setFilterBarOpen(!isFilterBarOpen)}
                 title="Toggle filters (F)"
                 aria-label="Toggle filters"
-                aria-expanded={!!isFilterBarOpen}
+                aria-expanded={isFilterBarOpen ? "true" : "false"}
                 className={cn(
-                  "relative flex items-center gap-1.25 px-2.5 sm:px-3 py-1.25 rounded-xl text-[12px] font-semibold font-sans cursor-pointer transition-all duration-180",
+                  "relative flex items-center gap-[5px] px-2.5 sm:px-3 py-[5px] rounded-xl text-[12px] font-semibold font-sans cursor-pointer transition-all duration-180",
                   isFilterBarOpen
                     ? "border border-[#00C8FF] bg-[#00C8FF] text-black shadow-[0_0_10px_rgba(0,200,255,0.55),0_0_20px_rgba(0,200,255,0.25)]"
                     : "border border-[rgba(0,200,255,0.45)] bg-[rgba(0,200,255,0.12)] text-[#00C8FF] shadow-[0_0_6px_rgba(0,200,255,0.2)]"

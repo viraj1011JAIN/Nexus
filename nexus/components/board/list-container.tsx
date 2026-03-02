@@ -370,7 +370,7 @@ export const ListContainer = ({
               {/* Add List button */}
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl border-none bg-linear-to-br from-[#7B2FF7] to-[#C01CC4] text-white text-[13px] font-semibold font-sans flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_6px_24px_rgba(123,47,247,0.42)] transition-shadow duration-200"
+                className="w-full py-2.5 rounded-xl border-none bg-gradient-to-br from-[#7B2FF7] to-[#C01CC4] text-white text-[13px] font-semibold font-sans flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_6px_24px_rgba(123,47,247,0.42)] transition-shadow duration-200"
               >
                 + Add List
               </button>
@@ -389,9 +389,9 @@ export const ListContainer = ({
             const LIST_COLORS = ["#7C3AED","#D97706","#8B5CF6","#059669","#1A73E8","#E0284A"];
             const col = LIST_COLORS[i % LIST_COLORS.length];
             return (
-              <div key={list.id} className="flex items-center gap-1.25 shrink-0">
+              <div key={list.id} className="flex items-center gap-[5px] shrink-0">
                 <div
-                  className="w-1.25 h-1.25 rounded-full shrink-0"
+                  className="w-[5px] h-[5px] rounded-full shrink-0"
                   style={{ background: col, boxShadow: isDark ? `0 0 4px ${col}66` : "none" }}
                 />
                 <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/28 whitespace-nowrap">
@@ -409,7 +409,7 @@ export const ListContainer = ({
         <div className="hidden sm:flex items-center gap-1.5 shrink-0">
           <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/20">Auto-save</span>
           <div
-            className="animate-pulse-dot w-1.25 h-1.25 rounded-full bg-[#059669] dark:bg-[#4FFFB0] shadow-[0_0_4px_rgba(5,150,105,0.4)] dark:shadow-[0_0_4px_rgba(79,255,176,0.5)]"
+            className="animate-pulse-dot w-[5px] h-[5px] rounded-full bg-[#059669] dark:bg-[#4FFFB0] shadow-[0_0_4px_rgba(5,150,105,0.4)] dark:shadow-[0_0_4px_rgba(79,255,176,0.5)]"
           />
         </div>
       </div>
