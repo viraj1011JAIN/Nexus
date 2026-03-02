@@ -269,7 +269,7 @@ const ListItemInner = ({
 
         {/* Cards Area */}
         <SortableContext items={data.cards} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-y-2 board-scrollbar overflow-x-hidden overflow-y-auto max-h-[calc(100vh-260px)] px-2.5 py-2.5">
+          <div className="flex flex-col gap-y-2 board-scrollbar overflow-x-hidden overflow-y-auto max-h-[calc(100dvh-260px)] px-2.5 py-2.5">
             {data.cards.map((card, cardIndex) => (
               <CardItem
                 index={cardIndex}

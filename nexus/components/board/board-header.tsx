@@ -49,6 +49,7 @@ export function BoardHeader({
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <Link
             href="/"
+            aria-label="Back to home"
             className="flex items-center gap-[5px] text-[12.5px] font-medium no-underline py-1 px-2 rounded-[7px] transition-colors duration-150 ease-in-out text-[#9A8F85] hover:text-[#1A1714] dark:text-white/35 dark:hover:text-white/70 font-[family-name:var(--font-dm-sans)] shrink-0"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
@@ -99,6 +100,8 @@ export function BoardHeader({
           <button
             type="button"
             onClick={() => setShareOpen(true)}
+            aria-label="Share"
+            aria-expanded={shareOpen}
             className="flex items-center gap-[6px] py-[6px] px-2 sm:px-3 rounded-[9px] border cursor-pointer text-[12.5px] font-medium transition-all duration-150 ease-in-out font-[family-name:var(--font-dm-sans)] border-black/9 bg-[#FFFDF9] text-[#6B6560] shadow-[0_1px_4px_rgba(0,0,0,0.05)] hover:opacity-80 dark:border-white/9 dark:bg-white/4 dark:text-white/45 dark:shadow-none"
           >
             <Share2 className="w-3 h-3" />

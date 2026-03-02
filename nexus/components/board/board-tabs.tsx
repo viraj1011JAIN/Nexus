@@ -369,6 +369,8 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
               <button
                 onClick={() => setFilterBarOpen(!isFilterBarOpen)}
                 title="Toggle filters (F)"
+                aria-label="Toggle filters"
+                aria-expanded={isFilterBarOpen}
                 className={cn(
                   "relative flex items-center gap-[5px] px-2.5 sm:px-3 py-[5px] rounded-xl text-[12px] font-semibold font-sans cursor-pointer transition-all duration-180",
                   isFilterBarOpen
