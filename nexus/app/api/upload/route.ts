@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: "File exceeds 10 MB limit" }, { status: 413 });
+    return NextResponse.json({ error: "File exceeds 100 MB limit" }, { status: 413 });
   }
 
   if (!ALLOWED_MIME_TYPES.has(file.type)) {

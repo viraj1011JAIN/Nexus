@@ -44,7 +44,12 @@ export async function POST(req: NextRequest) {
   }
 
   const event   = req.headers.get("x-github-event") ?? "";
-  const payload = JSON.parse(rawBody) as Record<string, unknown>;
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(rawBody) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
   if (event === "push") {
     const commits = (payload.commits as { message: string; url: string; id: string }[]) ?? [];

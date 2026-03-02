@@ -220,7 +220,8 @@ export function useCardLock({ boardId, cardId, enabled = true, orgId }: UseCardL
         setCardLocks(new Map());
       }
     };
-  }, [boardId, enabled, user, orgId, getToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getToken is identity-stable per Clerk design (same pattern as use-presence.ts)
+  }, [boardId, enabled, user, orgId]);
 
   // Auto-lock when cardId becomes available
   useEffect(() => {

@@ -43,7 +43,7 @@ export async function POST() {
 
     return NextResponse.json({ url: portalSession.url });
   } catch (error) {
-    logger.error("Stripe portal session creation failed", { error, orgId: (await auth()).orgId });
+    logger.error("Stripe portal session creation failed", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

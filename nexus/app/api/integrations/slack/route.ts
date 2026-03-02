@@ -102,7 +102,12 @@ export async function POST(req: NextRequest) {
 
   // ── JSON event (URL verification or event API) ─────────────────────────────
   if (contentType.includes("application/json")) {
-    const payload = JSON.parse(rawBody) as Record<string, unknown>;
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(rawBody) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
 
     // Slack URL verification challenge
     if (payload.type === "url_verification") {

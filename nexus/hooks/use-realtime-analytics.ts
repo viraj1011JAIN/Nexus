@@ -64,7 +64,8 @@ export function useRealtimeAnalytics(boardId: string, orgId: string) {
       channel?.unsubscribe();
       setIsConnected(false);
     };
-  }, [boardId, orgId, getToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getToken is identity-stable per Clerk design (same pattern as use-presence.ts)
+  }, [boardId, orgId]);
 
   return { updates, isConnected };
 }

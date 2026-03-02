@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    logger.error("Stripe checkout session creation failed", { error, orgId: (await auth()).orgId });
+    logger.error("Stripe checkout session creation failed", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
