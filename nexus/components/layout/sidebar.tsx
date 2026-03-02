@@ -47,7 +47,7 @@ export const Sidebar = () => {
   return (
     <aside className="w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 z-20 select-none relative overflow-hidden">
       {/* Rainbow shimmer stripe */}
-      <div className="shimmer-stripe absolute top-0 left-0 right-0 h-0.75 z-10" />
+      <div className="shimmer-stripe absolute top-0 left-0 right-0 h-[3px] z-10" />
 
       {/* == Brand Header ================================================== */}
       <div className="px-5 pt-7 pb-5 border-b border-sidebar-border">

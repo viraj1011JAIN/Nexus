@@ -686,99 +686,151 @@ export function BoardList() {
         {/* ── Project Health Panel ────────────────────────────────────── */}
         {boards.length > 0 && (
           <div
-            className="bg-card border border-border rounded-2xl p-5 animate-fade-up mt-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+            className="relative bg-card border border-border rounded-2xl overflow-hidden animate-fade-up mt-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
             style={{ animationDelay: "0.22s" }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display font-bold text-[15px] text-foreground tracking-tight">
-                    Workspace Health
-                  </h2>
-                  <div className={cn(
-                    "flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full",
-                    realtimeStatus === "connected"
-                      ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"
-                      : realtimeStatus === "connecting"
-                      ? "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
-                      : "bg-muted text-muted-foreground"
-                  )}>
+            {/* Decorative top gradient stripe */}
+            <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-[#7B2FF7] via-[#F107A3] to-[#1A73E8] opacity-80" />
+
+            <div className="p-6">
+              {/* Header row */}
+              <div className="flex items-start justify-between mb-5">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="font-display font-bold text-[16px] text-foreground tracking-tight">
+                      Workspace Health
+                    </h2>
                     <div className={cn(
-                      "w-1.5 h-1.5 rounded-full",
+                      "flex items-center gap-[5px] text-[10px] font-bold px-2 py-[3px] rounded-full border",
                       realtimeStatus === "connected"
-                        ? "bg-emerald-500 animate-pulse-dot"
+                        ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50"
                         : realtimeStatus === "connecting"
-                        ? "bg-amber-500 animate-pulse-dot"
-                        : "bg-muted-foreground"
-                    )} />
-                    {realtimeStatus === "connected" ? "LIVE" : realtimeStatus === "connecting" ? "SYNC" : "OFF"}
-                  </div>
-                </div>
-                <p className="text-[12px] text-muted-foreground mt-0.5">
-                  Real-time progress tracking across {boards.length} board{boards.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <div
-                  className={`font-display font-bold text-[32px] leading-none tabular-nums bg-clip-text text-transparent ${healthGradientClass}`}
-                >
-                  {healthScore}
-                </div>
-                <div className="text-[10px] text-muted-foreground font-medium mt-0.5">
-                  {healthScore >= 70 ? "Excellent" : healthScore >= 40 ? "Good" : "Needs Work"}
-                </div>
-              </div>
-            </div>
-
-            {/* Per-board progress bars */}
-            <div className="space-y-2.5 mb-4">
-              {boards.slice(0, 5).map((board, _i) => {
-                const pct = Math.max(4, Math.round((board.cardCount / maxBoardCards) * 100));
-                const g   = getBoardGradient(board);
-                return (
-                  <div key={board.id} className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g }} />
-                    <span className="text-[12px] font-medium text-foreground w-28 truncate shrink-0">{board.title}</span>
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%`, background: g }}
-                      />
+                        ? "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50"
+                        : "bg-muted text-muted-foreground border-border"
+                    )}>
+                      <div className={cn(
+                        "w-[6px] h-[6px] rounded-full",
+                        realtimeStatus === "connected"
+                          ? "bg-emerald-500 animate-pulse-dot"
+                          : realtimeStatus === "connecting"
+                          ? "bg-amber-500 animate-pulse-dot"
+                          : "bg-muted-foreground"
+                      )} />
+                      {realtimeStatus === "connected" ? "LIVE" : realtimeStatus === "connecting" ? "SYNC" : "OFF"}
                     </div>
-                    <span className="text-[11px] text-muted-foreground tabular-nums w-14 text-right shrink-0">
-                      {board.cardCount} card{board.cardCount !== 1 ? "s" : ""}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground tabular-nums w-12 text-right shrink-0">
-                      {board.listCount} list{board.listCount !== 1 ? "s" : ""}
+                  </div>
+                  <p className="text-[12px] text-muted-foreground mt-1">
+                    Real-time progress tracking across {boards.length} board{boards.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+
+                {/* Health score badge */}
+                <div className="relative flex flex-col items-center justify-center shrink-0 ml-4">
+                  {/* Score circle */}
+                  <div className={cn(
+                    "w-[68px] h-[68px] rounded-full flex flex-col items-center justify-center border-[3px]",
+                    healthScore >= 70
+                      ? "border-emerald-300 dark:border-emerald-700/60"
+                      : healthScore >= 40
+                      ? "border-amber-300 dark:border-amber-700/60"
+                      : "border-red-300 dark:border-red-700/60"
+                  )}>
+                    <span
+                      className={`font-display font-bold text-[26px] leading-none tabular-nums bg-clip-text text-transparent ${healthGradientClass}`}
+                    >
+                      {healthScore}
                     </span>
                   </div>
-                );
-              })}
-            </div>
+                  <span className={cn(
+                    "text-[10px] font-bold mt-1.5 tracking-wide uppercase",
+                    healthScore >= 70
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : healthScore >= 40
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-red-500 dark:text-red-400"
+                  )}>
+                    {healthScore >= 70 ? "Excellent" : healthScore >= 40 ? "Good" : "Needs Work"}
+                  </span>
+                </div>
+              </div>
 
-            {/* Progress explanation */}
-            <div className="bg-muted/60 rounded-xl p-3 mb-4">
-              <p className="text-[11.5px] text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground">How progress is tracked:</span>{" "}
-                Each bar shows card volume relative to the busiest board. Move cards through lists
-                (e.g. &#34;To Do → In Progress → Done&#34;) in the board view to reflect real work status.
-                The health score weighs recency (40%), card density (40%), and volume (20%).
-              </p>
+              {/* Per-board progress bars */}
+              <div className="space-y-[10px]">
+                {boards.slice(0, 5).map((board, _i) => {
+                  const pct = Math.max(4, Math.round((board.cardCount / maxBoardCards) * 100));
+                  const g   = getBoardGradient(board);
+                  return (
+                    <div
+                      key={board.id}
+                      className="group flex items-center gap-3 px-3 py-[9px] rounded-xl bg-muted/40 dark:bg-white/[0.025] hover:bg-muted/70 dark:hover:bg-white/[0.045] transition-colors duration-150"
+                    >
+                      {/* Color swatch */}
+                      <div
+                        className="w-[10px] h-[10px] rounded-[3px] shrink-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                        style={{ background: g }}
+                      />
+                      {/* Board name */}
+                      <span className="text-[12.5px] font-semibold text-foreground w-[120px] truncate shrink-0 group-hover:text-foreground/90">
+                        {board.title}
+                      </span>
+                      {/* Progress bar */}
+                      <div className="flex-1 h-[7px] bg-black/[0.04] dark:bg-white/[0.06] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700 ease-out"
+                          style={{ width: `${pct}%`, background: g }}
+                        />
+                      </div>
+                      {/* Stats */}
+                      <div className="flex items-center gap-[14px] shrink-0">
+                        <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
+                          <span className="font-semibold text-foreground/80">{board.cardCount}</span> card{board.cardCount !== 1 ? "s" : ""}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
+                          <span className="font-semibold text-foreground/80">{board.listCount}</span> list{board.listCount !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Show more indicator if > 5 boards */}
+              {boards.length > 5 && (
+                <p className="text-[11px] text-muted-foreground/60 text-center mt-2 font-medium">
+                  + {boards.length - 5} more board{boards.length - 5 !== 1 ? "s" : ""}
+                </p>
+              )}
+
+              {/* Progress explanation — collapsible feel with refined style */}
+              <details className="group/details mt-4">
+                <summary className="flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold text-muted-foreground/70 hover:text-muted-foreground transition-colors select-none list-none [&::-webkit-details-marker]:hidden">
+                  <ChevronDown className="w-3 h-3 transition-transform duration-200 group-open/details:rotate-180" />
+                  How is this calculated?
+                </summary>
+                <div className="mt-2.5 bg-muted/50 dark:bg-white/[0.02] border border-border/60 rounded-xl px-3.5 py-3">
+                  <p className="text-[11.5px] text-muted-foreground leading-[1.7]">
+                    Each bar shows card volume relative to the busiest board. Move cards through lists
+                    (e.g. &#34;To Do → In Progress → Done&#34;) in the board view to reflect real work status.
+                    The health score weighs <span className="font-semibold text-foreground/80">recency (40%)</span>,{" "}
+                    <span className="font-semibold text-foreground/80">card density (40%)</span>, and{" "}
+                    <span className="font-semibold text-foreground/80">volume (20%)</span>.
+                  </p>
+                </div>
+              </details>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-border">
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-between px-6 py-3 bg-muted/30 dark:bg-white/[0.015] border-t border-border/60">
+              <div className="flex items-center gap-[6px]">
                 <div className={cn(
-                  "w-1.5 h-1.5 rounded-full",
+                  "w-[6px] h-[6px] rounded-full",
                   realtimeStatus === "connected"
                     ? "bg-emerald-400 animate-pulse-dot"
                     : realtimeStatus === "connecting"
                     ? "bg-amber-400 animate-pulse-dot"
                     : "bg-muted-foreground"
                 )} />
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground font-medium">
                   {realtimeStatus === "connected"
                     ? "Syncing via Supabase Realtime"
                     : realtimeStatus === "connecting"
@@ -786,7 +838,7 @@ export function BoardList() {
                     : "Realtime offline – refresh to update"}
                 </span>
               </div>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground font-medium">
                 {recentBoards.length} board{recentBoards.length !== 1 ? "s" : ""} updated this week
               </span>
             </div>
