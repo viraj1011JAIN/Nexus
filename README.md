@@ -106,6 +106,11 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 | **RLS at Database Level** | `prisma/migrations/rls_policies.sql` | Row-Level Security policies on every tenant-scoped table — application-layer bypasses are blocked at the DB |
 | **Full-Board CSV + JSON Export** | `actions/import-export-actions.ts` | Complete board snapshots including checklists, labels, and assignees — not just a title list |
 | **Public REST API with Scoped Keys** | `app/api/v1/` | Per-scope API keys (`nxk_` prefix) stored as SHA-256 hashes — never retrievable after creation |
+| **Realtime Drag Race Guard** | `hooks/use-realtime-board.ts` | Per-card 2-second suppression window stored in a `Map` ref — remote Supabase broadcasts are silently dropped for cards that were just dragged locally, preventing board snap-back during concurrent drags |
+| **Storage Cleanup on Card Delete** | `actions/delete-card.ts` | Fetches all attachment `storagePaths` before Prisma cascade delete, then calls Supabase Storage `remove()` in `after()` — orphaned blobs are cleaned even though Prisma cascades only remove DB rows |
+| **Share Link Field Whitelist** | `app/shared/[token]/page.tsx` + `actions/board-share-actions.ts` | Unauthenticated shared-board responses use an explicit Prisma `select` — `orgId`, `createdById`, and all non-display columns are structurally excluded, not redacted |
+| **AI Frontend Cooldown** | `hooks/use-ai-cooldown.ts` | 10-second client-side cooldown on every AI trigger button with live countdown display — prevents OpenAI quota burn before the server-side rate limiter fires |
+| **Dependency Cycle Detection (BFS)** | `actions/dependency-actions.ts` | `wouldCreateCycle()` runs a breadth-first search (MAX_VISITED=500) across the full dependency graph before any new edge is saved — circular dependency deadlocks are rejected at the action layer |
 
 > If you are a recruiter or technical reviewer: the files above are the non-standard work in this project. The `lib/` directory is where bespoke business logic lives — not boilerplate.
 
@@ -1679,7 +1684,7 @@ All server actions follow the `createSafeAction` pattern from `lib/create-safe-a
 
 | Hook | Purpose |
 |---|---|
-| `use-realtime-board` | Supabase WebSocket subscription — live card/list/comment/reaction updates |
+| `use-realtime-board` | Supabase WebSocket subscription — live card/list/comment/reaction updates; includes 2-second per-card drag-race suppression window via `markLocalCardUpdate()` |
 | `use-presence` | Online user tracking on a board — avatar colors, join/leave events |
 | `use-card-lock` | Prevents concurrent card edits — broadcasts lock state via presence channel |
 | `use-card-modal` | Zustand store — centralized card modal open/close/view/edit mode state |
@@ -1689,6 +1694,7 @@ All server actions follow the `createSafeAction` pattern from `lib/create-safe-a
 | `use-push-notifications` | Web Push registration via Service Worker and PushManager API |
 | `use-realtime-analytics` | Live analytics via Supabase broadcast — card created/completed/deleted events |
 | `use-demo-mode` | Guest demo mode detection, read-only enforcement, session tracking |
+| `use-ai-cooldown` | Per-button 10-second client-side cooldown for AI trigger actions — countdown display, independent per component instance, cleans up timers on unmount |
 
 ---
 
@@ -1853,7 +1859,7 @@ nexus/
 │   ├── accessibility/               # ARIA live regions
 │   └── ...                          # Theme, billing, command palette, etc.
 │
-├── hooks/                           # 10 custom React hooks
+├── hooks/                           # 11 custom React hooks
 │   ├── use-realtime-board.ts
 │   ├── use-presence.ts
 │   ├── use-card-lock.ts
@@ -1863,7 +1869,8 @@ nexus/
 │   ├── use-optimistic-card.ts
 │   ├── use-push-notifications.ts
 │   ├── use-realtime-analytics.ts
-│   └── use-demo-mode.ts
+│   ├── use-demo-mode.ts
+│   └── use-ai-cooldown.ts
 │
 ├── lib/                             # 34 utility modules
 │   ├── db.ts                        # Prisma client (db + systemDb)
@@ -2288,6 +2295,46 @@ This prevents a user who has been removed from a board from continuing to receiv
 `actions/ai-actions.ts` now:
 - `sanitizeForPrompt()` strips control characters (`\x00`–`\x1F`), collapses excessive line padding, and trims whitespace before any user content reaches OpenAI
 - All three OpenAI calls (`suggestPriority`, `generateCardDescription`, `suggestChecklists`) split input into a **`system`** role message (fixed instructions) and a **`user`** role message (sanitized user-supplied content only). The model gives higher authority to `system` messages, preventing instruction injection via card titles or descriptions
+
+### AI Frontend Cooldown (Client-Side Spam Guard)
+
+`hooks/use-ai-cooldown.ts` adds a **secondary defence** in front of all AI trigger buttons:
+
+- **Why it matters**: The server-side per-org daily counter (`Organization.aiCallsToday`) fires *after* an OpenAI API call has already been made and billed. A single user could spam an AI button dozens of times per second, burning the daily quota before a single request is rejected.
+- **Implementation**: `triggerCooldown()` is called as the **first** line of every AI handler — before any `await` — so the button is disabled instantly on click. A `setInterval` ticks down a `secondsRemaining` counter displayed on the button label (`Wait 9s…`, `Wait 8s…`, …). Cleanup runs on unmount to prevent memory leaks.
+- **Scope**: Independent per component instance — checklist generation, description generation, and priority suggestion each have their own 10-second window.
+- Applied to: `components/modals/card-modal/checklists.tsx`, `components/modals/card-modal/index.tsx`, `components/board/list-item.tsx`
+
+### Realtime Drag Race Guard
+
+`hooks/use-realtime-board.ts` now includes a **version-gate suppression window** to prevent state flickering during concurrent drag operations:
+
+- **Root cause**: After a user reorders a card via `@dnd-kit`, the optimistic UI update is instant. However, a Supabase `postgres_changes` UPDATE broadcast for that same card arrives shortly after and re-applies the old (server-confirmed) position, causing a visible snap-back.
+- **Fix**: A `Map<cardId, suppressUntil>` ref stores `Date.now() + 2000` when a local drag operation starts (via `markLocalCardUpdate(cardId)`). Any incoming UPDATE broadcast for a card whose suppression window has not expired is silently dropped. The 2-second window is short enough that legitimate remote updates from *other* users are not affected.
+- The hook exposes `markLocalCardUpdate(cardId: string)` which the board's drag-end handler calls immediately upon completing a drag.
+
+### Supabase Storage Cleanup on Card Delete
+
+`actions/delete-card.ts` now cleans up orphaned storage blobs when a card is deleted:
+
+- **Root cause**: Prisma's cascade delete removes `Attachment` rows from the database, but the physical files stored in the `card-attachments` Supabase Storage bucket are not affected by DB-level cascades.
+- **Fix**: All `storagePaths` are fetched from the DB **before** the cascade delete runs. A Supabase service-role client then calls `storage.from("card-attachments").remove(storagePaths)` inside the `after()` async callback. Storage cleanup is best-effort — failures are logged to Sentry but do not fail the card deletion.
+
+### Share Link Data Exposure Protection
+
+`app/shared/[token]/page.tsx` and `actions/board-share-actions.ts` now use explicit Prisma `select` whitelists instead of `include`:
+
+- **Root cause**: The shared-board page is accessible to unauthenticated users (no Clerk session). Using `include: { lists: { include: { cards: true } } }` returned every column on every model — including `orgId`, `createdById`, `imageId`, and any future sensitive columns added to the schema.
+- **Fix**: An explicit `select` at every nesting level returns only display fields: board title and cover images; list id, title, order; card id, title, description, priority, dueDate, order; assignee name and avatar; label name and color. Any column not in the whitelist is never sent to the unauthenticated client.
+
+### Dependency Cycle Detection
+
+`actions/dependency-actions.ts` prevents circular dependency deadlocks before they are created:
+
+- A `wouldCreateCycle(sourceId, targetId, type)` function performs a BFS across the existing dependency graph starting from `targetId`.
+- `MAX_VISITED = 500` caps the traversal to prevent O(n²) DB calls on pathologically large graphs — any graph exceeding this threshold is treated conservatively as "cycle detected".
+- Cross-organization edges are filtered out before BFS begins — a card in a different org can never form a cycle with cards in this org.
+- The action returns a structured error `"This dependency would create a circular chain"` rather than allowing the `BLOCKING` relationship to be saved.
 
 ---
 
@@ -3080,6 +3127,16 @@ graph TB
 
 | Date | Commit | Change |
 |---|---|---|
+| 2026-03-02 | `973751a` | Fix: `hooks/use-realtime-board.ts` — per-card 2-second suppression window (`Map<cardId, suppressUntil>` ref + `markLocalCardUpdate()`) prevents remote Supabase UPDATE broadcasts from snapping dragged cards back to their old position during concurrent drags |
+| 2026-03-02 | `973751a` | Fix: `actions/delete-card.ts` — Supabase Storage `remove()` called in `after()` async callback cleans orphaned attachment blobs when a card is deleted; Prisma cascade handles DB rows, this handles the physical files |
+| 2026-03-02 | `973751a` | Security: `app/shared/[token]/page.tsx` + `actions/board-share-actions.ts` — explicit Prisma `select` whitelist on all unauthenticated shared-board queries; `orgId`, `createdById`, and all non-display columns structurally excluded (not just hidden) |
+| 2026-03-02 | `973751a` | Fix: `hooks/use-ai-cooldown.ts` (new) — 10-second client-side cooldown hook with live countdown; wired into `checklists.tsx` (checklist suggestions), `card-modal/index.tsx` (description generation), `list-item.tsx` (priority suggestion debounce guard); blocks repeat OpenAI calls before the server-side rate limiter fires |
+| 2026-03-02 | `973751a` | Note: `actions/dependency-actions.ts` — `wouldCreateCycle()` BFS (MAX_VISITED=500) was already fully implemented; no code change required |
+| 2026-03-02 | `c7c72ce` | Feat: `/api/cron/lexorank-rebalance` — weekly cron endpoint normalises all LexoRank order strings before the 64-char DoS limit is reached; `CRON_SECRET` bearer-token auth; full audit trail |
+| 2026-03-02 | `c7c72ce` | Feat: `hooks/use-presence.ts` Visibility API integration — presence channel unsubscribes immediately on `document.hidden`, resubscribes on tab focus; throttled sync prevents N² event storms |
+| 2026-03-02 | `c7c72ce` | Test: `e2e/board-golden-path.spec.ts` — full Playwright E2E golden path covering sign-up → org → board creation → card drag → checklist → share link → billing upgrade |
+| 2026-03-02 | `c7c72ce` | Perf: SSE keepalive (`/api/events` 15 s comment frames) + `lib/db-preheat.ts` (connection establishment on startup) + `next.config.ts` `experimental.instrumentationHook` — eliminates cold-start latency spikes |
+| 2026-03-02 | `c7c72ce` | Docs: README non-tutorial table + SSO enterprise roadmap + offline-mode progressive enhancement roadmap entries added |
 | 2026-03-02 | `7272611` | Test: All 43 unit test suites fixed — 1,349 / 1,349 tests passing (0 failing); root causes: missing `board-permissions` mock, `jest.resetAllMocks()` stripping `clerkClient` implementation, incorrect `auth` vs `getTenantContext` mock targets, wrong MIME type / file size fixture values |
 | 2026-03-02 | `2550b71` | Security: `lib/rate-limit.ts` rewritten async — Upstash Redis sliding-window when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set; in-memory fallback on Redis error (fail-open) |
 | 2026-03-02 | `2550b71` | Security: Stripe idempotency — `ProcessedStripeEvent` model + Prisma `P2002` guard before webhook `switch`; duplicate Stripe events silently ack'd without re-processing |
