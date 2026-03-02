@@ -193,10 +193,8 @@ export default function SignUpPage() {
               <div className="absolute top-0 left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full" />
 
               <SignUp
-                path="/sign-up"
-                routing="path"
                 signInUrl="/sign-in"
-                afterSignUpUrl="/"
+                fallbackRedirectUrl="/"
                 appearance={{
                   elements: {
                     rootBox: "w-full",

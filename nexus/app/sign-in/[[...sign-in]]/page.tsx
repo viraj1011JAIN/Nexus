@@ -220,10 +220,8 @@ export default function SignInPage() {
               <div className="absolute top-0 left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent rounded-full" />
 
               <SignIn
-                path="/sign-in"
-                routing="path"
                 signUpUrl="/sign-up"
-                afterSignInUrl="/"
+                fallbackRedirectUrl="/"
                 appearance={{
                   elements: {
                     rootBox: "w-full",
