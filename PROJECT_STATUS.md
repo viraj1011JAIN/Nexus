@@ -1,7 +1,8 @@
 # NEXUS — PROJECT STATUS
 
 **Last Audited:** March 2, 2026  
-**Last Commit:** `503c1c8` — security: harden against all 6 attack vectors  
+**Last Commit:** `40f81cb` — docs: update README with full project context  
+**Prior security commit:** `2550b71` — security: Stripe idempotency, Upstash rate-limit, realtime pre-flight auth, Supabase Realtime RLS  
 **Audited Against:** Live codebase at `c:\Nexus\nexus`  
 **Every fact verified from source files. No estimates, no aspirational claims.**
 
@@ -75,6 +76,8 @@
 | clsx | ^2.1.1 |
 | class-variance-authority | ^0.7.1 |
 | radix-ui | ^1.4.3 |
+| @upstash/ratelimit | ^2.0.5 |
+| @upstash/redis | ^1.35.0 |
 
 ### Dev Dependencies
 
@@ -125,6 +128,7 @@
 | `BoardShare` | boardId→Board, sharedWithOrgId, permission (VIEW/EDIT) |
 | `Epic` | boardId→Board, title, description, status, startDate, endDate |
 | `SavedView` | boardId→Board, name, filters (JSON), userId |
+| `ProcessedStripeEvent` | id, stripeEventId (UNIQUE), eventType, processedAt — idempotency record for Stripe webhook handler |
 
 ---
 
@@ -366,6 +370,15 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | Stripe replay attack + TOCTOU race | `app/api/webhook/stripe/route.ts` | Events older than 300 s are rejected (policy rejection, not error — returns 200); `customer.subscription.deleted` changed from `db.organization.update()` to `db.organization.updateMany()` with `WHERE stripeSubscriptionId = subscription.id` guard |
 | AI prompt injection | `actions/ai-actions.ts` | New `sanitizeForPrompt()` strips control chars and excessive whitespace; all 3 OpenAI calls (suggestPriority, generateCardDescription, suggestChecklists) refactored to use `system` role for fixed instructions and `user` role for sanitized user-supplied content only |
 
+### Commits `2550b71` + `40f81cb` — 4 remaining security checklist items
+
+| Item | Detail |
+|------|--------|
+| Stripe idempotency | `ProcessedStripeEvent` Prisma model — `stripeEventId` UNIQUE index; webhook handler checks for existing record before `switch (event.type)`, catches `P2002` unique-constraint violation to gracefully handle replayed events without double-processing |
+| Distributed rate limiting | `lib/rate-limit.ts` rewritten async; Upstash Redis sliding-window via `@upstash/ratelimit` when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set; falls back to in-memory `Map`-based GC-enabled limiter (fail-open) on Redis error; Ratelimit instances cached per `limit:windowMs` key |
+| Realtime pre-flight auth | `/api/realtime-auth` GET endpoint validates board membership via `getTenantContext()` + `prisma.boardMember` lookup; `use-presence.ts` and `use-card-lock.ts` both call this endpoint before subscribing to any Supabase Presence channel |
+| Supabase Realtime RLS | `supabase-realtime-rls.sql` — RLS policies on `realtime.messages` and `realtime.subscription` tables using `current_setting('request.jwt.claims')` to enforce user-level channel isolation |
+
 ---
 
 ## Bug Fixes — 24 February 2026 Session
@@ -433,8 +446,8 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | File | Purpose |
 |------|---------|
 | `use-realtime-board.ts` | Supabase `postgres_changes` board sync |
-| `use-presence.ts` | Supabase Presence for online users |
-| `use-card-lock.ts` | Presence-based card edit locking |
+| `use-presence.ts` | Supabase Presence for online users; pre-flight call to `/api/realtime-auth` verifies board membership before subscribing |
+| `use-card-lock.ts` | Presence-based card edit locking; `orgId`-scoped channel name; pre-flight call to `/api/realtime-auth` before subscribing |
 | `use-realtime-analytics.ts` | Supabase broadcast for analytics auto-refresh — uses `getAuthenticatedSupabaseClient(token)` with Clerk JWT (same security posture as `use-realtime-board.ts`) |
 | `use-card-modal.ts` | Zustand store for card modal open/close/id |
 | `use-debounce.ts` | Value debounce + callback debounce |
@@ -467,7 +480,7 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | `format-utils.ts` | Shared formatting helpers |
 | `priority-values.ts` | Priority enum values + colour mapping |
 | `webhook-constants.ts` | Outbound webhook event type constants |
-| `rate-limit.ts` | In-memory sliding-window rate limiter (`Map<string, number[]>`); GC every 200 calls; `rateLimit(key, limit, windowMs)` returns `{ ok, retryAfterMs }`. Note: resets on cold-start — designed for single-instance; comment in file recommends Upstash Redis for distributed deployments |
+| `rate-limit.ts` | Async hybrid rate limiter — Upstash Redis sliding-window via `@upstash/ratelimit` when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` env vars are present; falls back to in-memory GC-enabled `Map` on Redis error (fail-open); `rateLimit(key, limit, windowMs)` — async; Ratelimit instances cached per `limit:windowMs` key |
 | `webhook-delivery.ts` | Outbound webhook HTTP delivery; 3-attempt exponential backoff (1 s, 2 s delays); immediate break on 2xx success or 4xx client error |
 | `performance.ts` | Client performance measurement |
 | `prefetch.ts` | Route prefetch helpers |
@@ -491,7 +504,7 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | `/search` | Client | Full-text search results page |
 | `/shared` | Server | Shared board view (guest access) |
 
-### API Routes (`app/api/`) — 28 route files total
+### API Routes (`app/api/`) — 29 route files total
 
 | Route | Method(s) | Purpose |
 |-------|-----------|---------|
@@ -523,6 +536,7 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | `/api/v1/boards/[boardId]` | GET, PATCH, DELETE | Public REST API v1 — board CRUD |
 | `/api/v1/cards` | GET, POST | Public REST API v1 — cards |
 | `/api/v1/cards/[cardId]` | GET, PATCH, DELETE | Public REST API v1 — card CRUD |
+| `/api/realtime-auth` | GET | Pre-flight board membership check before Supabase Presence channel subscription; uses `getTenantContext()` to verify membership |
 
 ### Key Components (`components/`)
 
@@ -643,6 +657,8 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | `SENTRY_DSN` | Sentry server/edge | |
 | `SENTRY_AUTH_TOKEN` | Sentry source maps | |
 | `NEXT_PUBLIC_APP_URL` | Email links, webhooks | e.g. `https://yourapp.vercel.app` |
+| `UPSTASH_REDIS_REST_URL` | `lib/rate-limit.ts` | Optional; enables distributed rate limiting. When absent, falls back to in-memory limiter |
+| `UPSTASH_REDIS_REST_TOKEN` | `lib/rate-limit.ts` | Required alongside `UPSTASH_REDIS_REST_URL` |
 
 ---
 
@@ -697,5 +713,5 @@ Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the edge request interceptor
 | Web Push notifications | ✅ Built — needs VAPID env vars | All code built and working; activate by adding `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` to `.env` |
 | Test coverage | ✅ 191/191 | 13 suites passing |
 | CI/CD pipeline | ✅ 100% | GitHub Actions: typecheck + lint + test + build |
-| Security hardening | ✅ 100% | IDOR fix, XSS escaping, SVG upload blocked, NEXT_PUBLIC fallback removed, CLS skeletons, HSTS + COOP/CORP/X-Permitted-Cross-Domain headers, AI route rate limiting (20 req/min), Vercel function timeouts, RBAC desync fix (db.$transaction), Realtime authenticated client, LexoRank DoS guard (64-char cap), Stripe replay guard (300 s) + TOCTOU fix (updateMany), AI prompt injection protection (sanitizeForPrompt + role separation) |
+| Security hardening | ✅ 100% | IDOR fix, XSS escaping, SVG upload blocked, NEXT_PUBLIC fallback removed, CLS skeletons, HSTS + COOP/CORP/X-Permitted-Cross-Domain headers, AI route rate limiting (20 req/min), Vercel function timeouts, RBAC desync fix (db.$transaction), Realtime authenticated client, LexoRank DoS guard (64-char cap), Stripe replay guard (300 s) + TOCTOU fix (updateMany), AI prompt injection protection (sanitizeForPrompt + role separation), Stripe idempotency (ProcessedStripeEvent + P2002 guard), distributed rate limiting (Upstash Redis with in-memory fallback), realtime pre-flight auth (/api/realtime-auth), Supabase Realtime RLS policies (supabase-realtime-rls.sql) |
 

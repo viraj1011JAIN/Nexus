@@ -308,14 +308,14 @@ export function BoardList() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Name your new board..."
-              className="flex-1 h-[42px] px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
+              className="flex-1 h-10.5 px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
               disabled={isPending}
               autoComplete="off"
             />
             <button
               type="submit"
               disabled={isPending}
-              className="h-[42px] px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
+              className="h-10.5 px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
             >
               {isPending ? (
                 <div className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -328,7 +328,7 @@ export function BoardList() {
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
               aria-label="Toggle advanced options"
-              className="h-[42px] w-[42px] rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
+              className="h-10.5 w-10.5 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
             >
               <ChevronDown className={cn("h-4 w-4 transition-transform", showAdvanced && "rotate-180")} />
             </button>
