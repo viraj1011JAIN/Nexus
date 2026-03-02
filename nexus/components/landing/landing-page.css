@@ -13,8 +13,8 @@
   --pink: #ec4899;
   --magenta: #d946ef;
   --green: #10b981;
-  --text: #f1f0ff;
-  --muted: #6b6b8a;
+  --text: #ffffff;
+  --muted: #9898b8;
   --border: rgba(139, 92, 246, 0.15);
   --glow: rgba(139, 92, 246, 0.4);
 
@@ -96,7 +96,7 @@ html.has-cursor * {
   height: 100%;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 /* ─── Nav ─── */
@@ -238,7 +238,7 @@ html.has-cursor * {
 }
 .hero-title .line2 {
   display: block;
-  background: linear-gradient(135deg, #a78bfa 0%, #ec4899 50%, #06b6d4 100%);
+  background: linear-gradient(135deg, #c4b5fd 0%, #f472b6 50%, #22d3ee 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -258,14 +258,15 @@ html.has-cursor * {
 .hero-sub {
   margin-top: 24px;
   font-size: 1.15rem;
-  color: var(--muted);
+  color: #b8b8d4;
   max-width: 560px;
   text-align: center;
   line-height: 1.7;
   animation: fadeUp 1s 0.2s ease both;
 }
 .hero-sub span {
-  color: #a78bfa;
+  color: #c4b5fd;
+  text-shadow: 0 0 12px rgba(196, 181, 253, 0.4);
 }
 
 .hero-actions {
@@ -331,7 +332,7 @@ html.has-cursor * {
   font-family: var(--font-syne), "Syne", sans-serif;
   font-size: 2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #a78bfa, #ec4899);
+  background: linear-gradient(135deg, #c4b5fd, #f472b6);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -505,7 +506,7 @@ html.has-cursor * {
 }
 .mock-stat-lbl {
   font-size: 0.6rem;
-  color: #555;
+  color: #8888a8;
   margin-top: 2px;
 }
 
@@ -597,9 +598,10 @@ html.has-cursor * {
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
+  color: #ffffff;
 }
 .section-title .accent {
-  background: linear-gradient(135deg, #a78bfa, #06b6d4);
+  background: linear-gradient(135deg, #c4b5fd, #22d3ee);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -714,10 +716,11 @@ html.has-cursor * {
   font-size: 1.2rem;
   font-weight: 700;
   margin-bottom: 10px;
+  color: #ffffff;
 }
 .bento-desc {
   font-size: 0.9rem;
-  color: var(--muted);
+  color: #aaaac8;
   line-height: 1.65;
 }
 
@@ -966,7 +969,7 @@ html.has-cursor * {
 }
 .screen-metric-l {
   font-size: 0.6rem;
-  color: #555;
+  color: #8888a8;
 }
 
 .screen-boards-grid {
@@ -1056,6 +1059,7 @@ html.has-cursor * {
   font-size: 1rem;
   font-weight: 700;
   margin-bottom: 10px;
+  color: #ffffff;
 }
 .step-desc {
   font-size: 0.85rem;
@@ -1164,7 +1168,7 @@ html.has-cursor * {
   letter-spacing: -0.02em;
 }
 .cta-title span {
-  background: linear-gradient(135deg, #a78bfa, #ec4899, #06b6d4);
+  background: linear-gradient(135deg, #c4b5fd, #f472b6, #22d3ee);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1184,12 +1188,12 @@ html.has-cursor * {
 }
 .cta-note {
   font-size: 0.8rem;
-  color: #3a3a5c;
+  color: #7070a0;
   margin-top: 24px;
   letter-spacing: 0.06em;
 }
 .cta-note span {
-  color: var(--muted);
+  color: #9898b8;
 }
 
 /* ─── Footer ─── */

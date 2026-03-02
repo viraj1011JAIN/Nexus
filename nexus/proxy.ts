@@ -124,6 +124,19 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   // redirectToSignIn() preserves the return URL via Clerk's own mechanism
   // and handles cross-domain sign-in flows correctly.
   if (!userId) {
+    // Server Actions (identified by the `Next-Action` header) cannot handle
+    // 307 redirects — fetchServerAction in Next.js throws "unexpected response"
+    // if the response is not a valid action reply. Return 401 JSON instead so
+    // the client can surface a "session expired" message gracefully rather than
+    // crashing with a runtime overlay (e.g. on sign-out while actions are in flight).
+    if (req.headers.get("next-action") !== null) {
+      return applySecurityHeaders(
+        NextResponse.json(
+          { error: "Session expired. Please sign in again." },
+          { status: 401 }
+        )
+      );
+    }
     return authObj.redirectToSignIn({ returnBackUrl: req.url });
   }
 
