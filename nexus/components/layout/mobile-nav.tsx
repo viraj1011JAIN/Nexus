@@ -57,7 +57,7 @@ export const MobileNav = () => {
         </Link>
 
         <div className="flex items-center gap-3">
-          <UserButton afterSignOutUrl="/sign-in" />
+          <UserButton afterSignOutUrl="/" />
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="p-2 hover:bg-muted rounded-lg transition-colors"
