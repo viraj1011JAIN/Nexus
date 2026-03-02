@@ -328,9 +328,9 @@ function BoardTabsInner({ boardId, boardTitle, orgId, lists, filterBarOpen: exte
                     className="group gap-1 sm:gap-1.5 text-[11.5px] sm:text-[12.5px] rounded-[7px] px-2 sm:px-3 py-1.5 data-[state=active]:shadow-none font-sans transition-all duration-180 text-[#9A8F85] dark:text-white/38 data-[state=active]:text-[#7B2FF7] dark:data-[state=active]:text-[#C084FC] data-[state=active]:bg-[rgba(123,47,247,0.08)] dark:data-[state=active]:bg-[rgba(123,47,247,0.15)] data-[state=active]:font-semibold"
                     title={`${label} (${i + 1})`}
                   >
-                    <Icon className="h-3.5 w-3.5 opacity-60 group-data-[state=active]:opacity-100 shrink-0" />
-                    {/* Labels hidden on mobile — icons only; visible at sm+ */}
-                    <span className="hidden sm:inline">{label}</span>
+                    <Icon className="h-3.5 w-3.5 opacity-60 group-data-[state=active]:opacity-100 shrink-0" aria-hidden="true" />
+                    {/* Visible at sm+; sr-only on mobile so screen readers always get the label */}
+                    <span className="sr-only sm:not-sr-only sm:inline">{label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>

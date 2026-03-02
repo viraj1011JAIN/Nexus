@@ -922,6 +922,30 @@ html:not(.theme-mounted) * {
 }
 
 /* ============================================================================
+   WCAG 2.1 AA — KANBAN FOCUS RINGS
+   box-shadow (ring-*) is clipped by overflow-hidden on kanban cards/columns.
+   Use CSS outline instead so focus indicators are always visible.
+   ============================================================================ */
+
+.kanban-card:focus-visible,
+.kanban-list-col:focus-visible {
+  outline: 2px solid hsl(var(--ring, 263 70% 50%));
+  outline-offset: 2px;
+  box-shadow: none !important; /* prevent duplicate / clipped ring */
+}
+
+/* High-contrast mode: enforce solid focus outline (Windows / macOS) */
+@media (forced-colors: active) {
+  .kanban-card:focus-visible,
+  .kanban-list-col:focus-visible,
+  *:focus-visible {
+    outline: 3px solid ButtonText;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+}
+
+/* ============================================================================
    NEXUS DESIGN SYSTEM UTILITIES
    ============================================================================ */
 

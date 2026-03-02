@@ -768,10 +768,10 @@ export const CardModal = () => {
 
         {/* ── LOADING ── */}
         {!cardData ? (
-          <div className="cm-loading-wrap">
+          <div className="cm-loading-wrap" role="status" aria-label="Loading card details">
             <div className="cm-loading-inner">
-              <div className="cm-spinner" />
-              <p className="cm-loading-text">Loading card…</p>
+              <div className="cm-spinner" aria-hidden="true" />
+              <p className="cm-loading-text" aria-live="polite">Loading card…</p>
             </div>
           </div>
         ) : (
@@ -798,18 +798,24 @@ export const CardModal = () => {
                 <span className={cardData.coverImageUrl ? "cm-bc-id-img" : "cm-bc-id"}>#{cardData.id.slice(-8)}</span>
               </div>
 
-              {/* Priority pill */}
+              {/* Priority pill — concise label for screen readers */}
               {cardData.priority && (
-                <div className="cm-priority-pill">
-                  <div className="cm-priority-dot" />
-                  <span className="cm-priority-lbl">{priorityMeta[cardData.priority].label}</span>
+                <div
+                  className="cm-priority-pill"
+                  aria-label={`Priority: ${priorityMeta[cardData.priority].label}`}
+                >
+                  <div className="cm-priority-dot" aria-hidden="true" />
+                  <span className="cm-priority-lbl" aria-hidden="true">{priorityMeta[cardData.priority].label}</span>
                 </div>
               )}
 
               {/* Close */}
               <DialogClose asChild>
-                <button className={cardData.coverImageUrl ? "cm-close-img" : "cm-close"} title="Close">
-                  <X className="h-3.5 w-3.5"/>
+                <button
+                  className={cardData.coverImageUrl ? "cm-close-img" : "cm-close"}
+                  aria-label="Close card details"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </DialogClose>
             </div>

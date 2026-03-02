@@ -8,6 +8,7 @@ import {
   DndContext,
   closestCorners,
   PointerSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -17,6 +18,7 @@ import {
 import {
   SortableContext,
   horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
   arrayMove,
 } from "@dnd-kit/sortable";
 
@@ -119,10 +121,13 @@ export const ListContainer = ({
       activationConstraint: { distance: 8 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { 
-        delay: 150, 
-        tolerance: 8 
-      },
+      activationConstraint: { delay: 150, tolerance: 8 },
+    }),
+    // WCAG 2.1.1 — keyboard drag-and-drop via Space to pick up / Arrow keys to
+    // move / Space to drop / Escape to cancel.  Requires sortableKeyboardCoordinates
+    // so the sensor knows how to calculate target positions from keyboard input.
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
 
@@ -314,11 +319,49 @@ export const ListContainer = ({
         className="board-scrollbar flex-1 overflow-x-auto overflow-y-hidden flex flex-col pb-9"
       >
       {/* Board canvas */}
+      {/* Screen-reader instructions live outside the drag context so they are
+          always present in the accessibility tree.  dnd-kit also injects its
+          own live region with per-event announcements via the accessibility prop. */}
+      <div id="dnd-sr-instructions" className="sr-only" aria-live="off">
+        To pick up a draggable item, press Space or Enter.
+        While dragging, use the Arrow keys to move.
+        Press Space or Enter again to drop, or press Escape to cancel.
+      </div>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
-        onDragEnd={onDragEnd}
+        onDragEnd={(e) => {
+          onDragEnd(e);
+        }}
         onDragOver={onDragOver}
+        onDragCancel={() => { /* live region announcement handled by accessibility.announcements */ }}
+        accessibility={{
+          screenReaderInstructions: {
+            draggable: "To pick up a draggable item, press Space or Enter. Use the Arrow keys to move. Press Space or Enter to drop, or Escape to cancel.",
+          },
+          announcements: {
+            onDragStart: ({ active }) => {
+              const t = active.data.current?.card?.title ?? active.data.current?.list?.title ?? "item";
+              return `Picked up: ${t}. Use Arrow keys to move, Space to drop, Escape to cancel.`;
+            },
+            onDragOver: ({ active, over }) => {
+              if (!over) return;
+              const t = active.data.current?.card?.title ?? active.data.current?.list?.title ?? "item";
+              const dest = over.data.current?.list?.title ?? over.data.current?.card?.title ?? over.id;
+              return `${t} is over ${dest}.`;
+            },
+            onDragEnd: ({ active, over }) => {
+              if (!over) return;
+              const t = active.data.current?.card?.title ?? active.data.current?.list?.title ?? "item";
+              const dest = over.data.current?.list?.title ?? over.data.current?.card?.title ?? over.id;
+              return `${t} was dropped on ${dest}.`;
+            },
+            onDragCancel: ({ active }) => {
+              const t = active.data.current?.card?.title ?? active.data.current?.list?.title ?? "item";
+              return `Drag cancelled. ${t} was returned to its original position.`;
+            },
+          },
+        }}
       >
         <div
           className="flex gap-3.5 items-start px-6 pt-4.5 pb-2"
@@ -355,10 +398,13 @@ export const ListContainer = ({
               <input hidden name="boardId" value={boardId} readOnly />
               {/* Title input */}
               <div className="flex items-center gap-2 px-3.5 py-2.75 mb-2 bg-[#FFFDF9] dark:bg-white/2.5 border border-dashed border-black/10 dark:border-white/10 rounded-xl shadow-[0_1px_6px_rgba(0,0,0,0.04)] dark:shadow-none">
+                <label htmlFor="new-list-title" className="sr-only">New list name</label>
                 <input
+                  id="new-list-title"
                   name="title"
                   placeholder="Name this list…"
                   required
+                  aria-label="New list name"
                   className="flex-1 bg-transparent border-none outline-none text-[#1A1714] dark:text-[#E8E4F0] text-[13px] font-medium font-sans placeholder:text-[#9A8F85]"
                 />
               </div>
@@ -377,7 +423,12 @@ export const ListContainer = ({
       </div>{/* end shared scroll wrapper */}
 
       {/* Footer status bar — fixed to the bottom of the viewport */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 h-9 px-3 sm:px-6 flex items-center justify-between gap-4 sm:gap-8 bg-[rgba(255,253,249,0.96)] dark:bg-[rgba(13,12,20,0.92)] backdrop-blur-[14px] border-t border-black/7 dark:border-white/6">
+      <div
+        role="status"
+        aria-label="Board status"
+        aria-live="off"
+        className="fixed bottom-0 left-0 right-0 z-50 h-9 px-3 sm:px-6 flex items-center justify-between gap-4 sm:gap-8 bg-[rgba(255,253,249,0.96)] dark:bg-[rgba(13,12,20,0.92)] backdrop-blur-[14px] border-t border-black/7 dark:border-white/6"
+      >
         {/* List indicators: dot+count on mobile, full name+count on sm+ */}
         <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto flex-1 min-w-0">
           {orderedData.map((list, i) => {
@@ -392,12 +443,18 @@ export const ListContainer = ({
             return (
               <div key={list.id} className="flex items-center gap-[5px] shrink-0">
                 <div
+                  aria-hidden="true"
                   className={`w-[5px] h-[5px] rounded-full shrink-0 ${DOT_CLASSES[i % DOT_CLASSES.length]}`}
                 />
-                <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/28 whitespace-nowrap">
+                {/* aria-label gives context for screen readers when list title is
+                    visually hidden on mobile (display:none blocks AT access) */}
+                <span
+                  aria-label={`${list.title}: ${list.cards.length} ${list.cards.length === 1 ? "card" : "cards"}`}
+                  className="text-[10.5px] text-[#BFB9B3] dark:text-white/28 whitespace-nowrap"
+                >
                   {/* Show full list name on sm+, just the count on mobile */}
-                  <span className="hidden sm:inline">{list.title} · </span>
-                  <span className="text-[#6B6560] dark:text-white/45 font-medium">
+                  <span aria-hidden="true" className="hidden sm:inline">{list.title} · </span>
+                  <span aria-hidden="true" className="text-[#6B6560] dark:text-white/45 font-medium">
                     {list.cards.length}
                   </span>
                 </span>
@@ -409,6 +466,7 @@ export const ListContainer = ({
         <div className="hidden sm:flex items-center gap-1.5 shrink-0">
           <span className="text-[10.5px] text-[#BFB9B3] dark:text-white/20">Auto-save</span>
           <div
+            aria-hidden="true"
             className="animate-pulse-dot w-[5px] h-[5px] rounded-full bg-[#059669] dark:bg-[#4FFFB0] shadow-[0_0_4px_rgba(5,150,105,0.4)] dark:shadow-[0_0_4px_rgba(79,255,176,0.5)]"
           />
         </div>

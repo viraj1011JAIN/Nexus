@@ -31,7 +31,7 @@ const UserButton = dynamic(
 );
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { NotificationCenter } from "@/components/layout/notification-center";
 
 const routes = [
@@ -43,6 +43,7 @@ const routes = [
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const prefersReducedMotion = useReducedMotion();
 
   return (
     <aside className="w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 z-20 select-none relative overflow-hidden">
@@ -112,12 +113,13 @@ export const Sidebar = () => {
           return (
             <motion.div
               key={route.href}
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.15, delay: index * 0.04 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, x: -6 }}
+              animate={prefersReducedMotion ? {} : { opacity: 1, x: 0 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.15, delay: prefersReducedMotion ? 0 : index * 0.04 }}
             >
               <Link
                 href={route.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "group relative flex items-center gap-2.5 px-2.5 py-2.25 rounded-lg text-[13.5px] transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
                   isActive
@@ -153,10 +155,18 @@ export const Sidebar = () => {
       <div className="px-5 py-3 border-b border-sidebar-border">
         <div className="flex justify-between mb-1.5">
           <span className="text-[11px] text-muted-foreground font-medium">Storage</span>
-          <span className="text-[11px] text-foreground font-semibold">24%</span>
+          <span className="text-[11px] text-foreground font-semibold" aria-hidden="true">24%</span>
         </div>
-        <div className="h-1 bg-muted rounded-full overflow-hidden">
+        <div
+          role="progressbar"
+          aria-valuenow={24}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Storage usage: 24%"
+          className="h-1 bg-muted rounded-full overflow-hidden"
+        >
           <div
+            aria-hidden="true"
             className="h-full rounded-full w-[24%] bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4]"
           />
         </div>

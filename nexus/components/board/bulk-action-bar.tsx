@@ -302,8 +302,8 @@ export function BulkActionBar({
 
               {/* Loading indicator */}
               {loading && (
-                <div className="ml-2 pl-2 border-l border-slate-600">
-                  <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
+                <div className="ml-2 pl-2 border-l border-slate-600" role="status" aria-label="Processing bulk action">
+                  <Loader2 className="h-4 w-4 animate-spin text-indigo-400" aria-hidden="true" />
                 </div>
               )}
 

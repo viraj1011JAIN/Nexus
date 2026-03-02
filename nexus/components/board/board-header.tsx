@@ -61,8 +61,8 @@ export function BoardHeader({
 
           {/* Board identity */}
           <div className="flex items-center gap-[10px] min-w-0">
-            {/* Logo mark */}
-            <div className="w-[30px] h-[30px] rounded-[9px] bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] flex items-center justify-center text-[13px] font-extrabold text-white font-[family-name:var(--font-playfair)] shadow-[0_4px_14px_rgba(123,47,247,0.35)] shrink-0">
+            {/* Logo mark — decorative, board title is in h1 */}
+            <div aria-hidden="true" className="w-[30px] h-[30px] rounded-[9px] bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] flex items-center justify-center text-[13px] font-extrabold text-white font-[family-name:var(--font-playfair)] shadow-[0_4px_14px_rgba(123,47,247,0.35)] shrink-0">
               N
             </div>
 
@@ -81,12 +81,14 @@ export function BoardHeader({
         {/* RIGHT: live badge + presence + share + settings */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
-          {/* Live badge — full pill on sm+, dot-only on mobile */}
+          {/* Live badge — announces real-time sync status */}
           <div
+            role="status"
+            aria-label="Board is live and syncing in real time"
             className="flex items-center gap-[6px] py-[5px] px-[10px] rounded-full bg-[rgba(5,150,105,0.08)] border border-[rgba(5,150,105,0.2)] dark:bg-[rgba(79,255,176,0.08)] dark:border-[rgba(79,255,176,0.2)]"
           >
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse-dot bg-[#059669] shadow-[0_0_5px_rgba(5,150,105,0.4)] dark:bg-[#4FFFB0] dark:shadow-[0_0_5px_rgba(79,255,176,0.5)]" />
-            <span className="hidden sm:inline text-[11px] font-semibold text-[#059669] dark:text-[#4FFFB0]">
+            <div aria-hidden="true" className="w-1.5 h-1.5 rounded-full animate-pulse-dot bg-[#059669] shadow-[0_0_5px_rgba(5,150,105,0.4)] dark:bg-[#4FFFB0] dark:shadow-[0_0_5px_rgba(79,255,176,0.5)]" />
+            <span aria-hidden="true" className="hidden sm:inline text-[11px] font-semibold text-[#059669] dark:text-[#4FFFB0]">
               Live
             </span>
           </div>

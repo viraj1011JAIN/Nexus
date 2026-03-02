@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
 import { Clock, Lock, CheckSquare, Check, Paperclip } from "lucide-react";
 import { useBulkSelection } from "@/lib/bulk-selection-context";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { deleteCard } from "@/actions/delete-card";
 import { useParams } from "next/navigation";
 import { useCardModal } from "@/hooks/use-card-modal";
@@ -52,6 +52,8 @@ const CardItemInner = ({
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const isDark = mounted && resolvedTheme === "dark";
   const isSelected = selectedIds.includes(data.id);
+  // Respect the OS "Reduce motion" setting (WCAG 2.3.3 Animation from Interactions)
+  const prefersReducedMotion = useReducedMotion();
 
   // Priority bar class for accent bar
   const priorityBarClass = data.priority ? PRIORITY_BAR_CLASSES[data.priority] ?? null : null;
@@ -87,6 +89,28 @@ const CardItemInner = ({
     : null;
   const isDueSoon = hoursUntilDue !== null && hoursUntilDue > 0 && hoursUntilDue < 24;
 
+  // Accessible name for the card — summarises key metadata for screen readers.
+  // dnd-kit's {…attributes} spreads role="button" + tabIndex + aria-describedby
+  // (keyboard instructions). The aria-label gives the button a meaningful name.
+  const cardAriaLabel = [
+    data.title,
+    data.priority
+      ? `Priority: ${data.priority.charAt(0) + data.priority.slice(1).toLowerCase()}`
+      : null,
+    isOverdue
+      ? "Overdue"
+      : isDueSoon
+      ? "Due soon"
+      : data.dueDate
+      ? `Due ${format(new Date(data.dueDate), "MMM d")}`
+      : null,
+    (data._count?.dependencies ?? 0) > 0
+      ? `Blocked by ${data._count!.dependencies} ${data._count!.dependencies === 1 ? "card" : "cards"}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(". ");
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -105,15 +129,28 @@ const CardItemInner = ({
       }}
       {...attributes}
       {...listeners}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      whileHover={{ scale: 1.012, boxShadow: isDark
+      aria-label={cardAriaLabel}
+      onKeyDown={(e) => {
+        // Enter activates the card (open modal / toggle bulk-select).
+        // All other keys (Space to pick up, Arrows to move, Escape to cancel)
+        // are forwarded to dnd-kit's KeyboardSensor event handler.
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (isBulkMode) { toggleCard(data.id); return; }
+          cardModal.onOpen(data.id);
+        } else {
+          (listeners?.onKeyDown as React.KeyboardEventHandler | undefined)?.(e);
+        }
+      }}
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+      exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.97 }}
+      whileHover={prefersReducedMotion ? undefined : { scale: 1.012, boxShadow: isDark
         ? "0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(123,47,247,0.25)"
         : "0 8px 24px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06), 0 0 0 1px rgba(123,47,247,0.1)"
       }}
-      whileTap={{ scale: 0.985 }}
-      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1], delay: index * 0.04 }}
+      whileTap={prefersReducedMotion ? undefined : { scale: 0.985 }}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.4, 0, 0.2, 1], delay: prefersReducedMotion ? 0 : index * 0.04 }}
       onClick={() => {
         if (isBulkMode) { toggleCard(data.id); return; }
         cardModal.onOpen(data.id);
@@ -123,9 +160,9 @@ const CardItemInner = ({
         isSelected && "ring-2 ring-primary"
       )}
     >
-      {/* Priority left accent bar */}
+      {/* Priority left accent bar — purely decorative, conveyed by PriorityBadge */}
       {priorityBarClass && (
-        <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-[12px] ${priorityBarClass}`} />
+        <div aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-[12px] ${priorityBarClass}`} />
       )}
       {/* Bulk selection checkbox (top-left overlay — visible only in bulk mode) */}
       {isBulkMode && (
@@ -190,7 +227,15 @@ const CardItemInner = ({
 
           {/* Due Date Tag */}
           {data.dueDate && (
-            <div className={cn(
+            <div
+              aria-label={
+                isOverdue
+                  ? `Overdue: ${format(new Date(data.dueDate), "MMM d")}`
+                  : isDueSoon
+                  ? `Due soon: ${format(new Date(data.dueDate), "MMM d")}`
+                  : `Due ${format(new Date(data.dueDate), "MMM d")}`
+              }
+              className={cn(
               "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium",
               isOverdue
                 ? "bg-red-500/10 text-red-600 dark:text-red-400"
@@ -198,37 +243,42 @@ const CardItemInner = ({
                 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                 : "bg-black/5 dark:bg-white/8 text-[#6B6560] dark:text-white/45"
             )}>
-              <Clock className="w-3 h-3" />
-              <span>{format(new Date(data.dueDate), "MMM d")}</span>
+              <Clock className="w-3 h-3" aria-hidden="true" />
+              <span aria-hidden="true">{format(new Date(data.dueDate), "MMM d")}</span>
             </div>
           )}
 
           {/* Story Points badge */}
           {data.storyPoints !== null && data.storyPoints !== undefined && (
-            <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <span>{data.storyPoints}pt</span>
+            <div
+              aria-label={`${data.storyPoints} story ${data.storyPoints === 1 ? "point" : "points"}`}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            >
+              <span aria-hidden="true">{data.storyPoints}pt</span>
             </div>
           )}
 
           {/* Dependency lock icon */}
           {(data._count?.dependencies ?? 0) > 0 && (
             <div
+              aria-label={`Blocked by ${data._count!.dependencies} ${data._count!.dependencies === 1 ? "card" : "cards"}`}
               title={`Blocked by ${data._count!.dependencies} card${data._count!.dependencies === 1 ? "" : "s"}`}
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-red-500/10 text-red-600 dark:text-red-400"
             >
-              <Lock className="w-3 h-3" />
-              <span>{data._count!.dependencies}</span>
+              <Lock className="w-3 h-3" aria-hidden="true" />
+              <span aria-hidden="true">{data._count!.dependencies}</span>
             </div>
           )}
 
           {/* Attachment count badge */}
           {(data._count?.attachments ?? 0) > 0 && (
             <div
+              aria-label={`${data._count!.attachments} ${data._count!.attachments === 1 ? "attachment" : "attachments"}`}
               title={`${data._count!.attachments} attachment${data._count!.attachments === 1 ? "" : "s"}`}
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/8 text-[#6B6560] dark:text-white/45"
             >
-              <Paperclip className="w-3 h-3" />
-              <span>{data._count!.attachments}</span>
+              <Paperclip className="w-3 h-3" aria-hidden="true" />
+              <span aria-hidden="true">{data._count!.attachments}</span>
             </div>
           )}
         </div>
@@ -243,9 +293,17 @@ const CardItemInner = ({
           const pct = Math.round((done / total) * 100);
           return (
             <div className="flex items-center gap-2 w-full">
-              <CheckSquare className="w-3 h-3 text-[#9A8F85] dark:text-white/35 shrink-0" />
-              <div className="flex-1 h-1 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
+              <CheckSquare className="w-3 h-3 text-[#9A8F85] dark:text-white/35 shrink-0" aria-hidden="true" />
+              <div
+                role="progressbar"
+                aria-valuenow={pct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Checklist: ${done} of ${total} items complete`}
+                className="flex-1 h-1 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden"
+              >
                 <div
+                  aria-hidden="true"
                   className={cn(
                     "h-full rounded-full transition-[width] duration-500 [width:var(--progress-w)]",
                     pct === 100 ? "bg-emerald-500" : "bg-[#7B2FF7]"
@@ -253,7 +311,7 @@ const CardItemInner = ({
                   style={{ '--progress-w': `${pct}%` } as CSSProperties}
                 />
               </div>
-              <span className="text-[10px] font-medium tabular-nums text-[#9A8F85] dark:text-white/35 shrink-0">{done}/{total}</span>
+              <span aria-hidden="true" className="text-[10px] font-medium tabular-nums text-[#9A8F85] dark:text-white/35 shrink-0">{done}/{total}</span>
             </div>
           );
         })()}

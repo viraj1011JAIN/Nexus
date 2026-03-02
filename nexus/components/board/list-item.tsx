@@ -156,6 +156,8 @@ const ListItemInner = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
+      {...listeners}
+      aria-label={`${data.title} column, ${data.cards.length} ${data.cards.length === 1 ? "card" : "cards"}`}
       className="animate-list-enter kanban-list-col w-72 shrink-0 select-none touch-none"
     >
       {/* List column outer shell */}
@@ -169,9 +171,8 @@ const ListItemInner = ({
             : "0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)",
         }}
       >
-        {/* List Header — drag handle */}
+        {/* List Header — visual drag handle (keyboard drag is on the column root) */}
         <div
-          {...listeners}
           className="flex items-center justify-between px-3.5 pt-3 pb-3 cursor-grab active:cursor-grabbing"
           style={{
             background: isDark
@@ -182,8 +183,9 @@ const ListItemInner = ({
           }}
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {/* Color dot */}
+            {/* Color dot — decorative */}
             <div
+              aria-hidden="true"
               className="w-2 h-2 rounded-full shrink-0"
               style={{ background: listColor, boxShadow: isDark ? `0 0 7px ${listColor}bb` : `0 0 5px ${listColor}77` }}
             />
@@ -205,17 +207,19 @@ const ListItemInner = ({
                 <button type="submit" hidden />
               </form>
             ) : (
-              <span
+              <button
+                type="button"
                 onClick={enableEditing}
-                title="Click to rename"
-                className="text-[13px] font-bold tracking-[-0.01em] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[#1A1714] dark:text-[#E8E4F0] hover:text-[#0F0D0B] dark:hover:text-white transition-colors duration-100"
+                aria-label={`Rename list: ${data.title}`}
+                className="text-[13px] font-bold tracking-[-0.01em] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[#1A1714] dark:text-[#E8E4F0] hover:text-[#0F0D0B] dark:hover:text-white transition-colors duration-100 bg-transparent border-none p-0 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 {data.title}
-              </span>
+              </button>
             )}
 
             {/* Card count pill */}
             <span
+              aria-label={`${data.cards.length} ${data.cards.length === 1 ? "card" : "cards"}`}
               className="shrink-0 text-[10px] font-bold px-1.5 py-px rounded-full leading-none"
               style={{
                 background: `${listColor}1A`,
@@ -233,6 +237,7 @@ const ListItemInner = ({
             <button
               onClick={() => cardInputRef.current?.focus()}
               title="Add card"
+              aria-label={`Add card to ${data.title}`}
               className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#9A8F85] dark:text-white/40 hover:scale-105"
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.background = `${listColor}28`;
@@ -251,6 +256,7 @@ const ListItemInner = ({
               <DropdownMenuTrigger asChild>
                 <button
                   title="List options"
+                  aria-label={`Options for ${data.title} list`}
                   className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#BFB9B3] dark:text-white/30 hover:bg-black/8 dark:hover:bg-white/10 hover:text-[#6B6560] dark:hover:text-white/60"
                 >
                   <MoreHorizontal className="w-3.5 h-3.5" />
@@ -331,6 +337,7 @@ const ListItemInner = ({
               <button
                 type="submit"
                 title="Add card"
+                aria-label={`Add card to ${data.title}`}
                 className="h-8 w-8 rounded-[10px] border-none shrink-0 flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95"
                 style={{ background: `${listColor}20`, color: listColor }}
                 onMouseEnter={e => {
