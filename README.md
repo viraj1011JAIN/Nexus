@@ -927,7 +927,7 @@ Nexus uses **PostgreSQL** hosted on **Supabase**. All database access goes throu
 
 ### Schema Overview
 
-- **34 models** — every concept in the app (boards, cards, users, labels, sprints, etc.) has its own table
+- **35 models** — every concept in the app (boards, cards, users, labels, sprints, etc.) has its own table
 - **13 enums** — fixed value sets used across the schema: `BoardRole`, `OrgRole`, `Priority`, `ACTION`, `ENTITY_TYPE`, `SubscriptionPlan`, and more
 - **All primary keys are CUID strings** — e.g. `clx1a2b3c4d5e6f7g8h` — not auto-incremented integers
   - CUIDs are collision-resistant, URL-safe, and do not expose creation order to attackers
@@ -1351,6 +1351,20 @@ Per-user settings stored in the database.
 
 ---
 
+#### `ProcessedStripeEvent`
+Idempotency table that prevents duplicate Stripe webhook events from being processed twice.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | CUID string | Row ID |
+| `stripeEventId` | String (unique) | The Stripe event ID (e.g. `evt_1...)`) — `UNIQUE` constraint stops double-processing |
+| `eventType` | String | The Stripe event type (e.g. `checkout.session.completed`) |
+| `processedAt` | DateTime | When the event was first processed |
+
+When a Stripe event arrives, the handler attempts to `INSERT` a row before the `switch` statement. If a row already exists (duplicate delivery → Prisma `P2002` error), the handler returns HTTP 200 immediately without re-running business logic. This is an additional safety layer on top of the 300-second staleness check — it handles retries delivered within the staleness window.
+
+---
+
 ### Database Design Decisions
 
 - **CUID primary keys** — CUIDs look like `clx1a2b3c4d` — they are random enough to be unguessable, safe to expose in URLs, and work in distributed environments without a central sequence counter
@@ -1572,6 +1586,7 @@ All internal routes use Clerk session (cookie) authentication.
 | `POST` | `/api/gdpr/delete-request` | Request account deletion (GDPR Article 17) |
 | `POST` | `/api/admin/seed-templates` | Seed board templates (admin only) |
 | `POST` | `/api/cron/daily-reports` | Daily report generation (Vercel Cron, 9 AM UTC) |
+| `GET` | `/api/realtime-auth` | Pre-flight board membership check before Supabase channel subscription (`?boardId=<id>`) |
 
 ---
 
@@ -1823,7 +1838,7 @@ nexus/
 │   └── ...                          # DAL, email, utils, design tokens, etc.
 │
 ├── prisma/
-│   ├── schema.prisma                # 34 models, 13 enums
+│   ├── schema.prisma                # 35 models, 13 enums
 │   ├── seed.ts
 │   └── migrations/
 │
@@ -1849,6 +1864,7 @@ nexus/
 │   ├── icon-192.png
 │   └── icon-512.png
 │
+├── supabase-realtime-rls.sql        # RLS policies for realtime.messages + realtime.subscription
 ├── next.config.ts
 ├── tailwind.config.ts
 ├── jest.config.ts
@@ -1866,7 +1882,7 @@ nexus/
 | Components | 99 files |
 | Custom Hooks | 10 files |
 | Pages | 24 pages |
-| API Routes | 31 routes |
+| API Routes | 32 routes |
 | Server Actions | 40 files |
 | Lib Modules | 35 files |
 | Test Files | 43 files |
@@ -1915,6 +1931,8 @@ cp .env.example .env
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service key for file uploads (`sb_secret_*` format from modern Supabase projects) | Supabase > Settings > API |
 | `GIPHY_API_KEY` | Giphy API key | developers.giphy.com |
 | `KLIPY_API_KEY` | Alternative GIF provider | klipy.com/developers |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint — enables distributed rate limiting across all Vercel instances | [upstash.com](https://upstash.com) > New Database > REST API |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token — required alongside `UPSTASH_REDIS_REST_URL` | Upstash Console |
 | `E2E_EMAIL` | Playwright test account email | Create a test account |
 | `E2E_PASSWORD` | Playwright test account password | — |
 
@@ -2121,9 +2139,10 @@ npx playwright test boards.spec.ts
 
 **Route-level limiting** — `lib/rate-limit.ts`:
 
-- In-memory sliding-window implementation with GC every 200 calls
+- **Distributed (Upstash Redis)** when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set — sliding-window via `@upstash/ratelimit`; state shared across all Vercel instances
+- **In-memory fallback** — GC-enabled `Map<string, number[]>` with GC every 200 calls; used when Upstash is not configured or if Redis is temporarily unavailable (fail-open to keep the app live)
 - Applied to `/api/ai`: 20 requests per user per minute; returns 429 + `Retry-After` header on breach
-- Note: in-memory store resets on cold-start. For multi-instance production deployments, replace with Redis/Upstash.
+- Ratelimit instances are cached in-process per `limit:windowMs` key — no Redis round-trip overhead for setup
 
 ### Webhook Security
 
@@ -2188,6 +2207,25 @@ This prevents a race condition where two parallel requests could both pass the m
 ### LexoRank DoS Guard
 
 `actions/update-card-order.ts` and `actions/update-list-order.ts` reject any order string exceeding 64 characters with a safe error message. Normal LexoRank strings max out at ~32 characters; this cap only triggers on malformed or malicious payloads.
+
+### Stripe Idempotency
+
+`app/api/webhook/stripe/route.ts` records every processed Stripe event in the `ProcessedStripeEvent` table (Prisma model added 2026-03-02). The `stripeEventId` column has a `UNIQUE` constraint — a duplicate delivery causes a Prisma `P2002` error which is caught and silently acknowledged with HTTP 200 without re-processing. This closes the gap left by the 300-second staleness check, which only filters *very* old replays.
+
+### Realtime Channel Pre-flight Verification
+
+Before subscribing to any Supabase channel, client hooks (`use-presence`, `use-card-lock`) call `GET /api/realtime-auth?boardId=<id>`. That endpoint:
+1. Extracts `userId` + `orgId` from the signed Clerk JWT
+2. Resolves the internal `User` record (same pattern as `getTenantContext()`)
+3. Verifies an active `OrganizationUser` row exists (`isActive = true`, `status = ACTIVE`)
+4. Verifies a `BoardMember` row exists for the requested `boardId`
+5. Returns `{ allowed: false }` with HTTP 403/401 on any failure — fail-closed
+
+This prevents a user who has been removed from a board from continuing to receive live WebSocket events until their Clerk JWT expires.
+
+### Supabase Realtime Row-Level Security
+
+`supabase-realtime-rls.sql` (run once in Supabase SQL Editor) enables RLS on `realtime.messages` and `realtime.subscription`. Policies restrict channel subscriptions to topics that start with `org:<jwt.org_id>:` — matching the channel naming convention enforced in `lib/realtime-channels.ts`. Requires the Clerk JWT template `supabase` to include `{ "org_id": "{{org.id}}" }`.
 
 ### Stripe Replay Attack + TOCTOU
 
@@ -2374,7 +2412,7 @@ flowchart LR
 sequenceDiagram
     participant U as User (Browser)
     participant DND as @dnd-kit
-    participant OPT as Optimistic UI
+    participant OptUI as Optimistic UI
     participant SA as Server Action
     participant DB as PostgreSQL
     participant EB as Event Bus
@@ -2382,9 +2420,9 @@ sequenceDiagram
     participant Other as Other Users
 
     U->>DND: Starts dragging card
-    DND->>OPT: Show DragOverlay ghost
+    DND->>OptUI: Show DragOverlay ghost
     U->>DND: Drops card in new position
-    DND->>OPT: Update local state immediately (0ms delay)
+    DND->>OptUI: Update local state immediately (0ms delay)
     DND->>SA: Call update-card-order(cardId, newOrder)
     SA->>SA: Validate input via Zod schema
     SA->>SA: getTenantContext() — check auth + MOVE_CARD permission
@@ -2398,7 +2436,7 @@ sequenceDiagram
     DB->>RT: postgres_changes fires on card row update
     RT->>Other: Broadcast card move event
     Other->>Other: UI updates — card appears in new position
-    Note over U,OPT: If SA fails → OPT rolls back to original position
+    Note over U,OptUI: If SA fails → OptUI rolls back to original position
 ```
 
 ---
@@ -2732,7 +2770,7 @@ graph TB
 
 | Concern | Current | Production Scale Path |
 |---|---|---|
-| Rate limiting | In-memory `Map` (single instance) | Replace with Redis/Upstash for distributed limiting |
+| Rate limiting | Upstash Redis (distributed) with in-memory fallback — `lib/rate-limit.ts` | Add `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` env vars to enable distributed mode |
 | DB connections | Supabase free tier limits | Scale Supabase plan, monitor PgBouncer utilization |
 | Realtime connections | Per-project Supabase limits | Shard by organization at high concurrency |
 | File storage | Supabase Storage | Add CDN in front of storage bucket |
@@ -2745,11 +2783,12 @@ graph TB
 
 ### Current Limitations
 
-- **Rate limiting is in-memory** — Single-instance only. Multi-instance deployments require Redis
+- **Rate limiting** — Distributed Upstash Redis when env vars are set; falls back to single-instance in-memory Map when running without Upstash credentials (e.g. local dev or deployments that haven't configured Upstash yet)
 - **Test coverage is ~19.5%** — Core paths (auth, billing, RBAC) are covered; UI components are not
 - **No offline support** — Service Worker handles push notifications only, not offline caching
 - **No native mobile app** — Web UI is responsive, but no iOS/Android app exists
 - **No SSO/SAML** — Enterprise authentication not yet implemented
+- **Supabase Realtime RLS** — requires manual one-time SQL execution in Supabase Dashboard (`supabase-realtime-rls.sql`) and Clerk JWT template configuration
 
 ### Potential Roadmap Items
 
@@ -2770,6 +2809,11 @@ graph TB
 
 | Date | Commit | Change |
 |---|---|---|
+| 2026-03-02 | `2550b71` | Security: `lib/rate-limit.ts` rewritten async — Upstash Redis sliding-window when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set; in-memory fallback on Redis error (fail-open) |
+| 2026-03-02 | `2550b71` | Security: Stripe idempotency — `ProcessedStripeEvent` model + Prisma `P2002` guard before webhook `switch`; duplicate Stripe events silently ack'd without re-processing |
+| 2026-03-02 | `2550b71` | Security: `app/api/realtime-auth` — new GET endpoint verifying org membership + `BoardMember` row before any Supabase channel subscription; fail-closed on DB error |
+| 2026-03-02 | `2550b71` | Security: `hooks/use-presence.ts` + `hooks/use-card-lock.ts` — pre-flight call to `/api/realtime-auth` before subscribing to any Supabase channel; authenticated Supabase client; org-scoped channel names |
+| 2026-03-02 | `2550b71` | Security: `supabase-realtime-rls.sql` — RLS policies for `realtime.messages` + `realtime.subscription` scoped to JWT `org_id` claim |
 | 2026-03-02 | `503c1c8` | Security: RBAC desync fixed — `lib/tenant-context.ts` healing path wrapped in `db.$transaction()`, uses real DB `isActive`/`status`, immediately throws `FORBIDDEN` for suspended rows |
 | 2026-03-02 | `503c1c8` | Security: Realtime auth — `hooks/use-realtime-analytics.ts` now uses `getAuthenticatedSupabaseClient(token)` with Clerk JWT (was unauthenticated) |
 | 2026-03-02 | `503c1c8` | Security: LexoRank DoS guard — `update-card-order.ts` + `update-list-order.ts` reject order strings > 64 chars |
