@@ -75,7 +75,7 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 > Built as a self-hostable alternative to Trello and Jira — with multi-organization support, a public API, and enterprise-grade security architecture out of the box.
 
 **Code quality status:**
-- TypeScript: **0 errors** across all 99 components, 40 server actions, and 34 lib modules
+- TypeScript: **0 errors** across all 100 components, 42 server actions, and 35 lib modules
 - ESLint: **0 warnings** — all Tailwind v4 utilities, a11y rules, and import rules pass cleanly
 - Hydration: **0 mismatches** — all CSS utilities use bracket syntax (`gap-[5px]`, `h-[30px]`) for consistency between server and client renders
 
@@ -377,7 +377,7 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 
 - Root route — auto-redirects to `/dashboard` for authenticated users (handled in `proxy.ts` middleware before page render)
 - Shows a minimal marketing page for unauthenticated visitors with CTA to sign up
-- No data fetching; pure static render
+- Server-side `auth()` check redirects signed-in users to `/dashboard` (instant HTTP 307, no client JS required); unauthenticated visitors get a pure static marketing page
 
 ---
 
@@ -928,9 +928,9 @@ Browser                Next.js Server          Clerk            PostgreSQL
 
 ### Route Protection Strategy
 
-There is no `middleware.ts` file. Auth is enforced at the action/route level:
+Auth is enforced at two layers — `proxy.ts` (Next.js 16 middleware) and at the action/route level:
 
-- **Security headers** applied via `next.config.ts` for all routes
+- **`proxy.ts` middleware** — Clerk `clerkMiddleware()` runs on every non-static request. Unauthenticated users on protected routes are redirected to `/sign-in`. Org membership and board membership gates run before page render. Security headers (CSP, HSTS, X-Frame-Options, etc.) are injected here
 - **Server Actions** call `getTenantContext()` as the first operation
 - **API routes** call `authenticateApiKey()` for public v1 endpoints, or `getTenantContext()` for internal endpoints
 
@@ -951,8 +951,8 @@ Nexus uses **PostgreSQL** hosted on **Supabase**. All database access goes throu
 
 ### Schema Overview
 
-- **35 models** — every concept in the app (boards, cards, users, labels, sprints, etc.) has its own table
-- **13 enums** — fixed value sets used across the schema: `BoardRole`, `OrgRole`, `Priority`, `ACTION`, `ENTITY_TYPE`, `SubscriptionPlan`, and more
+- **41 models** — every concept in the app (boards, cards, users, labels, sprints, analytics, templates, etc.) has its own table
+- **13 enums** — fixed value sets used across the schema: `BoardRole`, `BoardPermission`, `Priority`, `ACTION`, `ENTITY_TYPE`, `SprintStatus`, and more
 - **All primary keys are CUID strings** — e.g. `clx1a2b3c4d5e6f7g8h` — not auto-incremented integers
   - CUIDs are collision-resistant, URL-safe, and do not expose creation order to attackers
 - **Two database connections are configured:**
@@ -1889,6 +1889,7 @@ nexus/
 │   └── icon-512.png
 │
 ├── supabase-realtime-rls.sql        # RLS policies for realtime.messages + realtime.subscription
+├── proxy.ts                         # Next.js 16 middleware (Clerk auth, route protection, security headers)
 ├── next.config.ts
 ├── tailwind.config.ts
 ├── jest.config.ts
@@ -1903,14 +1904,14 @@ nexus/
 
 | Section | Count |
 |---|---|
-| Components | 99 files |
+| Components | 100 files |
 | Custom Hooks | 10 files |
 | Pages | 24 pages |
 | API Routes | 32 routes |
-| Server Actions | 40 files |
+| Server Actions | 42 files |
 | Lib Modules | 35 files |
 | Test Files | 43 files |
-| E2E Specs | 7 files |
+| E2E Specs | 6 files |
 | Email Templates | 6 files |
 
 ---
@@ -2541,7 +2542,7 @@ Direct pushes to `main` are blocked. Every change to production goes through a r
 | `STRIPE_SECRET_KEY` | Test mode key | Test mode key | Live mode key |
 | `STRIPE_WEBHOOK_SECRET` | `stripe listen` CLI | Preview webhook | Production webhook |
 | `CRON_SECRET` | Any random string | Set in Vercel | Set in Vercel |
-| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Preview URL | `https://yourdomain.com` |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3001` | Preview URL | `https://yourdomain.com` |
 
 > Never commit `.env.local` — it is gitignored. All production secrets live in Vercel's encrypted environment variable store.
 
@@ -3021,7 +3022,6 @@ graph TB
 
 ### Potential Roadmap Items
 
-- Redis-backed distributed rate limiting (Upstash)
 - Offline-first support with background sync
 - Native mobile application (React Native or enhanced PWA)
 - SSO/SAML for enterprise authentication
