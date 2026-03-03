@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { motion, useScroll, useSpring, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
@@ -349,8 +349,8 @@ function ParticleCanvas() {
   // from useReducedMotion() returning null on the server and true/false on the
   // client.  We render nothing until the component mounts on the client so
   // both sides agree on the initial DOM (null), then reveal the canvas after.
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
+  const subscribe = useCallback((cb: () => void) => { cb(); return () => {}; }, []);
+  const isMounted = useSyncExternalStore(subscribe, () => true, () => false);
 
   useEffect(() => {
     if (!isMounted || shouldReduce) return;
@@ -835,7 +835,7 @@ export default function AboutPage() {
               className="text-3xl md:text-5xl font-black leading-[1.15] tracking-tight text-white mb-8"
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              "Earned complexity,{" "}
+              &ldquo;Earned complexity,{" "}
               <span
                 style={{
                   background: "linear-gradient(135deg,#a78bfa,#ec4899)",
@@ -846,7 +846,7 @@ export default function AboutPage() {
               >
                 zero shortcuts,
               </span>{" "}
-              documentation depth that impresses on first read."
+              documentation depth that impresses on first read.&rdquo;
             </blockquote>
             <p className="text-white/40 text-[15px] max-w-xl mx-auto">
               — From the NEXUS architectural specification. Every line of code was written with a senior

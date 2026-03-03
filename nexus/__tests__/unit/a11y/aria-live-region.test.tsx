@@ -34,7 +34,6 @@
 import React from "react";
 import {
   render,
-  screen,
   act,
   waitFor,
 } from "@testing-library/react";

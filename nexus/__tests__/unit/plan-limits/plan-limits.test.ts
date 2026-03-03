@@ -205,7 +205,7 @@ import { POST }            from "@/app/api/upload/route";
 
 const mockGetTenantContext  = getTenantContext as jest.Mock;
 const mockOrgFindUnique     = db.organization.findUnique as jest.Mock;
-const mockOrgCreate         = db.organization.create     as jest.Mock;
+const _mockOrgCreate        = db.organization.create     as jest.Mock;
 const mockOrgUpsert         = db.organization.upsert     as jest.Mock;
 const mockAttachmentCount   = db.attachment.count        as jest.Mock;
 const mockCardFindFirst     = db.card.findFirst          as jest.Mock;

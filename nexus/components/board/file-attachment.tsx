@@ -285,7 +285,6 @@ function PreviewModal({
         );
       case "video":
         return (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
           <video
             controls
             className="max-w-full max-h-[72vh] rounded"
@@ -296,7 +295,6 @@ function PreviewModal({
         return (
           <div className="flex flex-col items-center gap-6 py-16 px-12">
             <Music className="h-24 w-24 text-white/20" aria-hidden />
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <audio controls src={url} className="w-80" />
           </div>
         );

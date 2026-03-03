@@ -185,8 +185,6 @@ export function useRealtimeBoard({
           break;
       }
     },
-    // localOpTimestampRef is a stable ref — it doesn't need to be a dep.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [onCardCreated, onCardUpdated, onCardDeleted, announceRemoteChanges]
   );
 

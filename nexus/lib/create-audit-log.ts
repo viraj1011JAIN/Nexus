@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { db, getDbForOrg } from "@/lib/db";
+import { getDbForOrg } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { captureSentryException } from "@/lib/sentry-helpers";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
