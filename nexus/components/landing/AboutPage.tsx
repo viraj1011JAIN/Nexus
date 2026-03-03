@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, useScroll, useSpring, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -535,7 +535,15 @@ export default function AboutPage() {
   const shouldReduce = useReducedMotion();
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
-  const { isSignedIn } = useUser();
+  // useAuth is safe in SSR — userId will be null/undefined until client-side
+  // Clerk loads. We defer the auth-dependent CTA to after client mount so the
+  // SSR HTML and the initial client render agree on href+text ("/sign-up" /
+  // "Get Started Free"), preventing React's "unexpected response" hydration error.
+  const { userId } = useAuth();
+  const [isCTAMounted, setIsCTAMounted] = useState(false);
+  useEffect(() => { setIsCTAMounted(true); }, []);
+  const ctaHref = isCTAMounted && userId ? "/dashboard" : "/sign-up";
+  const ctaText = isCTAMounted && userId ? "Open Dashboard" : "Get Started Free";
 
   const [activeSection, setActiveSection] = useState("hero");
 
@@ -1010,14 +1018,14 @@ export default function AboutPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
-              href={isSignedIn ? "/dashboard" : "/sign-up"}
+              href={ctaHref}
               className="px-8 py-4 rounded-full text-[14px] font-bold text-white transition-all duration-300 hover:-translate-y-1"
               style={{
                 background: "linear-gradient(135deg,#7b2ff7,#06b6d4)",
                 boxShadow: "0 8px 32px rgba(123,47,247,0.35)",
               }}
             >
-              {isSignedIn ? "Open Dashboard" : "Get Started Free"}
+              {ctaText}
             </Link>
             <Link
               href="/"
