@@ -318,7 +318,7 @@ const CardItemInner = ({
       </div>
 
       {/* 3 DOTS MENU */}
-      <div className="absolute right-1.5 top-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+      <div className="absolute right-1.5 top-1.5 z-10 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity duration-150">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

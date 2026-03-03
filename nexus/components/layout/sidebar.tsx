@@ -88,7 +88,7 @@ export const Sidebar = () => {
     <Dialog open={showStorageFullDialog} onOpenChange={setShowStorageFullDialog}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-linear-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
+          <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
             <AlertTriangle className="h-7 w-7 text-red-500" />
           </div>
           <DialogTitle className="text-center text-lg">Storage Limit Reached</DialogTitle>
@@ -105,10 +105,10 @@ export const Sidebar = () => {
               <span className="text-xs font-bold text-red-500">{boardCount} / {boardLimit}</span>
             </div>
             <div className="h-2 bg-background rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-linear-to-r from-red-500 to-orange-500 w-full" />
+              <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-500 w-full" />
             </div>
           </div>
-          <Button asChild className="w-full bg-linear-to-r from-[#7B2FF7] to-[#C01CC4] hover:opacity-90 text-white">
+          <Button asChild className="w-full bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4] hover:opacity-90 text-white">
             <Link href="/billing">Upgrade to Pro</Link>
           </Button>
           <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setShowStorageFullDialog(false)}>
@@ -129,7 +129,7 @@ export const Sidebar = () => {
         <div className="flex items-center gap-3 mb-5">
           {/* Gradient logo mark with "N" lettermark */}
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-linear-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
           >
             <span className="text-white font-bold text-[17px] leading-none tracking-tight select-none font-display">N</span>
           </div>
@@ -222,7 +222,7 @@ export const Sidebar = () => {
                 {/* Active indicator pill */}
                 {isActive && (
                   <span
-                    className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full bg-linear-to-b from-[#7B2FF7] to-[#C01CC4]"
+                    className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full bg-gradient-to-b from-[#7B2FF7] to-[#C01CC4]"
                   />
                 )}
 
@@ -279,10 +279,10 @@ export const Sidebar = () => {
             className={cn(
               "h-full rounded-full transition-all duration-500",
               isStorageFull
-                ? "bg-linear-to-r from-red-500 to-orange-500"
+                ? "bg-gradient-to-r from-red-500 to-orange-500"
                 : storagePercent >= 80
-                  ? "bg-linear-to-r from-amber-500 to-orange-500"
-                  : "bg-linear-to-r from-[#7B2FF7] to-[#C01CC4]"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                  : "bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4]"
             )}
             style={{ width: `${Math.max(storagePercent, 2)}%` }}
           />
