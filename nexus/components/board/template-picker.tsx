@@ -146,7 +146,7 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
     const Icon = style.icon;
     return (
       <div className={cn("flex items-center gap-3 p-3 rounded-xl border", style.border, style.bg)}>
-        <div className={cn("w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0", style.gradient)}>
+        <div className={cn("w-9 h-9 rounded-lg bg-linear-to-br flex items-center justify-center shrink-0", style.gradient)}>
           <Icon className="h-4.5 w-4.5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
@@ -184,7 +184,7 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
         onClick={() => setExpanded(true)}
         className="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-accent/40 transition-all duration-200 group"
       >
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#7B2FF7] to-[#C01CC4] flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(123,47,247,0.25)]">
+        <div className="w-9 h-9 rounded-lg bg-linear-to-br from-[#7B2FF7] to-[#C01CC4] flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(123,47,247,0.25)]">
           <LayoutTemplate className="h-4.5 w-4.5 text-white" />
         </div>
         <div className="flex-1 text-left">
@@ -203,7 +203,7 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
     return (
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         {/* Preview header with gradient */}
-        <div className={cn("bg-gradient-to-r p-4 relative", style.gradient)}>
+        <div className={cn("bg-linear-to-r p-4 relative", style.gradient)}>
           <button
             type="button"
             onClick={() => setPreviewTemplate(null)}
@@ -273,7 +273,7 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
             }}
             className={cn(
               "flex-1 h-9 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-1.5",
-              "bg-gradient-to-r shadow-lg hover:shadow-xl hover:-translate-y-px transition-all duration-200",
+              "bg-linear-to-r shadow-lg hover:shadow-xl hover:-translate-y-px transition-all duration-200",
               style.gradient
             )}
           >
@@ -291,7 +291,7 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#7B2FF7] to-[#C01CC4] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-linear-to-br from-[#7B2FF7] to-[#C01CC4] flex items-center justify-center">
             <LayoutTemplate className="h-3.5 w-3.5 text-white" />
           </div>
           <h3 className="text-sm font-bold text-foreground">Choose a Template</h3>
@@ -320,8 +320,8 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
                 "px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0",
                 isActive
                   ? cat === "All"
-                    ? "bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4] text-white shadow-[0_2px_8px_rgba(123,47,247,0.3)]"
-                    : cn("bg-gradient-to-r text-white shadow-lg", style?.gradient)
+                    ? "bg-linear-to-r from-[#7B2FF7] to-[#C01CC4] text-white shadow-[0_2px_8px_rgba(123,47,247,0.3)]"
+                    : cn("bg-linear-to-r text-white shadow-lg", style?.gradient)
                   : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
@@ -368,12 +368,12 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
               )}
             >
               {/* Gradient accent bar */}
-              <div className={cn("h-1.5 bg-gradient-to-r", style.gradient)} />
+              <div className={cn("h-1.5 bg-linear-to-r", style.gradient)} />
 
               <div className="p-3 flex items-start gap-3">
                 {/* Category icon */}
                 <div className={cn(
-                  "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-md",
+                  "w-10 h-10 rounded-xl bg-linear-to-br flex items-center justify-center shrink-0 shadow-md",
                   style.gradient
                 )}>
                   <Icon className="h-5 w-5 text-white" />
@@ -429,7 +429,7 @@ export function TemplatePicker({ onSelect, onClear, selectedId }: TemplatePicker
                     }}
                     className={cn(
                       "h-8 px-3 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1",
-                      "bg-gradient-to-r shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200",
+                      "bg-linear-to-r shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-200",
                       style.gradient
                     )}
                   >

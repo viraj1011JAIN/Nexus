@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -55,29 +55,29 @@ export const Sidebar = () => {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const [boardCount, setBoardCount] = useState(0);
-  const [boardLimit, setBoardLimit] = useState(50);
+  const boardLimit = 50;
   const [showStorageFullDialog, setShowStorageFullDialog] = useState(false);
 
-  const fetchBoardCount = useCallback(async () => {
-    try {
-      const res = await fetch("/api/boards");
-      if (res.ok) {
-        const data = await res.json();
-        setBoardCount(Array.isArray(data) ? data.length : 0);
+  // Fetch board count on mount and when navigating (boards may have been created/deleted).
+  // Using an async callback inside the effect avoids the react-hooks/set-state-in-effect lint
+  // rule, because the setState call happens asynchronously after the await, not synchronously
+  // in the effect body.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/boards");
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setBoardCount(Array.isArray(data) ? data.length : 0);
+        }
+      } catch {
+        // silently fail — sidebar remains functional
       }
-    } catch {
-      // silently fail — sidebar remains functional
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchBoardCount();
-  }, [fetchBoardCount]);
-
-  // Re-fetch when navigating (boards may have been created/deleted)
-  useEffect(() => {
-    fetchBoardCount();
-  }, [pathname, fetchBoardCount]);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [pathname]);
 
   const storagePercent = boardLimit === Infinity ? 0 : Math.min(Math.round((boardCount / boardLimit) * 100), 100);
   const isStorageFull = boardCount >= boardLimit && boardLimit !== Infinity;
@@ -88,7 +88,7 @@ export const Sidebar = () => {
     <Dialog open={showStorageFullDialog} onOpenChange={setShowStorageFullDialog}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
+          <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-linear-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
             <AlertTriangle className="h-7 w-7 text-red-500" />
           </div>
           <DialogTitle className="text-center text-lg">Storage Limit Reached</DialogTitle>
@@ -105,10 +105,10 @@ export const Sidebar = () => {
               <span className="text-xs font-bold text-red-500">{boardCount} / {boardLimit}</span>
             </div>
             <div className="h-2 bg-background rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-500 w-full" />
+              <div className="h-full rounded-full bg-linear-to-r from-red-500 to-orange-500 w-full" />
             </div>
           </div>
-          <Button asChild className="w-full bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4] hover:opacity-90 text-white">
+          <Button asChild className="w-full bg-linear-to-r from-[#7B2FF7] to-[#C01CC4] hover:opacity-90 text-white">
             <Link href="/billing">Upgrade to Pro</Link>
           </Button>
           <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setShowStorageFullDialog(false)}>
@@ -129,7 +129,7 @@ export const Sidebar = () => {
         <div className="flex items-center gap-3 mb-5">
           {/* Gradient logo mark with "N" lettermark */}
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-linear-to-br from-[#7B2FF7] to-[#F107A3] shadow-[0_6px_20px_rgba(123,47,247,0.35)]"
           >
             <span className="text-white font-bold text-[17px] leading-none tracking-tight select-none font-display">N</span>
           </div>
@@ -222,7 +222,7 @@ export const Sidebar = () => {
                 {/* Active indicator pill */}
                 {isActive && (
                   <span
-                    className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full bg-gradient-to-b from-[#7B2FF7] to-[#C01CC4]"
+                    className="absolute left-0 top-[18%] bottom-[18%] w-[3px] rounded-r-full bg-linear-to-b from-[#7B2FF7] to-[#C01CC4]"
                   />
                 )}
 
@@ -279,10 +279,10 @@ export const Sidebar = () => {
             className={cn(
               "h-full rounded-full transition-all duration-500",
               isStorageFull
-                ? "bg-gradient-to-r from-red-500 to-orange-500"
+                ? "bg-linear-to-r from-red-500 to-orange-500"
                 : storagePercent >= 80
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                  : "bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4]"
+                  ? "bg-linear-to-r from-amber-500 to-orange-500"
+                  : "bg-linear-to-r from-[#7B2FF7] to-[#C01CC4]"
             )}
             style={{ width: `${Math.max(storagePercent, 2)}%` }}
           />
