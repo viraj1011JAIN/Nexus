@@ -195,7 +195,7 @@ export default function ActivityPage() {
             className={cn(
               "px-3 sm:px-4 py-2 rounded-lg text-[13px] sm:text-[14px] font-medium transition-all duration-200 border-2 whitespace-nowrap",
               filter === filterType
-                ? "bg-primary text-primary-foreground border-primary shadow-[0_2px_8px_rgba(124,58,237,0.25)]"
+                ? "bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4] text-white border-transparent shadow-[0_4px_16px_rgba(123,47,247,0.4)] scale-[1.03] ring-2 ring-[#7B2FF7]/30"
                 : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:bg-accent"
             )}
           >

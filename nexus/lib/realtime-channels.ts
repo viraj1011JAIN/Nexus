@@ -16,8 +16,13 @@
 
 // ── Board-level channels ───────────────────────────────────────────────────
 
-/** Throws if orgId contains the channel delimiter character ':'. */
+/** Throws if orgId is missing or contains the channel delimiter character ':'. */
 function validateOrgId(orgId: string): void {
+  if (!orgId) {
+    throw new Error(
+      "Invalid orgId: orgId is required but was undefined/null/empty. Ensure the user has an active organization before subscribing to realtime channels."
+    );
+  }
   if (orgId.includes(":")) {
     throw new Error(
       `Invalid orgId "${orgId}": orgId must not contain the ':' delimiter character. Channel names use ':' as a separator and embedding it in an orgId would corrupt the channel namespace.`

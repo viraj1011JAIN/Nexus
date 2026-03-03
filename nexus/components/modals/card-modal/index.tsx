@@ -557,7 +557,7 @@ export const CardModal = () => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         data-cm-modal
-        className="p-0 gap-0 border-none overflow-hidden"
+        className="p-0 gap-0 border border-white/20 dark:border-white/10 overflow-hidden"
       >
         <style>{`
           /* Fonts (DM Sans + Playfair Display) are loaded globally via next/font

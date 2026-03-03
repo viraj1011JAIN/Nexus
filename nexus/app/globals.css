@@ -238,6 +238,50 @@
 }
 
 /* ============================================================================
+   CLERK ORGANIZATION SWITCHER OVERRIDES
+   Prevent black backgrounds on hover / popover; use design-system tokens
+   ============================================================================ */
+
+/* Trigger hover — white text, subtle purple highlight */
+.cl-organizationSwitcherTrigger:hover {
+  background: rgb(var(--accent)) !important;
+  color: rgb(var(--foreground)) !important;
+  border-color: rgb(var(--primary) / 0.4) !important;
+}
+
+.dark .cl-organizationSwitcherTrigger:hover {
+  background: rgba(123, 47, 247, 0.12) !important;
+  color: #fff !important;
+  border-color: rgba(123, 47, 247, 0.4) !important;
+}
+
+/* Popover panel (org list) */
+.cl-organizationSwitcherPopoverCard {
+  background: rgb(var(--popover)) !important;
+  border: 1px solid rgb(var(--border)) !important;
+  color: rgb(var(--popover-foreground)) !important;
+}
+
+/* Action buttons inside popover */
+.cl-organizationSwitcherPopoverActionButton:hover,
+.cl-organizationPreview:hover {
+  background: rgb(var(--accent)) !important;
+  color: rgb(var(--foreground)) !important;
+}
+
+.dark .cl-organizationSwitcherPopoverActionButton:hover,
+.dark .cl-organizationPreview:hover {
+  background: rgba(123, 47, 247, 0.12) !important;
+  color: #fff !important;
+}
+
+/* All text inside Clerk org switcher */
+.cl-organizationSwitcherPopoverCard *,
+.cl-organizationSwitcherPopoverCard .cl-organizationPreview__organizationSwitcher {
+  color: rgb(var(--popover-foreground)) !important;
+}
+
+/* ============================================================================
    SOLID MODERN DESIGN - NO GLASS EFFECTS
    Clean, crisp surfaces with proper shadows for depth
    ============================================================================ */

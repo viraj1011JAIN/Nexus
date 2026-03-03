@@ -15,6 +15,14 @@ import { useReverification } from "@clerk/nextjs";
 import { UnsplashPicker, type UnsplashPhoto } from "@/components/board/unsplash-picker";
 import { TemplatePicker } from "@/components/board/template-picker";
 import { type TemplateSummary } from "@/actions/template-actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -74,6 +82,9 @@ export function BoardList() {
   const [activeFilter, setActiveFilter] = useState<"All" | "Recent" | "Active">("All");
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const { theme, setTheme } = useTheme();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showStorageFullDialog, setShowStorageFullDialog] = useState(false);
+  const BOARD_LIMIT = 50; // FREE plan limit
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Step-up auth: Clerk will show a biometric / TOTP challenge if the user's
@@ -666,7 +677,13 @@ export function BoardList() {
             {/* Ghost "Create New Board" card */}
             <button
               type="button"
-              onClick={() => document.querySelector<HTMLInputElement>("input[placeholder='Name your new board...']")?.focus()}
+              onClick={() => {
+                if (boards.length >= BOARD_LIMIT) {
+                  setShowStorageFullDialog(true);
+                } else {
+                  setShowCreateDialog(true);
+                }
+              }}
               className={cn(
                 "border-[1.5px] border-dashed border-border rounded-4xl",
                 "flex flex-col items-center justify-center gap-2.5 min-h-50 cursor-pointer w-full",
@@ -847,6 +864,111 @@ export function BoardList() {
           </div>
         )}
       </div>
+
+      {/* ── Create Board Dialog (blur background popup) ─────────────── */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Create New Board</DialogTitle>
+            <DialogDescription>Start a fresh workspace for your team</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              handleCreateBoard(e);
+              if (title.trim().length >= 3) setShowCreateDialog(false);
+            }}
+            className="space-y-4 pt-2"
+          >
+            {/* Photo preview */}
+            {selectedPhoto && (
+              <div
+                className="w-full h-28 rounded-xl bg-cover bg-center [background-image:var(--bg-img)] relative overflow-hidden border border-border"
+                style={{ '--bg-img': `url(${selectedPhoto.thumbUrl})` } as CSSProperties}
+              >
+                <div className="absolute inset-0 bg-black/25" />
+                <p className="absolute bottom-2 right-2.5 text-[10px] text-white/80">
+                  Photo by{" "}
+                  <a href={selectedPhoto.userLink} target="_blank" rel="noopener noreferrer" className="underline">
+                    {selectedPhoto.userName}
+                  </a>
+                </p>
+              </div>
+            )}
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Name your new board..."
+              className="w-full h-11 px-4 rounded-xl text-sm bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+              disabled={isPending}
+              autoComplete="off"
+              autoFocus
+            />
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Background Photo</p>
+                <UnsplashPicker
+                  selectedId={selectedPhoto?.id}
+                  onSelect={(photo) => setSelectedPhoto(photo)}
+                  onClear={() => setSelectedPhoto(null)}
+                />
+              </div>
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Start from Template</p>
+                <TemplatePicker
+                  selectedId={selectedTemplate?.id}
+                  onSelect={(tmpl) => setSelectedTemplate(tmpl)}
+                  onClear={() => setSelectedTemplate(null)}
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full h-11 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isPending ? (
+                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Create Board
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Storage Full Dialog ─────────────────────────────────────── */}
+      <Dialog open={showStorageFullDialog} onOpenChange={setShowStorageFullDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
+              <AlertTriangle className="h-7 w-7 text-red-500" />
+            </div>
+            <DialogTitle className="text-center text-lg">Storage Limit Reached</DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              You&apos;ve used all <span className="font-semibold text-foreground">{BOARD_LIMIT}</span> boards on the Free plan.
+              Upgrade to Pro for unlimited boards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="bg-muted rounded-xl p-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-xs text-muted-foreground font-medium">Boards Used</span>
+                <span className="text-xs font-bold text-red-500">{boards.length} / {BOARD_LIMIT}</span>
+              </div>
+              <div className="h-2 bg-background rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-500 w-full" />
+              </div>
+            </div>
+            <Link
+              href="/billing"
+              className="flex items-center justify-center w-full h-11 rounded-xl text-sm font-semibold text-white bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] transition-all"
+            >
+              Upgrade to Pro
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

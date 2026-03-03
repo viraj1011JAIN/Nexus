@@ -9,6 +9,7 @@ export function SonnerProvider() {
       richColors
       expand={false}
       duration={3000}
+      style={{ zIndex: 99999 }}
     />
   );
 }

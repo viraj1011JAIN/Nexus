@@ -7,14 +7,10 @@ export const Toaster = () => {
     <Sonner
       position="bottom-right"
       toastOptions={{
-        style: {
-          background: "white",
-          color: "rgb(15 23 42)",
-          border: "1px solid rgb(226 232 240)",
-        },
-        className: "shadow-lg",
+        className: "shadow-lg !bg-card !text-card-foreground !border-border",
         duration: 3000,
       }}
+      style={{ zIndex: 99999 }}
     />
   );
 };

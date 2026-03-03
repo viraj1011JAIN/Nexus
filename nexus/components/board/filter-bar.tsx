@@ -656,10 +656,10 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
         )}
 
         <div className="flex items-center gap-1.5 ml-auto">
-          {/* ── Views ── teal */}
+          {/* ── Views ── */}
           <Popover open={showViews} onOpenChange={setShowViews}>
             <PopoverTrigger asChild>
-              <button className={cn(filterBtnBase, "bg-teal-600 dark:bg-teal-700 shadow-[0_2px_8px_rgba(13,148,136,0.45)] focus-visible:ring-teal-400")}>
+              <button className={cn(filterBtnBase, "bg-[#7B2FF7] dark:bg-[#7B2FF7] shadow-[0_2px_8px_rgba(123,47,247,0.45)] focus-visible:ring-[#7B2FF7]/60")}>
                 <Bookmark className="h-3.5 w-3.5" />
                 Views
                 <ChevronDown className="h-3 w-3 opacity-70" />
@@ -667,14 +667,14 @@ export function FilterBar({ boardId, members = [], lists = [], labels = [], onCh
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-72 p-0 border-0 shadow-xl bg-teal-50 dark:bg-teal-950/95 text-teal-900 dark:text-teal-100"
+              className="w-72 p-0 border border-border shadow-xl bg-popover text-popover-foreground"
               sideOffset={4}
             >
-              <div className="border-b border-teal-200 dark:border-teal-800 px-3.5 py-2.5 flex items-center justify-between">
-                <span className="text-sm font-bold text-teal-700 dark:text-teal-300">Saved Views</span>
+              <div className="border-b border-border px-3.5 py-2.5 flex items-center justify-between">
+                <span className="text-sm font-bold text-foreground">Saved Views</span>
                 <button
                   onClick={() => { setShowViews(false); setShowSaveDialog(true); }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-800/60 border-0 rounded-md px-2.5 py-1 cursor-pointer hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground bg-muted border-0 rounded-md px-2.5 py-1 cursor-pointer hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <BookmarkPlus className="h-3.5 w-3.5" />
                   Save current

@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -8,6 +9,8 @@ import {
   Activity,
   CreditCard,
   Plus,
+  AlertTriangle,
+  HardDrive,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -33,6 +36,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { motion, useReducedMotion } from "framer-motion";
 import { NotificationCenter } from "@/components/layout/notification-center";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const routes = [
   { label: "Boards",   icon: Layout,     href: `/dashboard` },
@@ -44,8 +54,70 @@ const routes = [
 export const Sidebar = () => {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
+  const [boardCount, setBoardCount] = useState(0);
+  const [boardLimit, setBoardLimit] = useState(50);
+  const [showStorageFullDialog, setShowStorageFullDialog] = useState(false);
+
+  const fetchBoardCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/boards");
+      if (res.ok) {
+        const data = await res.json();
+        setBoardCount(Array.isArray(data) ? data.length : 0);
+      }
+    } catch {
+      // silently fail — sidebar remains functional
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBoardCount();
+  }, [fetchBoardCount]);
+
+  // Re-fetch when navigating (boards may have been created/deleted)
+  useEffect(() => {
+    fetchBoardCount();
+  }, [pathname, fetchBoardCount]);
+
+  const storagePercent = boardLimit === Infinity ? 0 : Math.min(Math.round((boardCount / boardLimit) * 100), 100);
+  const isStorageFull = boardCount >= boardLimit && boardLimit !== Infinity;
 
   return (
+    <>
+    {/* Storage Full Dialog */}
+    <Dialog open={showStorageFullDialog} onOpenChange={setShowStorageFullDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="mx-auto mb-3 w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center">
+            <AlertTriangle className="h-7 w-7 text-red-500" />
+          </div>
+          <DialogTitle className="text-center text-lg">Storage Limit Reached</DialogTitle>
+          <DialogDescription className="text-center text-sm">
+            You&apos;ve used all <span className="font-semibold text-foreground">{boardLimit}</span> boards on the Free plan.
+            Upgrade to Pro for unlimited boards.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          {/* Usage bar */}
+          <div className="bg-muted rounded-xl p-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-xs text-muted-foreground font-medium">Boards Used</span>
+              <span className="text-xs font-bold text-red-500">{boardCount} / {boardLimit}</span>
+            </div>
+            <div className="h-2 bg-background rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-500 w-full" />
+            </div>
+          </div>
+          <Button asChild className="w-full bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4] hover:opacity-90 text-white">
+            <Link href="/billing">Upgrade to Pro</Link>
+          </Button>
+          <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => setShowStorageFullDialog(false)}>
+            Maybe later
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <aside className="w-64 h-full bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 z-20 select-none relative overflow-hidden">
       {/* Rainbow shimmer stripe */}
       <div className="shimmer-stripe absolute top-0 left-0 right-0 h-[3px] z-10" />
@@ -101,6 +173,26 @@ export const Sidebar = () => {
                 fontWeight: "500",
                 transition: "all 150ms ease",
               },
+              organizationSwitcherTriggerIcon: {
+                color: "rgb(var(--foreground))",
+              },
+              organizationPreview: {
+                color: "rgb(var(--foreground))",
+              },
+              organizationSwitcherPopoverCard: {
+                background: "rgb(var(--popover))",
+                border: "1px solid rgb(var(--border))",
+                color: "rgb(var(--popover-foreground))",
+              },
+              organizationSwitcherPopoverActionButton: {
+                color: "rgb(var(--foreground))",
+              },
+              organizationSwitcherPopoverActionButtonText: {
+                color: "rgb(var(--foreground))",
+              },
+              organizationSwitcherPopoverActionButtonIcon: {
+                color: "rgb(var(--foreground))",
+              },
             },
           }}
         />
@@ -151,26 +243,57 @@ export const Sidebar = () => {
 
       {/* == Footer ======================================================= */}
       <div className="border-t border-sidebar-border">
-      {/* Storage usage meter */}
-      <div className="px-5 py-3 border-b border-sidebar-border">
-        <div className="flex justify-between mb-1.5">
-          <span className="text-[11px] text-muted-foreground font-medium">Storage</span>
-          <span className="text-[11px] text-foreground font-semibold" aria-hidden="true">24%</span>
+      {/* Storage usage meter — live board count */}
+      <button
+        type="button"
+        onClick={() => { if (isStorageFull) setShowStorageFullDialog(true); }}
+        className={cn(
+          "w-full text-left px-5 py-3 border-b border-sidebar-border transition-colors",
+          isStorageFull && "cursor-pointer hover:bg-muted/60"
+        )}
+      >
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+            <HardDrive className="h-3 w-3" />
+            Storage
+          </span>
+          <span
+            className={cn(
+              "text-[11px] font-semibold",
+              isStorageFull ? "text-red-500" : storagePercent >= 80 ? "text-amber-500" : "text-foreground"
+            )}
+          >
+            {boardCount} / {boardLimit === Infinity ? "\u221E" : boardLimit} boards
+          </span>
         </div>
         <div
           role="progressbar"
-          aria-valuenow={24}
+          aria-valuenow={storagePercent}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Storage usage: 24%"
-          className="h-1 bg-muted rounded-full overflow-hidden"
+          aria-label={`Storage usage: ${storagePercent}% (${boardCount} of ${boardLimit === Infinity ? "unlimited" : boardLimit} boards)`}
+          className="h-1.5 bg-muted rounded-full overflow-hidden"
         >
           <div
             aria-hidden="true"
-            className="h-full rounded-full w-[24%] bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4]"
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              isStorageFull
+                ? "bg-gradient-to-r from-red-500 to-orange-500"
+                : storagePercent >= 80
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                  : "bg-gradient-to-r from-[#7B2FF7] to-[#C01CC4]"
+            )}
+            style={{ width: `${Math.max(storagePercent, 2)}%` }}
           />
         </div>
-      </div>
+        {isStorageFull && (
+          <p className="text-[10px] text-red-500 font-medium mt-1.5 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Limit reached — upgrade for more
+          </p>
+        )}
+      </button>
       <div className="px-3 pt-3 pb-4 space-y-0.5">
 
         {/* User avatar + notifications + settings */}
@@ -203,5 +326,6 @@ export const Sidebar = () => {
       </div>
       </div>
     </aside>
+    </>
   );
 };

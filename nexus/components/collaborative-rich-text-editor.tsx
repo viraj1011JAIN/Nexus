@@ -192,6 +192,7 @@ export function CollaborativeRichTextEditor({
 
   // ── Supabase Yjs provider — mount/unmount with component ──────────────
   useEffect(() => {
+    if (!orgId || !cardId) return;
     const supabase = createClient();
     const channelName = cardYjsChannel(orgId, cardId);
     const channel = supabase.channel(channelName);
