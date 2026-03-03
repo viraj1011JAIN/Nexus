@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, useScroll, useSpring, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -344,9 +345,15 @@ function FeatureCardComponent({ card, index }: { card: FeatureCard; index: numbe
 function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shouldReduce = useReducedMotion();
+  // isMounted guards against the SSR / client hydration mismatch that arises
+  // from useReducedMotion() returning null on the server and true/false on the
+  // client.  We render nothing until the component mounts on the client so
+  // both sides agree on the initial DOM (null), then reveal the canvas after.
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
-    if (shouldReduce) return;
+    if (!isMounted || shouldReduce) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -420,9 +427,11 @@ function ParticleCanvas() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [shouldReduce]);
+  }, [shouldReduce, isMounted]);
 
-  if (shouldReduce) return null;
+  // Return null on server (and before client mount) so SSR output matches
+  // the initial client render — prevents React hydration errors.
+  if (!isMounted) return null;
   return (
     <canvas
       ref={canvasRef}
@@ -523,6 +532,7 @@ export default function AboutPage() {
   const shouldReduce = useReducedMotion();
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  const { isSignedIn } = useUser();
 
   const [activeSection, setActiveSection] = useState("hero");
 
@@ -997,14 +1007,14 @@ export default function AboutPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/dashboard"
+              href={isSignedIn ? "/dashboard" : "/sign-up"}
               className="px-8 py-4 rounded-full text-[14px] font-bold text-white transition-all duration-300 hover:-translate-y-1"
               style={{
                 background: "linear-gradient(135deg,#7b2ff7,#06b6d4)",
                 boxShadow: "0 8px 32px rgba(123,47,247,0.35)",
               }}
             >
-              Open the App
+              {isSignedIn ? "Open Dashboard" : "Get Started Free"}
             </Link>
             <Link
               href="/"

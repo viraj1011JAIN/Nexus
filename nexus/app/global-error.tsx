@@ -18,6 +18,12 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Opt out of React Compiler auto-memoisation — this component is rendered
+  // outside all provider contexts (no React tree), so injected hook calls
+  // (useMemoCache) would fail with a null dispatcher during /_global-error
+  // prerendering. RC 1.0.0 respects this function-scoped directive.
+  "use no memo";
+
   return (
     <html lang="en">
       <body
