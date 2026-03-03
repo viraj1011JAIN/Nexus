@@ -264,10 +264,18 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
   - **Story Points** — numeric estimate input
 - **Tab bar (bottom of modal):**
   - **Description** — TipTap editor (default tab)
-  - **Attachments** — file upload/download panel (up to 100 MB per file via Supabase Storage)
-    - Files displayed with icon, name (clickable link → opens in new tab), size, uploader, upload time
-    - Download button for forced download
-    - Delete button with confirmation toast
+  - **Attachments** — production-grade file system (up to 100 MB per file via Supabase Storage)
+    - **Multi-file upload** — button, drag-and-drop onto card, or **Ctrl+V paste** (screenshots upload instantly)
+    - **Per-file XHR progress bars** — real-time % indicator per uploaded file
+    - **In-app lightbox** — images render inline; PDFs embed via `<iframe>`; videos/audio have native player; other types show fallback with open-in-browser link
+    - **Keyboard navigation** — ← / → arrow keys + dot-strip to cycle through all attachments in the previewer
+    - **Grid view** — toggle between list and thumbnail grid; images show hover-zoom + slide-up filename label
+    - **Inline thumbnails** — image attachments show a 36×36 px thumbnail in list view
+    - **Sort** — dropdown to sort by date / name / size (ascending or descending)
+    - **Copy link** — one-click copy with ✓ feedback; produces a `?download=false` inline-view URL so recipients see the file, not a download prompt
+    - **Coloured file-type badges** — IMG · PDF · VID · AUD · ZIP · DOC · XLS · PPT · TXT with matching icons
+    - **Empty drop-zone** — interactable empty state prompts drag / paste / browse
+    - **Supabase inline serving** — `?download=false` query param forces `Content-Disposition: inline` so files open in the browser by default; download icon preserves forced-download behaviour
     - Toast notification on successful upload
     - FREE plan: 10 attachment limit
   - **Checklists** — create multiple checklists; check/uncheck items; AI item generation from description
@@ -3208,6 +3216,8 @@ graph TB
 
 | Date | Commit | Change |
 |---|---|---|
+| 2026-03-03 | `HEAD` | Fix: **Supabase Storage bucket provisioning** — `scripts/setup-storage.ts` executed to create the `card-attachments` bucket (public, 10 MB limit, MIME allowlist); bucket was missing in the new environment causing `POST /api/upload` to return 500; script is idempotent and can be re-run safely |
+| 2026-03-03 | `HEAD` | Feat(attachments): **Full attachment system rewrite** — `components/board/file-attachment.tsx` fully replaced; multi-file XHR upload with per-file progress bars; drag-and-drop anywhere on the attachment panel; Ctrl+V paste uploads clipboard images/files instantly; in-app lightbox previewer (image, PDF iframe, video, audio); ← → keyboard navigation + dot-strip between attachments; grid view toggle for image-heavy cards; inline 36 px thumbnails in list view; sort by date/name/size (asc/desc toggle); one-click copy-link with `?download=false` for inline browser viewing; coloured file-type badge system (IMG/PDF/VID/AUD/ZIP/DOC/XLS/PPT/TXT) with matched Lucide icons; empty drop-zone CTA; `PreviewModal` sub-component with toolbar (open-in-tab + download + close) |
 | 2026-03-04 | `b165520` | Perf: **Lighthouse-driven performance sprint** — service worker v2 (`public/sw.js`): 4-strategy caching (cache-first static/fonts, stale-while-revalidate images, network-first HTML, network-only API+Clerk+Supabase), LRU eviction (IMAGE_CACHE_MAX 60, PAGE_CACHE_MAX 20), offline shell pre-caching on install; `app/layout.tsx`: `preconnect` + `dns-prefetch` for `img.clerk.com`, `js.stripe.com`, `api.stripe.com`, Unsplash, GitHub avatars; full OpenGraph metadata (og:type/image/locale/url/siteName) + Twitter `summary_large_image` card with 1200×630 og:image; `metadataBase`, title template `%s \| NEXUS`, canonical URL, keywords, author, robots; `next.config.ts`: `experimental.inlineCss: true` (inline critical CSS → faster FCP), `minimumCacheTTL` 3 600 s → 86 400 s (−96 % origin fetches for CDN images), public asset Cache-Control 1 d → 7 d + 30 d SWR, `Link: </dashboard>; rel=prefetch` header on `/`; `app/globals.css`: `overscroll-contain` (`-x`, `-y`) utilities prevent scroll-chain CLS, `isolate-context` creates new stacking context for modals, `will-animate`/`animation-done` GPU hint lifecycle, `touch-action` pan-y/pan-x/none/auto for dnd-kit touch precision, `@supports (backdrop-filter)` guard on `.glass-effect`, `img:not([width])` CLS safety net; **build clean: 57 routes, 0 TS errors** |
 | 2026-03-03 | `b706486` | Feat(a11y): **Collaborative ARIA live announcements + WCAG 2.1 AA contrast CI shield** — `lib/colors.ts` (NEW): WCAG 2.1 relative-luminance math (`hexToRgb`, `getLuminance`, `getContrastRatio`, `getContrastingTextColor`, `getWcagLevel`), 10 design-system palette tokens (PRIORITY_COLORS 5 + STATUS_COLORS 5), `ContrastAuditResult` interface, `auditAllContrast()` single CI gate; `hooks/use-realtime-board.ts`: `announce()` wired for all confirmed-remote events — card INSERT/UPDATE (moved-list / priority-changed / due-date-updated / renamed) / DELETE; list INSERT / DELETE; `announceRemoteChanges` option (default `true`); local-op 2 s suppression gate prevents self-announcing own drags; `components/accessibility/aria-live-region.tsx`: `announce()` hardened with `typeof window.dispatchEvent !== "function"` guard for belt-and-suspenders SSR safety; `__tests__/unit/a11y/aria-live-region.test.tsx` (NEW, 26 tests): hydration safety, polite/assertive delivery, ring-buffer (max 5), SSR guard via try/finally, collaborative real-time scenarios; `__tests__/a11y/accessibility.test.tsx` (REWRITTEN, 57 tests): contrast contracts, axe audits for `AriaLiveRegion` + design primitives, WCAG pattern guards, board UI regression guards; **1,512/1,512 tests passing, 50 suites** |
 | 2026-03-03 | `6b8efb3` | Feat(a11y): WCAG 2.1 AA hardening sprint — 9 files changed, 227 insertions, 62 deletions; aria-live-region dual-region architecture (polite + assertive), ring-buffer, `suppressHydrationWarning`; skip-to-main-content link; board card, list column, and DnD keyboard instruction ARIA patterns; `PriorityBadge` and `SmartDueDate` accessible markup |
