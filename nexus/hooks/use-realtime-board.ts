@@ -7,6 +7,7 @@ import { getAuthenticatedSupabaseClient } from "@/lib/supabase/client";
 import { boardChannel } from "@/lib/realtime-channels";
 import { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { Database } from "@/types/supabase";
+import { announce } from "@/components/accessibility/aria-live-region";
 
 type CardPayload = RealtimePostgresChangesPayload<Database["public"]["Tables"]["Card"]["Row"]>;
 type ListPayload = RealtimePostgresChangesPayload<Database["public"]["Tables"]["List"]["Row"]>;
@@ -30,6 +31,14 @@ interface UseRealtimeBoardOptions {
   onCommentDeleted?: (commentId: string) => void;
   onReactionAdded?: (reaction: CommentReaction) => void;
   onReactionRemoved?: (reactionId: string) => void;
+  /**
+   * When `true` (default), broadcasts human-readable announcements to the
+   * global ARIA Live Region for every remote collaborative event so screen
+   * reader users are kept aware of changes made by other collaborators.
+   *
+   * Set to `false` if the consumer already handles its own announcements.
+   */
+  announceRemoteChanges?: boolean;
 }
 
 /**
@@ -86,6 +95,7 @@ export function useRealtimeBoard({
   onCommentDeleted,
   onReactionAdded,
   onReactionRemoved,
+  announceRemoteChanges = true,
 }: UseRealtimeBoardOptions) {
   const { getToken } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
@@ -123,9 +133,13 @@ export function useRealtimeBoard({
           if (newRecord && onCardCreated) {
             onCardCreated(newRecord as unknown as Card);
           }
+          // Observer announcement — a collaborator added a card
+          if (announceRemoteChanges && newRecord) {
+            announce(`New card "${(newRecord as { title?: string }).title ?? "Untitled"}" was added to the board by a collaborator.`);
+          }
           break;
         case "UPDATE": {
-          if (!newRecord || !onCardUpdated) break;
+          if (!newRecord) break;
 
           // ── Version gate ────────────────────────────────────────────────
           // If this card has had a local drag operation in the last
@@ -134,19 +148,46 @@ export function useRealtimeBoard({
           const suppressedUntil = localOpTimestampRef.current.get(newRecord.id as string);
           if (suppressedUntil && Date.now() < suppressedUntil) break;
 
-          onCardUpdated(newRecord as unknown as Card);
+          if (onCardUpdated) onCardUpdated(newRecord as unknown as Card);
+
+          // Observer announcement — derive what changed from old vs new record
+          if (announceRemoteChanges) {
+            const oldRec = oldRecord as Record<string, unknown> | null | undefined;
+            const newRec = newRecord as Record<string, unknown>;
+            const title  = (newRec.title as string | undefined) ?? "A card";
+
+            if (oldRec && oldRec.listId !== newRec.listId) {
+              announce(`"${title}" was moved to another list by a collaborator.`);
+            } else if (oldRec && oldRec.priority !== newRec.priority) {
+              const priority = String(newRec.priority ?? "unknown").toLowerCase();
+              announce(`"${title}" priority changed to ${priority} by a collaborator.`);
+            } else if (oldRec && oldRec.dueDate !== newRec.dueDate) {
+              announce(`"${title}" due date was updated by a collaborator.`);
+            } else if (oldRec && oldRec.title !== newRec.title) {
+              announce(`A card was renamed to "${title}" by a collaborator.`);
+            }
+            // Silent for order-only reshuffles (too noisy for screen readers)
+          }
           break;
         }
         case "DELETE":
           if (oldRecord?.id && onCardDeleted) {
             onCardDeleted(oldRecord.id);
           }
+          if (announceRemoteChanges) {
+            const deletedTitle = (oldRecord as Record<string, unknown> | null)?.title as string | undefined;
+            announce(
+              deletedTitle
+                ? `Card "${deletedTitle}" was removed by a collaborator.`
+                : "A card was removed by a collaborator.",
+            );
+          }
           break;
       }
     },
     // localOpTimestampRef is a stable ref — it doesn't need to be a dep.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onCardCreated, onCardUpdated, onCardDeleted]
+    [onCardCreated, onCardUpdated, onCardDeleted, announceRemoteChanges]
   );
 
   const handleListChange = useCallback(
@@ -158,20 +199,33 @@ export function useRealtimeBoard({
           if (newRecord && onListCreated) {
             onListCreated(newRecord as List);
           }
+          if (announceRemoteChanges && newRecord) {
+            announce(`New list "${(newRecord as { title?: string }).title ?? "Untitled"}" was added by a collaborator.`);
+          }
           break;
         case "UPDATE":
           if (newRecord && onListUpdated) {
             onListUpdated(newRecord as List);
           }
+          // No announcement for list updates — they are typically reorders
+          // which are too frequent and low-value for screen reader output.
           break;
         case "DELETE":
           if (oldRecord?.id && onListDeleted) {
             onListDeleted(oldRecord.id);
           }
+          if (announceRemoteChanges) {
+            const deletedTitle = (oldRecord as Record<string, unknown> | null)?.title as string | undefined;
+            announce(
+              deletedTitle
+                ? `List "${deletedTitle}" was removed by a collaborator.`
+                : "A list was removed by a collaborator.",
+            );
+          }
           break;
       }
     },
-    [onListCreated, onListUpdated, onListDeleted]
+    [onListCreated, onListUpdated, onListDeleted, announceRemoteChanges]
   );
 
   // Phase 3: Comment change handler
@@ -368,6 +422,7 @@ export function useRealtimeBoard({
     onCommentDeleted,
     onReactionAdded,
     onReactionRemoved,
+    announceRemoteChanges,
   ]);
 
   return {

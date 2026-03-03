@@ -93,9 +93,14 @@ export function AriaLiveRegion() {
  * Example usage:
  *   announce("Card moved to Done", "polite")
  *   announce("Error: Failed to save card", "assertive")
+ *
+ * The function is a safe no-op in:
+ *   - SSR environments where `window` is not defined
+ *   - Any environment where `window.dispatchEvent` is not a function
+ *     (e.g. some test runtimes, browser extensions that override globals)
  */
 export function announce(message: string, priority: "polite" | "assertive" = "polite") {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || typeof window.dispatchEvent !== "function") return;
   window.dispatchEvent(
     new CustomEvent("nexus:announce", { detail: { message, priority } })
   );
