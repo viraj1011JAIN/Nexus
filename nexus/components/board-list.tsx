@@ -364,7 +364,6 @@ export function BoardList() {
                 />
               </div>
               <div className="border-t border-border pt-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Start from Template</p>
                 <TemplatePicker
                   selectedId={selectedTemplate?.id}
                   onSelect={(tmpl) => setSelectedTemplate(tmpl)}
@@ -867,7 +866,7 @@ export function BoardList() {
 
       {/* ── Create Board Dialog (blur background popup) ─────────────── */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Create New Board</DialogTitle>
             <DialogDescription>Start a fresh workspace for your team</DialogDescription>
@@ -913,7 +912,6 @@ export function BoardList() {
                 />
               </div>
               <div className="border-t border-border pt-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Start from Template</p>
                 <TemplatePicker
                   selectedId={selectedTemplate?.id}
                   onSelect={(tmpl) => setSelectedTemplate(tmpl)}
@@ -931,7 +929,7 @@ export function BoardList() {
               ) : (
                 <Plus className="h-4 w-4" />
               )}
-              Create Board
+              {selectedTemplate ? "Create from Template" : "Create Board"}
             </button>
           </form>
         </DialogContent>
