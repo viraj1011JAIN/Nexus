@@ -15,10 +15,10 @@
  * Push / notification click are also handled (Task-029).
  */
 
-const STATIC_CACHE = "nexus-static-v2";   // Content-hashed JS/CSS — immutable
-const FONT_CACHE   = "nexus-fonts-v2";    // Web fonts — stable, cache forever
-const IMAGE_CACHE  = "nexus-images-v2";   // User images — stale-while-revalidate
-const PAGE_CACHE   = "nexus-pages-v2";    // HTML pages  — network-first
+const STATIC_CACHE = "nexus-static-v3";   // Content-hashed JS/CSS — immutable (v3: no-store guard)
+const FONT_CACHE   = "nexus-fonts-v3";    // Web fonts — stable, cache forever
+const IMAGE_CACHE  = "nexus-images-v3";   // User images — stale-while-revalidate
+const PAGE_CACHE   = "nexus-pages-v3";    // HTML pages  — network-first
 
 const ALL_CACHES = [STATIC_CACHE, FONT_CACHE, IMAGE_CACHE, PAGE_CACHE];
 
@@ -55,6 +55,19 @@ function isImage(url) {
     url.includes("avatars.githubusercontent.com") ||
     url.includes("lh3.googleusercontent.com")
   );
+}
+
+/**
+ * Returns true only if the response should be stored in the cache.
+ * Respects Cache-Control directives sent by the origin — in particular:
+ *   - Next.js sets `Cache-Control: no-store` on /_next/static/* in dev so
+ *     Turbopack chunk filenames can be re-used after source edits without
+ *     poisoning the cache with stale JS (which causes hydration mismatches).
+ *   - Any route that explicitly opts out of caching is honoured here too.
+ */
+function isCacheable(response) {
+  const cc = (response.headers.get("cache-control") ?? "").toLowerCase();
+  return response.ok && !cc.includes("no-store") && !cc.includes("no-cache");
 }
 
 /** Evict oldest entries once a cache exceeds maxEntries */
@@ -132,7 +145,8 @@ async function cacheFirst(request, cacheName) {
   if (cached) return cached;
 
   const response = await fetch(request);
-  if (response.ok) cache.put(request, response.clone());
+  // Only store if the origin permits caching (e.g. no-store in dev Turbopack)
+  if (isCacheable(response)) cache.put(request, response.clone());
   return response;
 }
 
@@ -143,7 +157,7 @@ async function staleWhileRevalidate(request, cacheName, maxEntries) {
   const cached = await cache.match(request);
 
   const fetchPromise = fetch(request).then((response) => {
-    if (response.ok) {
+    if (isCacheable(response)) {
       cache.put(request, response.clone());
       trimCache(cacheName, maxEntries);
     }
@@ -159,7 +173,7 @@ async function networkFirst(request, cacheName, maxEntries) {
   const cache = await caches.open(cacheName);
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    if (isCacheable(response)) {
       cache.put(request, response.clone());
       trimCache(cacheName, maxEntries);
     }
