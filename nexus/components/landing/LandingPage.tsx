@@ -374,6 +374,7 @@ export default function LandingPage() {
           <a href="#features">Features</a>
           <a href="#showcase">Product</a>
           <a href="#workflow">Workflow</a>
+          <Link href="/about">About</Link>
           <Link href="/sign-in">Sign In</Link>
           <Link href="/sign-up" className="nav-cta">
             Get Started

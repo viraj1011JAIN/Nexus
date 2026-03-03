@@ -164,6 +164,9 @@ export function BoardList() {
 
       if (result.fieldErrors?.title) {
         toast.error(result.fieldErrors.title[0]);
+      } else if (result.error === "LIMIT_REACHED") {
+        setShowCreateDialog(false);
+        setShowStorageFullDialog(true);
       } else if (result.error) {
         toast.error(result.error);
       } else if (result.data) {
@@ -172,6 +175,7 @@ export function BoardList() {
         setSelectedPhoto(null);
         setSelectedTemplate(null);
         setShowAdvanced(false);
+        setShowCreateDialog(false);
         fetchBoards();
       }
     });
@@ -874,7 +878,6 @@ export function BoardList() {
           <form
             onSubmit={(e) => {
               handleCreateBoard(e);
-              if (title.trim().length >= 3) setShowCreateDialog(false);
             }}
             className="space-y-4 pt-2"
           >

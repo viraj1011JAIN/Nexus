@@ -15,8 +15,8 @@ export const CreateBoard = z.object({
   imageFullUrl:  z.string().url().optional(),
   imageUserName: z.string().optional(),
   imageLinkUrl:  z.string().url().optional(),
-  // Board template (optional)
-  templateId:    z.string().uuid().optional(),
+  // Board template (optional) — IDs are CUIDs, not UUIDs
+  templateId:    z.string().min(1).optional(),
 });
 
 export const DeleteBoard = z.object({
