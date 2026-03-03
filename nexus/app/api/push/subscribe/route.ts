@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   await db.user.update({
-    where: { id: userId },
+    where: { clerkUserId: userId },
     data: { pushSubscription: JSON.stringify(parsed.data.subscription) },
   });
 
@@ -49,7 +49,7 @@ export async function DELETE(_req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await db.user.update({
-    where: { id: userId },
+    where: { clerkUserId: userId },
     data: { pushSubscription: null },
   });
 

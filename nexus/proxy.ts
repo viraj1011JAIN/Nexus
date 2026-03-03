@@ -44,7 +44,11 @@ const isPublicRoute = createRouteMatcher([
   "/robots.txt",
   "/sitemap.xml",
   "/api/health",
+  "/api/health/(.*)",         // /api/health/shards — uses CRON_SECRET Bearer auth, not Clerk
   "/api/webhook/(.*)",
+  // v1 REST API — authenticated via API key, not Clerk session.
+  // The route handlers call authenticateApiKey() themselves.
+  "/api/v1/(.*)",
 ]);
 
 // ─── Security headers — pre-computed at module load ─────────────────────────
@@ -111,8 +115,20 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     // app WITHOUT rendering the page component at all. Previously, the request
     // fell through to app/page.tsx which triggered a full RSC render + a
     // second auth() call just to issue a 307. Moving the redirect here
-    // eliminates that render entirely (~500 ms saved on every authed / hit).
-    if (req.nextUrl.pathname === "/" && authObj.userId) {
+    // eliminates that render entirely (~500 ms saved on every authed hit).
+    //
+    // IMPORTANT: Skip this redirect for RSC navigation/prefetch requests.
+    // When Clerk's afterSignOutUrl="/" navigation fires (via router.push) and
+    // the JWT cookie is still briefly present, the /dashboard redirect causes a
+    // two-hop chain: / → /dashboard → (session now cleared) → /sign-in.
+    // Letting the RSC request reach app/page.tsx is safe — the page calls auth()
+    // and handles the redirect natively, or renders the landing page if signed out.
+    const isRSCRequest =
+      req.headers.get("rsc") !== null ||
+      req.headers.get("next-router-prefetch") !== null ||
+      req.headers.get("next-router-state-tree") !== null;
+
+    if (req.nextUrl.pathname === "/" && authObj.userId && !isRSCRequest) {
       const url = req.nextUrl.clone();
       url.pathname = "/dashboard";
       return applySecurityHeaders(NextResponse.redirect(url, 307));
@@ -158,6 +174,20 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
       const url = req.nextUrl.clone();
       url.pathname = "/sign-in";
       return applySecurityHeaders(NextResponse.redirect(url));
+    }
+
+    // API routes called via client-side fetch() (e.g. /api/boards from BoardList,
+    // /api/realtime-auth from Supabase) cannot follow Clerk's FAPI redirect chain.
+    // That chain is cross-origin and causes a CORS failure + unhandled promise
+    // rejection in the browser. Return 401 JSON so callers can handle session
+    // expiry cleanly (e.g. stop polling silently on sign-out).
+    if (req.nextUrl.pathname.startsWith("/api/")) {
+      return applySecurityHeaders(
+        NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 401 }
+        )
+      );
     }
 
     // Regular full-page navigation — use Clerk's built-in redirect which

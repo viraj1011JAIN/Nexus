@@ -94,10 +94,17 @@ export function BoardList() {
   const fetchBoards = useCallback(async () => {
     try {
       const res = await fetch('/api/boards');
+      // 401 means session expired / sign-out in progress — stop fetching silently.
+      // This happens when Supabase realtime events fire during sign-out before the
+      // component unmounts (debounced timeout outlives the session).
+      if (res.status === 401) return;
       if (res.ok) {
         const data = await res.json();
         setBoards(data);
       }
+    } catch {
+      // Network error (e.g. cross-origin redirect during sign-out) — ignore silently.
+      // The component will be unmounted or the user is on their way to /sign-in.
     } finally {
       setLoading(false);
     }
@@ -138,6 +145,9 @@ export function BoardList() {
 
     return () => {
       supabase.removeChannel(channel);
+      // Clear any pending debounced fetch so it doesn't fire after unmount
+      // (which would happen if a realtime event arrived just before sign-out).
+      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
     };
   }, [fetchBoards, debouncedFetchBoards]);
 
