@@ -109,7 +109,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 | **Stripe Idempotency Guard** | `app/api/webhook/stripe/route.ts` | `ProcessedStripeEvent` table + Prisma `P2002` guard prevents double-processing replayed webhooks |
 | **Supabase Channel Pre-Flight** | `hooks/use-presence.ts` | Calls `/api/realtime-auth` before opening any WebSocket channel — board membership verified server-side |
 | **Presence Throttle + Visibility API** | `hooks/use-presence.ts` | Presence unsubscribes immediately when the user switches away from the tab; throttled state sync prevents N² event storms |
-| **AI Prompt Injection Protection** | `lib/automation-engine.ts` | `sanitizeForPrompt()` strips control characters; all OpenAI calls use `system`/`user` role separation |
+| **AI Prompt Injection Protection** | `actions/ai-actions.ts` | `sanitizeForPrompt()` strips control characters; all OpenAI calls use `system`/`user` role separation |
 | **Rate Limiter (Redis + In-Memory)** | `lib/action-protection.ts` | Sliding-window via Upstash Redis when configured; automatic in-memory fallback so local dev needs no Redis |
 | **RLS at Database Level** | `prisma/migrations/rls_policies.sql` | Row-Level Security policies on every tenant-scoped table — application-layer bypasses are blocked at the DB |
 | **Full-Board CSV + JSON Export** | `actions/import-export-actions.ts` | Complete board snapshots including checklists, labels, and assignees — not just a title list |
@@ -1676,7 +1676,7 @@ All server actions follow the `createSafeAction` pattern from `lib/create-safe-a
 5. `emitCardEvent()` triggers automations and webhooks
 6. `createAuditLog()` records the action
 
-**40 server actions across these domains:**
+**42 server actions across these domains:**
 
 | Domain | Action Files |
 |---|---|
@@ -1810,7 +1810,7 @@ Located in `nexus/emails/`:
 
 ```
 nexus/
-├── actions/                         # 40 server actions (createSafeAction pattern)
+├── actions/                         # 42 server actions (createSafeAction pattern)
 │   ├── create-board.ts
 │   ├── create-card.ts
 │   ├── create-list.ts
@@ -1922,7 +1922,7 @@ nexus/
 │   └── ...                          # DAL, email, utils, design tokens, etc.
 │
 ├── prisma/
-│   ├── schema.prisma                # 35 models, 13 enums
+│   ├── schema.prisma                # 41 models, 13 enums
 │   ├── seed.ts
 │   └── migrations/
 │
@@ -1935,17 +1935,18 @@ nexus/
 │   └── a11y/                        # CI accessibility shield — 57 tests (contrast contracts, axe audits, WCAG pattern guards, board regression tests)
 │       └── accessibility.test.tsx
 │
-├── e2e/                             # 7 Playwright E2E specs
+├── e2e/                             # 8 Playwright E2E specs
 │   ├── auth.setup.ts
 │   ├── auth-user-b.setup.ts
 │   ├── boards.spec.ts
 │   ├── cards.spec.ts
 │   ├── tenant-isolation.spec.ts
 │   ├── user-journeys.spec.ts
+│   ├── golden-path.spec.ts          # Full happy-path user journey
 │   └── chaos.spec.ts                # CE-1-CE-6: shard health, latency injection, reconnect, step-up cancel
 │
 ├── emails/                          # 6 Resend email templates
-├── scripts/                         # 6 utility scripts
+├── scripts/                         # 5 utility scripts
 │   ├── migrate-org-to-shard.ts      # Dual-write org migration (FK-ordered, batched, idempotent)
 │   └── test-shard-failover.ts       # 4-step shard failover verification
 ├── types/                           # TypeScript type definitions
@@ -1972,14 +1973,14 @@ nexus/
 
 | Section | Count |
 |---|---|
-| Components | 100 files |
-| Custom Hooks | 10 files |
-| Pages | 24 pages |
+| Components | 101 files |
+| Custom Hooks | 11 files |
+| Pages | 25 pages |
 | API Routes | 33 routes |
 | Server Actions | 42 files |
 | Lib Modules | 39 files |
 | Test Files | 50 files |
-| E2E Specs | 7 files |
+| E2E Specs | 8 files |
 | Email Templates | 6 files |
 
 ---
