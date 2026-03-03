@@ -92,7 +92,14 @@ function applySecurityHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
-// ─── Proxy handler ──────────────────────────────────────────────────────────
+// ─── Pre-compiled matchers ──────────────────────────────────────────────────
+// Compiling these once at module load keeps them out of the per-request hot
+// path. The RegExp is anchored (^) so startsWith semantics are preserved.
+
+/** Routes where a PENDING membership user is still allowed through. */
+const PENDING_ALLOWED_RE = /^\/(pending-approval|select-org|sign-in|sign-up|api\/webhook)($|\/)/;
+
+// ─── Proxy handler ───────────────────────────────────────────────────────────
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   // ── Layer 0: Resolve auth on EVERY route (including public) ────────────
@@ -112,26 +119,22 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   // ── Layer 1: Public routes ─────────────────────────────────────────────
   if (isPublicRoute(req)) {
     // Fast-path: redirect authenticated users from the landing page to the
-    // app WITHOUT rendering the page component at all. Previously, the request
-    // fell through to app/page.tsx which triggered a full RSC render + a
-    // second auth() call just to issue a 307. Moving the redirect here
-    // eliminates that render entirely (~500 ms saved on every authed hit).
+    // app WITHOUT rendering the page component at all.
     //
-    // IMPORTANT: Skip this redirect for RSC navigation/prefetch requests.
-    // When Clerk's afterSignOutUrl="/" navigation fires (via router.push) and
-    // the JWT cookie is still briefly present, the /dashboard redirect causes a
-    // two-hop chain: / → /dashboard → (session now cleared) → /sign-in.
-    // Letting the RSC request reach app/page.tsx is safe — the page calls auth()
-    // and handles the redirect natively, or renders the landing page if signed out.
-    const isRSCRequest =
-      req.headers.get("rsc") !== null ||
-      req.headers.get("next-router-prefetch") !== null ||
-      req.headers.get("next-router-state-tree") !== null;
+    // isRSCRequest is only evaluated here — the check is cheap but we avoid
+    // even 3 header.get() calls on every non-root public route (e.g. /sign-in)
+    // by gating it behind the pathname + userId pre-check.
+    if (req.nextUrl.pathname === "/" && authObj.userId) {
+      const isRSCRequest =
+        req.headers.get("rsc") !== null ||
+        req.headers.get("next-router-prefetch") !== null ||
+        req.headers.get("next-router-state-tree") !== null;
 
-    if (req.nextUrl.pathname === "/" && authObj.userId && !isRSCRequest) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return applySecurityHeaders(NextResponse.redirect(url, 307));
+      if (!isRSCRequest) {
+        const url = req.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return applySecurityHeaders(NextResponse.redirect(url, 307));
+      }
     }
     return applySecurityHeaders(NextResponse.next());
   }
@@ -205,31 +208,14 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   // ── Layer 3b: PENDING membership gate ──────────────────────────────────
-  // If the user's org membership is PENDING (set by org admin requiring
-  // approval), redirect to /pending-approval. This is a soft gate — the
-  // hard enforcement is in getTenantContext() which throws FORBIDDEN.
-  //
-  // IMPORTANT: We read from Clerk's sessionClaims (JWT). We CANNOT use
-  // Prisma here because proxy.ts runs on Edge Runtime. Orgs that enable
-  // "require approval" must set a Clerk publicMetadata field
-  // `orgMembershipStatus: "PENDING"` to activate this edge-level redirect.
-  //
-  // This is a UX optimization — not a security gate. The real gate is in
-  // requireRole() / requireActiveStatus() in server actions.
-  const pendingAllowedPaths = ["/pending-approval", "/select-org", "/sign-in", "/sign-up", "/api/webhook"];
-  const isOnPendingAllowedPath = pendingAllowedPaths.some(p => req.nextUrl.pathname.startsWith(p));
-  
-  if (orgId && !isOnPendingAllowedPath) {
-    try {
-      const sessionClaims = authObj.sessionClaims as Record<string, unknown> | undefined;
-      const metadata = sessionClaims?.publicMetadata as Record<string, unknown> | undefined;
-      if (metadata?.orgMembershipStatus === "PENDING") {
-        const url = req.nextUrl.clone();
-        url.pathname = "/pending-approval";
-        return NextResponse.redirect(url);
-      }
-    } catch {
-      // JWT parsing failure — don't block the request, let server-side handle it
+  // Read from Clerk's sessionClaims (JWT) — zero extra I/O.
+  // Uses pre-compiled PENDING_ALLOWED_RE instead of a 5-element .some() loop.
+  if (orgId && !PENDING_ALLOWED_RE.test(req.nextUrl.pathname)) {
+    const metadata = (authObj.sessionClaims?.publicMetadata) as Record<string, unknown> | undefined;
+    if (metadata?.orgMembershipStatus === "PENDING") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/pending-approval";
+      return NextResponse.redirect(url);
     }
   }
 

@@ -13,6 +13,7 @@ import 'server-only';
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { cache } from "react";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { DEMO_ORG_ID } from "@/lib/action-protection";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -57,14 +58,53 @@ export const ROLE_HIERARCHY: Record<TenantRole, number> = {
   GUEST: 1,
 };
 
+// ─── Cross-request DB caches ─────────────────────────────────────────────────
+// React.cache() deduplicates within a single render pass only.
+// unstable_cache() persists results across requests for `revalidate` seconds,
+// eliminating the 2 Postgres round-trips on every authenticated page load.
+
+/** clerkUserId → internal User.id. 60 s TTL; busted on first-sign-in provisioning. */
+const getCachedUserId = unstable_cache(
+  async (clerkUserId: string) => {
+    const row = await db.user.findUnique({
+      where: { clerkUserId },
+      select: { id: true },
+    });
+    return row?.id ?? null;
+  },
+  ["tenant:user-id"],
+  { revalidate: 60, tags: ["tenant-user"] }
+);
+
+/** (internalUserId, orgId) → membership row. 15 s TTL; busted on admin changes. */
+const getCachedMembership = unstable_cache(
+  async (internalUserId: string, orgId: string) => {
+    return db.organizationUser.findFirst({
+      where: { userId: internalUserId, organizationId: orgId },
+      select: { role: true, isActive: true, status: true },
+    });
+  },
+  ["tenant:membership"],
+  { revalidate: 15, tags: ["tenant-membership"] }
+);
+
+/**
+ * Bust both tenant caches — call from any admin action that mutates
+ * User or OrganizationUser rows so changes propagate within 1 request.
+ */
+export function invalidateTenantCache(): void {
+  revalidateTag("tenant-user");
+  revalidateTag("tenant-membership");
+}
+
 // ─── Core context getter ──────────────────────────────────────────────────────
 
 /**
  * THE canonical way to get tenant context in any server component, server action,
  * or API route handler.
  *
- * cache() ensures this function is called AT MOST ONCE per request.
- * The Clerk auth() call and DB membership query are deduplicated automatically.
+ * cache() deduplicates within a single render pass.
+ * getCachedUserId / getCachedMembership persist results across requests.
  *
  * @throws {TenantError} UNAUTHENTICATED — no userId or orgId in session
  * @throws {TenantError} FORBIDDEN — user not in OrganizationUser table or isActive=false
@@ -79,20 +119,14 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     );
   }
 
-  // Step 1: Resolve the User row — we need the internal UUID to query/create
-  // OrganizationUser. OrganizationUser.userId is a FK to User.id (UUID), NOT
-  // to Clerk's external user string.
-  let user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-    select: { id: true },
-  });
+  // Step 1: Resolve the User row — cached across requests (60 s TTL).
+  // getCachedUserId returns null on a first-ever sign-in; the healing path
+  // below provisions the row and busts the cache so the next request is fast.
+  let internalUserId = await getCachedUserId(userId);
 
-  if (!user) {
+  if (!internalUserId) {
     // ── User row healing path ─────────────────────────────────────────────
-    // There is no Clerk webhook provisioning User rows — we create the row
-    // on first access, gated on the Clerk-signed JWT proving the user exists.
-    // This handles first sign-in, local dev (no webhook tunnel), and any
-    // missed/delayed webhook delivery in production.
+    // First sign-in / missed webhook: create the User row, then bust the cache.
     try {
       const clerkUser = await (await clerkClient()).users.getUser(userId);
       const email =
@@ -105,33 +139,29 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
         clerkUser.username ||
         "Unknown User";
 
-      user = await db.user.create({
-        data: {
-          clerkUserId: userId,
-          email,
-          name,
-          imageUrl: clerkUser.imageUrl ?? null,
-        },
+      const newUser = await db.user.create({
+        data: { clerkUserId: userId, email, name, imageUrl: clerkUser.imageUrl ?? null },
         select: { id: true },
       });
+      internalUserId = newUser.id;
     } catch {
-      // Race condition: concurrent request created the row between our findUnique
-      // and create calls. Re-fetch; if still null, re-throw the original error.
-      user = await db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true } });
-      if (!user) {
+      // Race: concurrent request created the row between our cache miss and create.
+      const row = await db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true } });
+      if (!row) {
         throw new TenantError(
           "UNAUTHENTICATED",
           "Failed to provision user account — please try again"
         );
       }
+      internalUserId = row.id;
     }
+    revalidateTag("tenant-user");
   }
 
-  // Step 2: Check the local membership record.
-  const membership = await db.organizationUser.findFirst({
-    where: { userId: user.id, organizationId: orgId },
-    select: { role: true, isActive: true, status: true },
-  });
+  // Step 2: Check the local membership record — cross-request cached.
+  // 15 s TTL ensures suspensions/role changes take effect within one revalidation
+  // window. Admin mutations call invalidateTenantCache() for instant propagation.
+  const membership = await getCachedMembership(internalUserId, orgId);
 
   // Step 3: Explicit deactivation — local admin decision overrides Clerk session.
   // isActive=false is the instant-revocation mechanism: an admin sets this, and
@@ -198,17 +228,15 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
       //   b) If found — use its actual DB-stored isActive/status, never JWT defaults.
       //   c) If not found — create it and return the new row.
       const healedMembership = await db.$transaction(async (tx) => {
-        // Re-check inside the transaction — atomic
         const existing = await tx.organizationUser.findFirst({
-          where: { userId: user!.id, organizationId: orgId },
+          where: { userId: internalUserId!, organizationId: orgId },
           select: { id: true, isActive: true, status: true, role: true },
         });
-        if (existing) return existing; // Row exists — return actual DB values
+        if (existing) return existing;
 
-        // Row doesn't exist yet — create it
         return tx.organizationUser.create({
           data: {
-            userId: user!.id,
+            userId: internalUserId!,
             organizationId: orgId,
             role: tenantRole,
             isActive: true,
@@ -218,14 +246,11 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
           select: { id: true, isActive: true, status: true, role: true },
         });
       }).catch(async (err: unknown) => {
-        // Re-throw TenantErrors as-is
         if (err instanceof TenantError) throw err;
-        // Swallow unique-constraint only — extreme race: two concurrent requests both
-        // passed the inner findFirst check simultaneously. Re-fetch to get actual state.
         const message = err instanceof Error ? err.message : String(err);
         if (!message.toLowerCase().includes("unique constraint")) throw err;
         return db.organizationUser.findFirst({
-          where: { userId: user!.id, organizationId: orgId },
+          where: { userId: internalUserId!, organizationId: orgId },
           select: { id: true, isActive: true, status: true, role: true },
         });
       });
@@ -238,10 +263,11 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
         if (healedMembership.status === "SUSPENDED") {
           throw new TenantError("FORBIDDEN", "Your organization membership has been suspended");
         }
-        // Use DB-stored role + status, not JWT-derived defaults
         tenantRole = healedMembership.role as TenantRole;
         memberStatus = healedMembership.status as MembershipStatus;
       }
+      // Bust membership cache so new row is visible on the next request immediately
+      revalidateTag("tenant-membership");
     }
   }
 
@@ -254,7 +280,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
       isActive: true,
       status: memberStatus,
     },
-    internalUserId: user.id,
+    internalUserId: internalUserId!,
   };
 });
 

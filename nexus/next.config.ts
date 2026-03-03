@@ -149,12 +149,15 @@ const nextConfig: NextConfig = {
     parallelServerCompiles: true,
     parallelServerBuildTraces: true,
 
-    // Tree-shake large icon/animation/editor packages — real npm packages only
+    // Tree-shake large icon/animation/editor packages — real barrels only.
+    // Individual @radix-ui/react-X packages each expose a single component;
+    // they are NOT barrels and adding them here wastes Turbopack analysis time
+    // on every hot-reload without any tree-shaking benefit.
     optimizePackageImports: [
-      // Icons & animation — large barrel exports
+      // Icons & animation — largest barrels by far
       'lucide-react',
       'framer-motion',
-      // Tiptap editor packages
+      // Tiptap — many sub-packages, each a barrel
       '@tiptap/react',
       '@tiptap/starter-kit',
       '@tiptap/extension-character-count',
@@ -168,26 +171,15 @@ const nextConfig: NextConfig = {
       '@tiptap/extension-task-list',
       '@tiptap/extension-text-align',
       '@tiptap/extension-underline',
-      // Radix UI — each package is a barrel
-      '@radix-ui/react-avatar',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-label',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-scroll-area',
-      '@radix-ui/react-separator',
-      '@radix-ui/react-slot',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-tooltip',
-      '@radix-ui/react-visually-hidden',
       // DnD Kit
       '@dnd-kit/core',
       '@dnd-kit/sortable',
       '@dnd-kit/utilities',
-      // Charts & data vis
+      // Charts
       'recharts',
-      // Other large barrel-export packages
+      // Date utilities — large barrel
       'date-fns',
+      // Other large barrel-export packages
       'emoji-picker-react',
       'cmdk',
     ],
