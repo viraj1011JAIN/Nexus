@@ -374,7 +374,9 @@ function ParticleCanvas() {
     const resize = () => {
       W = canvas.width  = window.innerWidth;
       H = canvas.height = canvas.offsetHeight;
-      particles = Array.from({ length: 120 }, () => ({
+      // 80 particles → 3 160 connection checks/frame vs 7 140 with 120.
+      // Keeps the canvas smooth on mid-range mobile hardware.
+      particles = Array.from({ length: 80 }, () => ({
         x: Math.random() * W,
         y: Math.random() * H,
         r: Math.random() * 1.5 + 0.3,
@@ -511,6 +513,7 @@ function TechTicker() {
         className="flex gap-8 w-max"
         animate={{ x: ["0%", "-50%"] }}
         transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+        style={{ willChange: "transform" }}
       >
         {items.map((t, i) => (
           <div key={i} className="flex items-center gap-2 shrink-0">
@@ -574,7 +577,7 @@ export default function AboutPage() {
       {/* ── Progress bar ── */}
       <motion.div
         className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500 via-cyan-400 to-emerald-400 origin-left z-[200]"
-        style={{ scaleX }}
+        style={{ scaleX, willChange: "transform" }}
       />
 
       {/* ── Floating Nav ── */}
