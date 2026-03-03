@@ -166,7 +166,14 @@ export default function RootLayout({
           </a>
           <PerformanceWrapper>
             <ThemeProvider>
-              <div id="main-content" tabIndex={-1} className="bg-background text-foreground min-h-screen contain-layout focus-visible:outline-none" suppressHydrationWarning>
+              {/*
+               * NOTE: contain-layout was intentionally removed.
+               * CSS `contain: layout` creates a new containing block for
+               * position:fixed descendants (CSS Containment spec §3.3),
+               * which caused the landing page nav and About page floating
+               * nav to scroll with the page rather than stick to the viewport.
+               */}
+              <div id="main-content" tabIndex={-1} className="bg-background text-foreground min-h-screen focus-visible:outline-none" suppressHydrationWarning>
                 <AriaLiveRegion />
                 <CommandPaletteProvider />
                 <ModalProvider />

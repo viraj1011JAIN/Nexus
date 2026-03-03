@@ -11,6 +11,7 @@
  *
  * Public routes (no auth required):
  *   /                  Landing page
+ *   /about             About / marketing page
  *   /sign-in(/*)       Clerk sign-in flow
  *   /sign-up(/*)       Clerk sign-up flow
  *   /privacy           Privacy policy
@@ -31,6 +32,7 @@ import type { NextRequest } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
+  "/about",              // ← public marketing page — no auth required
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/privacy",
