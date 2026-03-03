@@ -423,11 +423,13 @@ export const ListContainer = ({
       </div>{/* end shared scroll wrapper */}
 
       {/* Footer status bar — fixed to the bottom of the viewport */}
+      {/* On mobile the fixed bottom nav bar is ~56px tall; shift the board status
+          strip above it with bottom-14 so it stays visible above the nav. */}
       <div
         role="status"
         aria-label="Board status"
         aria-live="off"
-        className="fixed bottom-0 left-0 right-0 z-50 h-9 px-3 sm:px-6 flex items-center justify-between gap-4 sm:gap-8 bg-[rgba(255,253,249,0.96)] dark:bg-[rgba(13,12,20,0.92)] backdrop-blur-[14px] border-t border-black/7 dark:border-white/6"
+        className="fixed bottom-14 lg:bottom-0 left-0 right-0 z-40 h-9 px-3 sm:px-6 flex items-center justify-between gap-4 sm:gap-8 bg-[rgba(255,253,249,0.96)] dark:bg-[rgba(13,12,20,0.92)] backdrop-blur-[14px] border-t border-black/7 dark:border-white/6"
       >
         {/* List indicators: dot+count on mobile, full name+count on sm+ */}
         <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto flex-1 min-w-0">

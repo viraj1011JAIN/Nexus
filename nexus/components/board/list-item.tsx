@@ -156,9 +156,8 @@ const ListItemInner = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       aria-label={`${data.title} column, ${data.cards.length} ${data.cards.length === 1 ? "card" : "cards"}`}
-      className="animate-list-enter kanban-list-col w-72 shrink-0 select-none touch-none"
+      className="animate-list-enter kanban-list-col w-72 shrink-0 select-none"
     >
       {/* List column outer shell */}
       <div
@@ -171,9 +170,12 @@ const ListItemInner = ({
             : "0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)",
         }}
       >
-        {/* List Header — visual drag handle (keyboard drag is on the column root) */}
+        {/* List Header — IS the drag handle for list reordering.
+             touch-none here (not on the whole column) so card-scroll area
+             retains normal touch-scroll behaviour. */}
         <div
-          className="flex items-center justify-between px-3.5 pt-3 pb-3 cursor-grab active:cursor-grabbing"
+          {...listeners}
+          className="flex items-center justify-between px-3.5 pt-3 pb-3 cursor-grab active:cursor-grabbing touch-none"
           style={{
             background: isDark
               ? `linear-gradient(135deg, ${listColor}14 0%, rgba(255,255,255,0.02) 100%)`

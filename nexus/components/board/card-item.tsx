@@ -4,7 +4,7 @@ import { memo, useSyncExternalStore, type CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, Priority } from "@prisma/client";
-import { Clock, Lock, CheckSquare, Check, Paperclip } from "lucide-react";
+import { Clock, Lock, CheckSquare, Check, Paperclip, GripVertical } from "lucide-react";
 import { useBulkSelection } from "@/lib/bulk-selection-context";
 import { motion, useReducedMotion } from "framer-motion";
 import { deleteCard } from "@/actions/delete-card";
@@ -64,6 +64,7 @@ const CardItemInner = ({
     setNodeRef,
     transform,
     transition,
+    isDragging,
   } = useSortable({
     id: data.id,
     data: {
@@ -128,18 +129,12 @@ const CardItemInner = ({
         animationDelay: `${index * 0.07}s`,
       }}
       {...attributes}
-      {...listeners}
       aria-label={cardAriaLabel}
       onKeyDown={(e) => {
-        // Enter activates the card (open modal / toggle bulk-select).
-        // All other keys (Space to pick up, Arrows to move, Escape to cancel)
-        // are forwarded to dnd-kit's KeyboardSensor event handler.
         if (e.key === "Enter") {
           e.preventDefault();
           if (isBulkMode) { toggleCard(data.id); return; }
           cardModal.onOpen(data.id);
-        } else {
-          (listeners?.onKeyDown as React.KeyboardEventHandler | undefined)?.(e);
         }
       }}
       initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
@@ -156,7 +151,8 @@ const CardItemInner = ({
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative text-sm rounded-2xl cursor-pointer animate-card-enter touch-manipulation overflow-hidden kanban-card",
+        "group relative text-sm rounded-2xl cursor-pointer animate-card-enter overflow-hidden kanban-card",
+        isDragging && "opacity-50 ring-2 ring-primary/60",
         isSelected && "ring-2 ring-primary"
       )}
     >
@@ -315,6 +311,23 @@ const CardItemInner = ({
             </div>
           );
         })()}
+      </div>
+
+      {/* DRAG HANDLE — dedicated touch/pointer target; touch-none required so the
+           browser doesn't claim the touch for scrolling before dnd-kit can activate */}
+      <div
+        {...listeners}
+        aria-label="Drag to reorder card"
+        className={cn(
+          "absolute right-1.5 bottom-1.5 z-10 touch-none cursor-grab active:cursor-grabbing",
+          "w-6 h-6 flex items-center justify-center rounded-lg select-none transition-opacity duration-150",
+          "text-[#9A8F85] dark:text-white/30 hover:text-[#6B6560] dark:hover:text-white/60",
+          // Always visible on touch screens; auto-hide on pointer devices until hover
+          "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
       </div>
 
       {/* 3 DOTS MENU */}
