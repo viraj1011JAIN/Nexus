@@ -114,6 +114,11 @@ export function useCardLock({ boardId, cardId, enabled = true, orgId }: UseCardL
       return;
     }
 
+    // Snapshot user fields synchronously while user is guaranteed non-null.
+    // Async callbacks use this instead of live user ref which may become null
+    // during sign-out.
+    const currentUserId = user.id;
+
     const channelName = orgId
       ? `org:${orgId}:card-locks:${boardId}`
       : `card-locks:${boardId}`;
@@ -133,11 +138,15 @@ export function useCardLock({ boardId, cardId, enabled = true, orgId }: UseCardL
               `/api/realtime-auth?boardId=${encodeURIComponent(boardId)}`,
               { cache: "no-store" },
             );
+            if (cancelled) return;
             if (!preflight.ok) return; // Access denied — silently abort subscription
           } catch {
+            if (cancelled) return;
             // Network error — fail open; channel-name isolation still applies
           }
         }
+
+        if (cancelled) return;
 
         // Use an authenticated Supabase client (Clerk JWT) when orgId is
         // available so RLS policies can validate the subscription.
@@ -146,6 +155,7 @@ export function useCardLock({ boardId, cardId, enabled = true, orgId }: UseCardL
         if (orgId) {
           let token: string | null = null;
           try { token = await getToken({ template: "supabase" }); } catch { /* no template */ }
+          if (cancelled) return;
           supabaseClient = getAuthenticatedSupabaseClient(token);
         } else {
           supabaseClient = getSupabaseClient();
@@ -156,7 +166,7 @@ export function useCardLock({ boardId, cardId, enabled = true, orgId }: UseCardL
         newChannel = supabaseClient.channel(channelName, {
           config: {
             presence: {
-              key: user.id,
+              key: currentUserId,
             },
           },
         });

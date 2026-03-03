@@ -170,7 +170,12 @@ export function NotificationCenter() {
       const supabase = getAuthenticatedSupabaseClient(token);
 
       // Channel scoped to this user in this org — prevents cross-tenant leakage
-      const channelName = `org:${organization!.id}:notifications:${userId}`;
+      // Guard: if organization became null (e.g. during sign-out), bail out.
+      // The outer effect guard checks organization?.id, but this async function
+      // can outlive that check if Clerk tears down the session mid-flight.
+      const orgId = organization?.id;
+      if (!orgId) return;
+      const channelName = `org:${orgId}:notifications:${userId}`;
 
       const channel = supabase
         .channel(channelName)
@@ -274,7 +279,7 @@ export function NotificationCenter() {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[380px] p-0"
+        className="w-95 p-0"
         align="end"
         sideOffset={8}
       >
@@ -302,7 +307,7 @@ export function NotificationCenter() {
         <Separator />
 
         {/* ── Notification list ─────────────────────────────────────────── */}
-        <ScrollArea className="max-h-[480px]">
+        <ScrollArea className="max-h-120">
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

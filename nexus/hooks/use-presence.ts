@@ -93,6 +93,19 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
       return;
     }
 
+    // Cancellation flag -- set to true when the effect cleans up (sign-out,
+    // unmount, dep change). Every async continuation checks this before
+    // touching React state or accessing user fields to avoid crashes when
+    // Clerk tears down the session while async setup is in-flight.
+    let cancelled = false;
+
+    // Snapshot user fields synchronously while user is guaranteed non-null.
+    // Async callbacks below read from this snapshot instead of the live
+    // user ref, which may become null if Clerk signs out mid-flight.
+    const userId = user.id;
+    const userName = user.fullName || user.firstName || "Anonymous";
+    const userAvatar = user.imageUrl;
+
     // Channel name includes orgId â€” prevents cross-tenant presence tracking
     const channelName = boardPresenceChannel(orgId, boardId);
 
@@ -111,13 +124,16 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         supabaseRef.current.removeChannel(channelRef.current);
         channelRef.current = null;
       }
-      setIsTracking(false);
-      setOnlineUsers([]);
+      if (!cancelled) {
+        setIsTracking(false);
+        setOnlineUsers([]);
+      }
     };
 
     /** Subscribe to the Supabase presence channel and start tracking. */
     const setupPresence = async () => {
       try {
+        if (cancelled) return;
         // â”€â”€ Board membership pre-flight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Verify the caller still has an active BoardMember row for this board
         // before opening a Supabase channel. The Clerk JWT only encodes org-level
@@ -127,11 +143,13 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
             `/api/realtime-auth?boardId=${encodeURIComponent(boardId)}`,
             { cache: "no-store" },
           );
+          if (cancelled) return;
           if (!preflight.ok) {
-            setError("Board access denied â€” you may have been removed from this board");
+            if (!cancelled) setError("Board access denied â€” you may have been removed from this board");
             return;
           }
         } catch {
+          if (cancelled) return;
           // Network error during preflight â€” fail open so the app stays usable
           // on transient connectivity issues; org-scoped channel name still
           // provides defence-in-depth isolation.
@@ -141,14 +159,15 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         try {
           token = await getToken({ template: "supabase" });
         } catch {
-          // Template not configured â€” degrade gracefully to anon key
+          // Template not configured -- degrade gracefully to anon key
         }
+        if (cancelled) return;
 
         const supabase = getAuthenticatedSupabaseClient(token);
         supabaseRef.current = supabase;
 
         const channel = supabase.channel(channelName, {
-          config: { presence: { key: user.id } },
+          config: { presence: { key: userId } },
         });
         channelRef.current = channel;
 
@@ -201,14 +220,16 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         });
 
         channel.subscribe(async (status) => {
+          if (cancelled) return;
           if (status === "SUBSCRIBED") {
             await channel.track({
-              userId: user.id,
-              userName: user.fullName || user.firstName || "Anonymous",
-              userAvatar: user.imageUrl,
+              userId,
+              userName,
+              userAvatar,
               joinedAt: new Date().toISOString(),
-              color: getUserColor(user.id),
+              color: getUserColor(userId),
             });
+            if (cancelled) return;
             setIsTracking(true);
             setError(null);
           } else if (status === "CHANNEL_ERROR") {
@@ -246,6 +267,7 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
     }
 
     return () => {
+      cancelled = true;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       cleanup();
     };

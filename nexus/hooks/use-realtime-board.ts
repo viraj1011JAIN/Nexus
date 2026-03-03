@@ -285,9 +285,12 @@ export function useRealtimeBoard({
     const channelName = boardChannel(orgId, boardId);
     let channel: RealtimeChannel;
     let supabase: ReturnType<typeof getAuthenticatedSupabaseClient> | undefined;
+    // Cancellation flag — prevents retry loop from firing after cleanup (sign-out)
+    let cancelled = false;
 
     // Connect to real-time channel
     const setupRealtimeSubscription = async () => {
+      if (cancelled) return;
       // Guard: boardId must be a valid UUID to prevent filter injection
       if (!/^[0-9a-f-]{36}$/i.test(boardId)) {
         console.error(`[useRealtimeBoard] Invalid boardId format: ${boardId}`);
@@ -303,6 +306,7 @@ export function useRealtimeBoard({
         } catch {
           // Template not configured — degrade gracefully to anon key
         }
+        if (cancelled) return;
         supabase = getAuthenticatedSupabaseClient(token);
         channel = supabase.channel(channelName);
 
@@ -363,6 +367,7 @@ export function useRealtimeBoard({
         // Subscribe and handle connection status with auto-retry
         channel
           .subscribe((status) => {
+            if (cancelled) return;
             if (status === "SUBSCRIBED") {
               setIsConnected(true);
               setError(null);
@@ -372,7 +377,8 @@ export function useRealtimeBoard({
               setIsConnected(false);
 
               // Implement exponential backoff retry (max 5 attempts)
-              if (retryCountRef.current < 5) {
+              // Do NOT retry if the effect has been cleaned up (sign-out, unmount)
+              if (!cancelled && retryCountRef.current < 5) {
                 const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000); // Max 30s
 
                 // Only log on first retry to reduce noise
@@ -384,7 +390,7 @@ export function useRealtimeBoard({
                   retryCountRef.current += 1;
                   setupRealtimeSubscription();
                 }, delay);
-              } else {
+              } else if (!cancelled) {
                 // Only show error after all retries exhausted
                 setError("Connection failed after multiple attempts");
                 if (process.env.NODE_ENV === "development") console.warn(`⚠️ Real-time connection failed for board: ${boardId} after ${retryCountRef.current} retries`);
@@ -400,6 +406,7 @@ export function useRealtimeBoard({
 
     // Cleanup: unsubscribe when component unmounts or boardId changes
     return () => {
+      cancelled = true;
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
