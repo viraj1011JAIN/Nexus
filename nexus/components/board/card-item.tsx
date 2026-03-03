@@ -1,19 +1,17 @@
 "use client";
 
-import { memo, useSyncExternalStore, type CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Card, Priority } from "@prisma/client";
+import { Card } from "@prisma/client";
 import { Clock, Lock, CheckSquare, Check, Paperclip, GripVertical } from "lucide-react";
 import { useBulkSelection } from "@/lib/bulk-selection-context";
 import { motion, useReducedMotion } from "framer-motion";
 import { deleteCard } from "@/actions/delete-card";
 import { useParams } from "next/navigation";
 import { useCardModal } from "@/hooks/use-card-modal";
-import { PriorityBadge } from "@/components/priority-badge";
 import { format, isPast, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,12 +21,12 @@ import {
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Priority accent bar gradient classes — Tailwind handles dark/light
-const PRIORITY_BAR_CLASSES: Record<string, string> = {
-  URGENT: "bg-gradient-to-b from-[#EF4444] to-[#EF444466] dark:from-[#FF4365] dark:to-[#FF436566]",
-  HIGH:   "bg-gradient-to-b from-[#F59E0B] to-[#F59E0B66] dark:from-[#FF8C42] dark:to-[#FF8C4266]",
-  MEDIUM: "bg-gradient-to-b from-[#06B6D4] to-[#06B6D466] dark:from-[#F5C518] dark:to-[#F5C51866]",
-  LOW:    "bg-gradient-to-b from-[#10B981] to-[#10B98166] dark:from-[#4FFFB0] dark:to-[#4FFFB066]",
+// Tiny priority dot — one visual cue, no noise
+const PRIORITY_DOT_CLASS: Record<string, string> = {
+  URGENT: "bg-red-500",
+  HIGH:   "bg-orange-400",
+  MEDIUM: "bg-sky-400",
+  LOW:    "bg-emerald-400",
 }
 
 interface CardItemProps {
@@ -48,15 +46,8 @@ const CardItemInner = ({
   const params = useParams();
   const cardModal = useCardModal();
   const { isBulkMode, selectedIds, toggleCard } = useBulkSelection();
-  const { resolvedTheme } = useTheme();
-  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
-  const isDark = mounted && resolvedTheme === "dark";
   const isSelected = selectedIds.includes(data.id);
-  // Respect the OS "Reduce motion" setting (WCAG 2.3.3 Animation from Interactions)
   const prefersReducedMotion = useReducedMotion();
-
-  // Priority bar class for accent bar
-  const priorityBarClass = data.priority ? PRIORITY_BAR_CLASSES[data.priority] ?? null : null;
 
   const {
     attributes,
@@ -115,19 +106,7 @@ const CardItemInner = ({
   return (
     <motion.div
       ref={setNodeRef}
-      style={{
-        ...style,
-        background: isDark ? "rgba(26,22,36,0.85)" : "#FFFFFF",
-        border: `1px solid ${
-          isSelected
-            ? "rgba(123,47,247,0.7)"
-            : isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)"
-        }`,
-        boxShadow: isDark
-          ? "0 1px 3px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.25)"
-          : "0 1px 3px rgba(0,0,0,0.05), 0 2px 6px rgba(0,0,0,0.04)",
-        animationDelay: `${index * 0.07}s`,
-      }}
+      style={{ ...style, animationDelay: `${index * 0.07}s` }}
       {...attributes}
       aria-label={cardAriaLabel}
       onKeyDown={(e) => {
@@ -137,61 +116,30 @@ const CardItemInner = ({
           cardModal.onOpen(data.id);
         }
       }}
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
       animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
-      exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.97 }}
-      whileHover={prefersReducedMotion ? undefined : { scale: 1.012, boxShadow: isDark
-        ? "0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(123,47,247,0.25)"
-        : "0 8px 24px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06), 0 0 0 1px rgba(123,47,247,0.1)"
-      }}
-      whileTap={prefersReducedMotion ? undefined : { scale: 0.985 }}
-      transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.4, 0, 0.2, 1], delay: prefersReducedMotion ? 0 : index * 0.04 }}
+      exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.98 }}
+      whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.14, ease: [0.4, 0, 0.2, 1] }}
       onClick={() => {
         if (isBulkMode) { toggleCard(data.id); return; }
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative text-sm rounded-2xl cursor-pointer animate-card-enter overflow-hidden kanban-card",
-        isDragging && "opacity-50 ring-2 ring-primary/60",
-        isSelected && "ring-2 ring-primary"
+        "group relative cursor-pointer animate-card-enter rounded-xl kanban-card",
+        "bg-white dark:bg-[#1C1824]",
+        "border border-gray-100 dark:border-white/[0.07]",
+        "shadow-sm hover:shadow-md hover:border-violet-200/70 dark:hover:border-violet-400/20",
+        "transition-all duration-150",
+        isDragging && "opacity-40",
+        isSelected && "ring-2 ring-violet-500/70 ring-offset-1 dark:ring-offset-[#0D0C14]"
       )}
     >
-      {/* Priority left accent bar — purely decorative, conveyed by PriorityBadge */}
-      {priorityBarClass && (
-        <div aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-0.75 rounded-l-2xl ${priorityBarClass}`} />
-      )}
-      {/* Bulk selection checkbox (top-left overlay — visible only in bulk mode) */}
-      {isBulkMode && (
-        <label
-          className="absolute top-1.5 left-1.5 z-20 cursor-pointer"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            checked={isSelected}
-            className="sr-only peer"
-            aria-label={`Select card: ${data.title}`}
-            onChange={() => toggleCard(data.id)}
-          />
-          <div
-            className={cn(
-              "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-150",
-              isSelected
-                ? "bg-primary border-primary"
-                : "bg-white/90 dark:bg-slate-800/90 border-slate-300 group-hover:border-primary"
-            )}
-          >
-            {isSelected && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
-          </div>
-        </label>
-      )}
-
-      {/* Cover Image / Color */}
+      {/* Cover image / colour swatch */}
       {(data.coverImageUrl || data.coverColor) && (
         <div
           className={cn(
-            "h-12 w-full rounded-t-lg",
+            "h-10 w-full rounded-t-[11px]",
             data.coverImageUrl
               ? "bg-cover bg-center [background-image:var(--cover-img)]"
               : "bg-(--cover-bg)"
@@ -203,157 +151,151 @@ const CardItemInner = ({
         />
       )}
 
-      {/* Card Content */}
-      <div className={cn("py-3 pr-9 space-y-2.5", priorityBarClass ? "pl-4" : "pl-3")}>
-        {/* Title */}
-        <p className="text-[13px] font-semibold leading-[1.4] text-[#1A1714] dark:text-[#E8E4F0] group-hover:text-[#7B2FF7] dark:group-hover:text-[#C084FC] transition-colors duration-150 line-clamp-2 pr-1">
-          {data.title}
-        </p>
-
-        {/* Tags Section */}
-        <div className="flex flex-wrap gap-1 items-center">
-          {/* Priority Badge */}
-          {data.priority && data.priority !== 'LOW' && (
-            <PriorityBadge
-              priority={data.priority as Priority}
-              size="sm"
-              animated={false}
+      <div className="px-3 py-2.5">
+        {/* Row 1 — optional priority dot · title · actions */}
+        <div className="flex items-start gap-2">
+          {isBulkMode ? (
+            <label
+              className="mt-0.75 shrink-0 cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                className="sr-only"
+                aria-label={`Select card: ${data.title}`}
+                onChange={() => toggleCard(data.id)}
+              />
+              <div className={cn(
+                "h-4 w-4 rounded border-2 flex items-center justify-center transition-all duration-150",
+                isSelected ? "bg-violet-600 border-violet-600" : "border-gray-300 dark:border-white/20"
+              )}>
+                {isSelected && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+              </div>
+            </label>
+          ) : data.priority ? (
+            <span
+              aria-hidden="true"
+              className={cn("mt-[5px] w-1.5 h-1.5 rounded-full shrink-0", PRIORITY_DOT_CLASS[data.priority])}
             />
-          )}
+          ) : null}
 
-          {/* Due Date Tag */}
-          {data.dueDate && (
-            <div
-              aria-label={
-                isOverdue
-                  ? `Overdue: ${format(new Date(data.dueDate), "MMM d")}`
-                  : isDueSoon
-                  ? `Due soon: ${format(new Date(data.dueDate), "MMM d")}`
-                  : `Due ${format(new Date(data.dueDate), "MMM d")}`
-              }
-              className={cn(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium",
-              isOverdue
-                ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                : isDueSoon
-                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                : "bg-black/5 dark:bg-white/8 text-[#6B6560] dark:text-white/45"
-            )}>
-              <Clock className="w-3 h-3" aria-hidden="true" />
-              <span aria-hidden="true">{format(new Date(data.dueDate), "MMM d")}</span>
-            </div>
-          )}
+          <p className="flex-1 min-w-0 text-[13px] font-medium leading-[1.45] text-gray-800 dark:text-gray-100 line-clamp-2">
+            {data.title}
+          </p>
 
-          {/* Story Points badge */}
-          {data.storyPoints !== null && data.storyPoints !== undefined && (
+          {/* Grip + 3-dot — touch: always visible; pointer: reveal on hover */}
+          <div
+            className={cn(
+              "flex items-center gap-0.5 shrink-0 -mt-0.5 -mr-0.5",
+              "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100",
+              "transition-opacity duration-150"
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div
-              aria-label={`${data.storyPoints} story ${data.storyPoints === 1 ? "point" : "points"}`}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400"
+              {...listeners}
+              aria-label="Drag to reorder card"
+              className="w-6 h-6 flex items-center justify-center rounded-md text-gray-300 dark:text-white/20 hover:text-gray-500 dark:hover:text-white/50 hover:bg-gray-100 dark:hover:bg-white/[0.07] cursor-grab active:cursor-grabbing touch-none select-none transition-colors duration-100"
             >
-              <span aria-hidden="true">{data.storyPoints}pt</span>
+              <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
             </div>
-          )}
 
-          {/* Dependency lock icon */}
-          {(data._count?.dependencies ?? 0) > 0 && (
-            <div
-              aria-label={`Blocked by ${data._count!.dependencies} ${data._count!.dependencies === 1 ? "card" : "cards"}`}
-              title={`Blocked by ${data._count!.dependencies} card${data._count!.dependencies === 1 ? "" : "s"}`}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-red-500/10 text-red-600 dark:text-red-400"
-            >
-              <Lock className="w-3 h-3" aria-hidden="true" />
-              <span aria-hidden="true">{data._count!.dependencies}</span>
-            </div>
-          )}
-
-          {/* Attachment count badge */}
-          {(data._count?.attachments ?? 0) > 0 && (
-            <div
-              aria-label={`${data._count!.attachments} ${data._count!.attachments === 1 ? "attachment" : "attachments"}`}
-              title={`${data._count!.attachments} attachment${data._count!.attachments === 1 ? "" : "s"}`}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/8 text-[#6B6560] dark:text-white/45"
-            >
-              <Paperclip className="w-3 h-3" aria-hidden="true" />
-              <span aria-hidden="true">{data._count!.attachments}</span>
-            </div>
-          )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 rounded-md text-gray-300 dark:text-white/20 hover:text-gray-500 dark:hover:text-white/50 hover:bg-gray-100 dark:hover:bg-white/[0.07]"
+                  aria-label="Card options"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="bottom">
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  className="text-red-600 dark:text-red-400 cursor-pointer text-xs px-3 py-2 font-medium"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-2" />
+                  Delete card
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        {/* Checklist Progress Bar */}
-        {(() => {
-          if (!data.checklists || data.checklists.length === 0) return null;
-          const allItems = data.checklists.flatMap((cl) => cl.items);
-          if (allItems.length === 0) return null;
-          const done = allItems.filter((i) => i.isComplete).length;
-          const total = allItems.length;
-          const pct = Math.round((done / total) * 100);
-          return (
-            <div className="flex items-center gap-2 w-full">
-              <CheckSquare className="w-3 h-3 text-[#9A8F85] dark:text-white/35 shrink-0" aria-hidden="true" />
-              <div
-                role="progressbar"
-                aria-valuenow={pct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Checklist: ${done} of ${total} items complete`}
-                className="flex-1 h-1 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden"
+        {/* Row 2 — metadata footer (only rendered when data is present) */}
+        {(data.dueDate ||
+          data.storyPoints != null ||
+          (data._count?.attachments ?? 0) > 0 ||
+          (data._count?.dependencies ?? 0) > 0 ||
+          data.checklists?.some((c) => c.items.length > 0)) && (
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            {data.dueDate && (
+              <span
+                aria-label={isOverdue ? `Overdue: ${format(new Date(data.dueDate), "MMM d")}` : isDueSoon ? `Due soon: ${format(new Date(data.dueDate), "MMM d")}` : `Due ${format(new Date(data.dueDate), "MMM d")}`}
+                className={cn(
+                  "inline-flex items-center gap-1 text-[11px] font-medium",
+                  isOverdue ? "text-red-500" : isDueSoon ? "text-amber-500" : "text-gray-400 dark:text-white/35"
+                )}
               >
-                <div
-                  aria-hidden="true"
+                <Clock className="w-3 h-3" aria-hidden="true" />
+                <span>{format(new Date(data.dueDate), "MMM d")}</span>
+              </span>
+            )}
+
+            {(() => {
+              if (!data.checklists?.length) return null;
+              const all = data.checklists.flatMap((c) => c.items);
+              if (!all.length) return null;
+              const done = all.filter((i) => i.isComplete).length;
+              return (
+                <span
+                  aria-label={`Checklist: ${done} of ${all.length} complete`}
                   className={cn(
-                    "h-full rounded-full transition-[width] duration-500 w-(--progress-w)",
-                    pct === 100 ? "bg-emerald-500" : "bg-[#7B2FF7]"
+                    "inline-flex items-center gap-1 text-[11px] font-medium",
+                    done === all.length ? "text-emerald-500" : "text-gray-400 dark:text-white/35"
                   )}
-                  style={{ '--progress-w': `${pct}%` } as CSSProperties}
-                />
-              </div>
-              <span aria-hidden="true" className="text-[10px] font-medium tabular-nums text-[#9A8F85] dark:text-white/35 shrink-0">{done}/{total}</span>
-            </div>
-          );
-        })()}
-      </div>
+                >
+                  <CheckSquare className="w-3 h-3" aria-hidden="true" />
+                  <span aria-hidden="true">{done}/{all.length}</span>
+                </span>
+              );
+            })()}
 
-      {/* DRAG HANDLE — dedicated touch/pointer target; touch-none required so the
-           browser doesn't claim the touch for scrolling before dnd-kit can activate */}
-      <div
-        {...listeners}
-        aria-label="Drag to reorder card"
-        className={cn(
-          "absolute right-1.5 bottom-1.5 z-10 touch-none cursor-grab active:cursor-grabbing",
-          "w-6 h-6 flex items-center justify-center rounded-lg select-none transition-opacity duration-150",
-          "text-[#9A8F85] dark:text-white/30 hover:text-[#6B6560] dark:hover:text-white/60",
-          // Always visible on touch screens; auto-hide on pointer devices until hover
-          "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+            {(data._count?.attachments ?? 0) > 0 && (
+              <span
+                aria-label={`${data._count!.attachments} attachment${data._count!.attachments === 1 ? "" : "s"}`}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-white/35"
+              >
+                <Paperclip className="w-3 h-3" aria-hidden="true" />
+                <span aria-hidden="true">{data._count!.attachments}</span>
+              </span>
+            )}
+
+            {(data._count?.dependencies ?? 0) > 0 && (
+              <span
+                aria-label={`Blocked by ${data._count!.dependencies} card${data._count!.dependencies === 1 ? "" : "s"}`}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400"
+              >
+                <Lock className="w-3 h-3" aria-hidden="true" />
+                <span aria-hidden="true">{data._count!.dependencies}</span>
+              </span>
+            )}
+
+            {data.storyPoints != null && (
+              <span
+                aria-label={`${data.storyPoints} story point${data.storyPoints === 1 ? "" : "s"}`}
+                className="ml-auto text-[11px] font-semibold tabular-nums text-gray-300 dark:text-white/25"
+              >
+                {data.storyPoints}<span className="font-normal opacity-70">pt</span>
+              </span>
+            )}
+          </div>
         )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
-      </div>
-
-      {/* 3 DOTS MENU */}
-      <div className="absolute right-1.5 top-1.5 z-10 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity duration-150">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 rounded-lg text-[#9A8F85] dark:text-white/35 hover:text-[#1A1714] dark:hover:text-white hover:bg-black/6 dark:hover:bg-white/10 transition-all"
-              aria-label="Card options"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="bottom" className="w-auto pb-2">
-            <DropdownMenuItem
-              onClick={handleDelete}
-              className="text-destructive cursor-pointer hover:text-destructive hover:bg-destructive/10 font-semibold text-xs px-3 py-2 rounded-lg"
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </motion.div>
   );

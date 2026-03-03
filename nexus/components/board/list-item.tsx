@@ -160,29 +160,13 @@ const ListItemInner = ({
       className="animate-list-enter kanban-list-col w-72 shrink-0 select-none"
     >
       {/* List column outer shell */}
-      <div
-        className="w-full flex flex-col rounded-[16px] overflow-hidden"
-        style={{
-          background: isDark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.018)",
-          border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(0,0,0,0.06)",
-          boxShadow: isDark
-            ? "0 4px 24px rgba(0,0,0,0.35)"
-            : "0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)",
-        }}
-      >
+      <div className="w-full flex flex-col rounded-2xl overflow-hidden bg-gray-50 dark:bg-[#181520] border border-gray-100 dark:border-white/6 shadow-sm">
         {/* List Header — IS the drag handle for list reordering.
              touch-none here (not on the whole column) so card-scroll area
              retains normal touch-scroll behaviour. */}
         <div
           {...listeners}
-          className="flex items-center justify-between px-3.5 pt-3 pb-3 cursor-grab active:cursor-grabbing touch-none"
-          style={{
-            background: isDark
-              ? `linear-gradient(135deg, ${listColor}14 0%, rgba(255,255,255,0.02) 100%)`
-              : `linear-gradient(135deg, ${listColor}09 0%, rgba(255,253,249,0.8) 100%)`,
-            borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.05)",
-            borderTop: `3px solid ${listColor}`,
-          }}
+          className="flex items-center justify-between px-3.5 pt-3 pb-2.5 cursor-grab active:cursor-grabbing touch-none border-b border-gray-100 dark:border-white/6 bg-white dark:bg-[#1C1824]"
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {/* Color dot — decorative */}
@@ -240,7 +224,7 @@ const ListItemInner = ({
               onClick={() => cardInputRef.current?.focus()}
               title="Add card"
               aria-label={`Add card to ${data.title}`}
-              className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#9A8F85] dark:text-white/40 hover:scale-105"
+              className="w-7 h-7 rounded-xl border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#9A8F85] dark:text-white/40 hover:scale-105"
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.background = `${listColor}28`;
                 (e.currentTarget as HTMLElement).style.color = listColor;
@@ -259,7 +243,7 @@ const ListItemInner = ({
                 <button
                   title="List options"
                   aria-label={`Options for ${data.title} list`}
-                  className="w-7 h-7 rounded-[8px] border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#BFB9B3] dark:text-white/30 hover:bg-black/8 dark:hover:bg-white/10 hover:text-[#6B6560] dark:hover:text-white/60"
+                  className="w-7 h-7 rounded-xl border-none flex items-center justify-center cursor-pointer transition-all duration-150 bg-black/4 dark:bg-white/6 text-[#BFB9B3] dark:text-white/30 hover:bg-black/8 dark:hover:bg-white/10 hover:text-[#6B6560] dark:hover:text-white/60"
                 >
                   <MoreHorizontal className="w-3.5 h-3.5" />
                 </button>
@@ -285,7 +269,7 @@ const ListItemInner = ({
 
         {/* Cards Area */}
         <SortableContext items={data.cards} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-y-2 board-scrollbar overflow-x-hidden overflow-y-auto max-h-[calc(100dvh-260px)] px-2.5 py-2.5">
+        <div className="flex flex-col gap-y-1.5 board-scrollbar overflow-x-hidden overflow-y-auto max-h-[calc(100dvh-260px)] px-2 py-2">
             {data.cards.map((card, cardIndex) => (
               <CardItem
                 index={cardIndex}
@@ -299,8 +283,7 @@ const ListItemInner = ({
 
         {/* Add Card Form */}
         <div
-          className="px-2.5 pb-2.5 pt-1"
-          style={{ borderTop: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.04)" }}
+          className="px-2 pb-2 pt-1 border-t border-gray-100 dark:border-white/5"
         >
           <form
             action={async (formData) => {
