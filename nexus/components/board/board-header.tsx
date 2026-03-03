@@ -50,29 +50,29 @@ export function BoardHeader({
           <Link
             href="/"
             aria-label="Back to home"
-            className="flex items-center gap-[5px] text-[12.5px] font-medium no-underline py-1 px-2 rounded-[7px] transition-colors duration-150 ease-in-out text-[#9A8F85] hover:text-[#1A1714] dark:text-white/35 dark:hover:text-white/70 font-[family-name:var(--font-dm-sans)] shrink-0"
+            className="flex items-center gap-1.25 text-[12.5px] font-medium no-underline py-1 px-2 rounded-[7px] transition-colors duration-150 ease-in-out text-[#9A8F85] hover:text-[#1A1714] dark:text-white/35 dark:hover:text-white/70 font-(family-name:--font-dm-sans) shrink-0"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Back</span>
           </Link>
 
           {/* vertical rule — hidden on mobile to save space */}
-          <div className="hidden sm:block w-px h-[18px] bg-black/10 dark:bg-white/10 shrink-0" />
+          <div className="hidden sm:block w-px h-4.5 bg-black/10 dark:bg-white/10 shrink-0" />
 
           {/* Board identity */}
-          <div className="flex items-center gap-[10px] min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             {/* Logo mark — decorative, board title is in h1 */}
-            <div aria-hidden="true" className="w-[30px] h-[30px] rounded-[9px] bg-gradient-to-br from-[#7B2FF7] to-[#F107A3] flex items-center justify-center text-[13px] font-extrabold text-white font-[family-name:var(--font-playfair)] shadow-[0_4px_14px_rgba(123,47,247,0.35)] shrink-0">
+            <div aria-hidden="true" className="w-7.5 h-7.5 rounded-[9px] bg-linear-to-br from-[#7B2FF7] to-[#F107A3] flex items-center justify-center text-[13px] font-extrabold text-white font-(family-name:--font-playfair) shadow-[0_4px_14px_rgba(123,47,247,0.35)] shrink-0">
               N
             </div>
 
             {/* Board title — shorter max-w on mobile */}
-            <h1 className="m-0 text-base font-bold tracking-[-0.02em] font-[family-name:var(--font-playfair)] whitespace-nowrap overflow-hidden text-ellipsis max-w-[110px] sm:max-w-60 text-[#0F0D0B] dark:text-transparent dark:bg-gradient-to-br dark:from-[#C084FC] dark:via-[#F0ABFC] dark:to-[#818CF8] dark:bg-clip-text">
+            <h1 className="m-0 text-base font-bold tracking-[-0.02em] font-(family-name:--font-playfair) whitespace-nowrap overflow-hidden text-ellipsis max-w-27.5 sm:max-w-60 text-[#0F0D0B] dark:text-transparent dark:bg-linear-to-br dark:from-[#C084FC] dark:via-[#F0ABFC] dark:to-[#818CF8] dark:bg-clip-text">
               {boardTitle}
             </h1>
 
             {/* PROJECT badge — hidden on mobile */}
-            <span className="hidden sm:inline-block text-[10px] font-bold py-[2px] px-2 rounded-full tracking-[0.05em] whitespace-nowrap bg-[rgba(123,47,247,0.1)] text-[#7B2FF7] border border-[rgba(123,47,247,0.2)] dark:bg-[rgba(123,47,247,0.15)] dark:text-[#A78BFA] dark:border-[rgba(123,47,247,0.3)]">
+            <span className="hidden sm:inline-block text-[10px] font-bold py-0.5 px-2 rounded-full tracking-[0.05em] whitespace-nowrap bg-[rgba(123,47,247,0.1)] text-[#7B2FF7] border border-[rgba(123,47,247,0.2)] dark:bg-[rgba(123,47,247,0.15)] dark:text-[#A78BFA] dark:border-[rgba(123,47,247,0.3)]">
               PROJECT
             </span>
           </div>
@@ -85,7 +85,7 @@ export function BoardHeader({
           <div
             role="status"
             aria-label="Board is live and syncing in real time"
-            className="flex items-center gap-[6px] py-[5px] px-[10px] rounded-full bg-[rgba(5,150,105,0.08)] border border-[rgba(5,150,105,0.2)] dark:bg-[rgba(79,255,176,0.08)] dark:border-[rgba(79,255,176,0.2)]"
+            className="flex items-center gap-1.5 py-1.25 px-2.5 rounded-full bg-[rgba(5,150,105,0.08)] border border-[rgba(5,150,105,0.2)] dark:bg-[rgba(79,255,176,0.08)] dark:border-[rgba(79,255,176,0.2)]"
           >
             <div aria-hidden="true" className="w-1.5 h-1.5 rounded-full animate-pulse-dot bg-[#059669] shadow-[0_0_5px_rgba(5,150,105,0.4)] dark:bg-[#4FFFB0] dark:shadow-[0_0_5px_rgba(79,255,176,0.5)]" />
             <span aria-hidden="true" className="hidden sm:inline text-[11px] font-semibold text-[#059669] dark:text-[#4FFFB0]">
@@ -103,8 +103,8 @@ export function BoardHeader({
             type="button"
             onClick={() => setShareOpen(true)}
             aria-label="Share"
-            aria-expanded={shareOpen}
-            className="flex items-center gap-[6px] py-[6px] px-2 sm:px-3 rounded-[9px] border cursor-pointer text-[12.5px] font-medium transition-all duration-150 ease-in-out font-[family-name:var(--font-dm-sans)] border-black/9 bg-[#FFFDF9] text-[#6B6560] shadow-[0_1px_4px_rgba(0,0,0,0.05)] hover:opacity-80 dark:border-white/9 dark:bg-white/4 dark:text-white/45 dark:shadow-none"
+            aria-expanded={shareOpen ? "true" : "false"}
+            className="flex items-center gap-1.25 py-1.5 px-2 sm:px-3 rounded-[9px] cursor-pointer text-[12.5px] font-semibold transition-all duration-150 ease-in-out font-(family-name:--font-dm-sans) bg-linear-to-br from-[#7B2FF7] to-[#F107A3] text-white border border-white/20 shadow-[0_0_14px_rgba(241,7,163,0.4),0_2px_8px_rgba(123,47,247,0.3)] hover:shadow-[0_0_22px_rgba(241,7,163,0.6),0_4px_14px_rgba(123,47,247,0.45)] hover:scale-[1.03] active:scale-[0.97]"
           >
             <Share2 className="w-3 h-3" />
             <span className="hidden sm:inline">Share</span>

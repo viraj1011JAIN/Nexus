@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useTransition, useEffect, useCallback, useMemo, useRef, type CSSProperties } from "react";
 import { Plus, Trash2, ChevronDown, LayoutGrid, Layers, Clock, List, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid, parseISO } from "date-fns";
@@ -272,8 +272,8 @@ export function BoardList() {
             ].map((stat, i) => (
               <div
                 key={stat.label}
-                className="animate-fade-up bg-card border border-border rounded-2xl p-4 flex items-center gap-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-                style={{ animationDelay: `${i * 0.06}s` }}
+                className="animate-fade-up bg-card border border-border rounded-2xl p-4 flex items-center gap-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] [animation-delay:var(--anim)]"
+                style={{ '--anim': `${i * 0.06}s` } as CSSProperties}
               >
                 <div
                   className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${stat.bgClass}`}
@@ -295,8 +295,8 @@ export function BoardList() {
           {/* Photo preview banner */}
           {selectedPhoto && (
             <div
-              className="w-full max-w-2xl h-24 rounded-xl mb-2 bg-cover bg-center relative overflow-hidden border border-border"
-              style={{ backgroundImage: `url(${selectedPhoto.thumbUrl})` }}
+              className="w-full max-w-2xl h-24 rounded-xl mb-2 bg-cover bg-center [background-image:var(--bg-img)] relative overflow-hidden border border-border"
+              style={{ '--bg-img': `url(${selectedPhoto.thumbUrl})` } as CSSProperties}
             >
               <div className="absolute inset-0 bg-black/25" />
               <p className="absolute bottom-2 right-2.5 text-[10px] text-white/80">
@@ -315,14 +315,14 @@ export function BoardList() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Name your new board..."
-              className="flex-1 h-[42px] px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
+              className="flex-1 h-10.5 px-4 rounded-xl text-[13.5px] bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm"
               disabled={isPending}
               autoComplete="off"
             />
             <button
               type="submit"
               disabled={isPending}
-              className="h-[42px] px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
+              className="h-10.5 px-5 rounded-xl text-[13.5px] font-semibold text-white flex items-center gap-2 transition-all duration-200 bg-[linear-gradient(135deg,#7B2FF7,#C01CC4)] shadow-[0_4px_16px_rgba(123,47,247,0.28)] hover:shadow-[0_8px_28px_rgba(123,47,247,0.35)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
             >
               {isPending ? (
                 <div className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -335,7 +335,7 @@ export function BoardList() {
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
               aria-label="Toggle advanced options"
-              className="h-[42px] w-[42px] rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
+              className="h-10.5 w-10.5 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm shrink-0"
             >
               <ChevronDown className={cn("h-4 w-4 transition-transform", showAdvanced && "rotate-180")} />
             </button>
@@ -505,8 +505,8 @@ export function BoardList() {
               <Link
                 key={board.id}
                 href={`/board/${board.id}`}
-                className="group animate-fade-up bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all duration-200 block"
-                style={{ animationDelay: `${index * 0.05}s` }}
+                className="group animate-fade-up bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all duration-200 block [animation-delay:var(--anim)]"
+                style={{ '--anim': `${index * 0.05}s` } as CSSProperties}
               >
                 <div className="flex items-center gap-4 px-4 py-3">
                   {/* Colour swatch */}
@@ -572,21 +572,17 @@ export function BoardList() {
                 key={board.id}
                 href={`/board/${board.id}`}
                 className={cn(
-                  "group board-card-hover board-card-tile animate-fade-up",
+                  "group board-card-hover board-card-tile animate-fade-up [animation-delay:var(--anim)]",
                   "bg-card border border-border rounded-4xl overflow-hidden",
                   "shadow-sm hover:shadow-xl",
                   "transition-shadow duration-200 cursor-pointer block"
                 )}
-                style={{ animationDelay: `${index * 0.08 + 0.2}s` }}
+                style={{ '--anim': `${index * 0.08 + 0.2}s` } as CSSProperties}
               >
                 {/* === Banner === */}
                 <div
-                  className="relative h-28 overflow-hidden bg-cover bg-center"
-                  style={{
-                    backgroundImage: board.imageThumbUrl
-                      ? `url(${board.imageThumbUrl})`
-                      : getBoardGradient(board),
-                  }}
+                  className="relative h-28 overflow-hidden bg-cover bg-center [background-image:var(--board-bg)]"
+                  style={{ '--board-bg': board.imageThumbUrl ? `url(${board.imageThumbUrl})` : getBoardGradient(board) } as CSSProperties}
                 >
                   {/* Noise texture overlay – SVG data-URI kept in className to satisfy no-inline-style rule */}
                   <div className="board-noise-overlay absolute inset-0 mix-blend-overlay opacity-40" />
@@ -693,11 +689,10 @@ export function BoardList() {
         {/* ── Project Health Panel ────────────────────────────────────── */}
         {boards.length > 0 && (
           <div
-            className="relative bg-card border border-border rounded-2xl overflow-hidden animate-fade-up mt-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
-            style={{ animationDelay: "0.22s" }}
+            className="relative bg-card border border-border rounded-2xl overflow-hidden animate-fade-up mt-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)] [animation-delay:0.22s]"
           >
             {/* Decorative top gradient stripe */}
-            <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-[#7B2FF7] via-[#F107A3] to-[#1A73E8] opacity-80" />
+            <div className="absolute top-0 inset-x-0 h-0.75 bg-linear-to-r from-[#7B2FF7] via-[#F107A3] to-[#1A73E8] opacity-80" />
 
             <div className="p-6">
               {/* Header row */}
@@ -708,7 +703,7 @@ export function BoardList() {
                       Workspace Health
                     </h2>
                     <div className={cn(
-                      "flex items-center gap-[5px] text-[10px] font-bold px-2 py-[3px] rounded-full border",
+                      "flex items-center gap-1.25 text-[10px] font-bold px-2 py-0.75 rounded-full border",
                       realtimeStatus === "connected"
                         ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50"
                         : realtimeStatus === "connecting"
@@ -716,7 +711,7 @@ export function BoardList() {
                         : "bg-muted text-muted-foreground border-border"
                     )}>
                       <div className={cn(
-                        "w-[6px] h-[6px] rounded-full",
+                        "w-1.5 h-1.5 rounded-full",
                         realtimeStatus === "connected"
                           ? "bg-emerald-500 animate-pulse-dot"
                           : realtimeStatus === "connecting"
@@ -735,7 +730,7 @@ export function BoardList() {
                 <div className="relative flex flex-col items-center justify-center shrink-0 ml-4">
                   {/* Score circle */}
                   <div className={cn(
-                    "w-[68px] h-[68px] rounded-full flex flex-col items-center justify-center border-[3px]",
+                    "w-17 h-17 rounded-full flex flex-col items-center justify-center border-[3px]",
                     healthScore >= 70
                       ? "border-emerald-300 dark:border-emerald-700/60"
                       : healthScore >= 40
@@ -762,33 +757,33 @@ export function BoardList() {
               </div>
 
               {/* Per-board progress bars */}
-              <div className="space-y-[10px]">
+              <div className="space-y-2.5">
                 {boards.slice(0, 5).map((board, _i) => {
                   const pct = Math.max(4, Math.round((board.cardCount / maxBoardCards) * 100));
                   const g   = getBoardGradient(board);
                   return (
                     <div
                       key={board.id}
-                      className="group flex items-center gap-3 px-3 py-[9px] rounded-xl bg-muted/40 dark:bg-white/[0.025] hover:bg-muted/70 dark:hover:bg-white/[0.045] transition-colors duration-150"
+                      className="group flex items-center gap-3 px-3 py-2.25 rounded-xl bg-muted/40 dark:bg-white/2.5 hover:bg-muted/70 dark:hover:bg-white/4.5 transition-colors duration-150"
                     >
                       {/* Color swatch */}
                       <div
-                        className="w-[10px] h-[10px] rounded-[3px] shrink-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
-                        style={{ background: g }}
+                        className="w-2.5 h-2.5 rounded-[3px] shrink-0 shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] [background:var(--swatch-bg)]"
+                        style={{ '--swatch-bg': g } as CSSProperties}
                       />
                       {/* Board name */}
-                      <span className="text-[12.5px] font-semibold text-foreground w-[120px] truncate shrink-0 group-hover:text-foreground/90">
+                      <span className="text-[12.5px] font-semibold text-foreground w-30 truncate shrink-0 group-hover:text-foreground/90">
                         {board.title}
                       </span>
                       {/* Progress bar */}
-                      <div className="flex-1 h-[7px] bg-black/[0.04] dark:bg-white/[0.06] rounded-full overflow-hidden">
+                      <div className="flex-1 h-1.75 bg-black/4 dark:bg-white/6 rounded-full overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all duration-700 ease-out"
-                          style={{ width: `${pct}%`, background: g }}
+                          className="h-full rounded-full transition-all duration-700 ease-out w-(--bar-w) [background:var(--bar-bg)]"
+                          style={{ '--bar-w': `${pct}%`, '--bar-bg': g } as CSSProperties}
                         />
                       </div>
                       {/* Stats */}
-                      <div className="flex items-center gap-[14px] shrink-0">
+                      <div className="flex items-center gap-3.5 shrink-0">
                         <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
                           <span className="font-semibold text-foreground/80">{board.cardCount}</span> card{board.cardCount !== 1 ? "s" : ""}
                         </span>
@@ -814,7 +809,7 @@ export function BoardList() {
                   <ChevronDown className="w-3 h-3 transition-transform duration-200 group-open/details:rotate-180" />
                   How is this calculated?
                 </summary>
-                <div className="mt-2.5 bg-muted/50 dark:bg-white/[0.02] border border-border/60 rounded-xl px-3.5 py-3">
+                <div className="mt-2.5 bg-muted/50 dark:bg-white/2 border border-border/60 rounded-xl px-3.5 py-3">
                   <p className="text-[11.5px] text-muted-foreground leading-[1.7]">
                     Each bar shows card volume relative to the busiest board. Move cards through lists
                     (e.g. &#34;To Do → In Progress → Done&#34;) in the board view to reflect real work status.
@@ -827,10 +822,10 @@ export function BoardList() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-6 py-3 bg-muted/30 dark:bg-white/[0.015] border-t border-border/60">
-              <div className="flex items-center gap-[6px]">
+            <div className="flex items-center justify-between px-6 py-3 bg-muted/30 dark:bg-white/1.5 border-t border-border/60">
+              <div className="flex items-center gap-1.5">
                 <div className={cn(
-                  "w-[6px] h-[6px] rounded-full",
+                  "w-1.5 h-1.5 rounded-full",
                   realtimeStatus === "connected"
                     ? "bg-emerald-400 animate-pulse-dot"
                     : realtimeStatus === "connecting"

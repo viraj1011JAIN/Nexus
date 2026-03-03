@@ -1218,7 +1218,7 @@ export const CardModal = () => {
                         {cardLabels.map((lbl: CardLabel) => (
                           <span
                             key={lbl.id}
-                            className="text-[9.5px] font-bold px-[7px] py-[2px] rounded-[20px] tracking-[0.03em] uppercase [background:var(--lbl-bg)] [color:var(--lbl-color)] [border:1px_solid_var(--lbl-border-color)]"
+                            className="text-[9.5px] font-bold px-1.75 py-0.5 rounded-4xl tracking-[0.03em] uppercase [background:var(--lbl-bg)] text-(--lbl-color) [border:1px_solid_var(--lbl-border-color)]"
                             style={{
                               '--lbl-bg': lbl.color ? `${lbl.color}18` : T.surface,
                               '--lbl-color': lbl.color ?? T.textMid,
@@ -1249,7 +1249,7 @@ export const CardModal = () => {
                           <span className={pct===100 ? "cm-pct-txt-done" : "cm-pct-txt-active"}>{pct}%</span>
                         </div>
                         <div className="cm-progress-track">
-                          <div className={`cm-progress-fill ${pct===100 ? "cm-progress-fill-done" : "cm-progress-fill-active"} [width:var(--progress-w)]`} style={{ '--progress-w': `${pct}%` } as CSSProperties}/>
+                          <div className={`cm-progress-fill ${pct===100 ? "cm-progress-fill-done" : "cm-progress-fill-active"} w-(--progress-w)`} style={{ '--progress-w': `${pct}%` } as CSSProperties}/>
                         </div>
                         <p className="cm-progress-txt">{done} of {total} tasks</p>
                       </div>

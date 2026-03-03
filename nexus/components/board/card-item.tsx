@@ -156,13 +156,13 @@ const CardItemInner = ({
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative text-sm rounded-[12px] cursor-pointer animate-card-enter touch-manipulation overflow-hidden kanban-card",
+        "group relative text-sm rounded-2xl cursor-pointer animate-card-enter touch-manipulation overflow-hidden kanban-card",
         isSelected && "ring-2 ring-primary"
       )}
     >
       {/* Priority left accent bar — purely decorative, conveyed by PriorityBadge */}
       {priorityBarClass && (
-        <div aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-[12px] ${priorityBarClass}`} />
+        <div aria-hidden="true" className={`absolute left-0 top-0 bottom-0 w-0.75 rounded-l-2xl ${priorityBarClass}`} />
       )}
       {/* Bulk selection checkbox (top-left overlay — visible only in bulk mode) */}
       {isBulkMode && (
@@ -198,7 +198,7 @@ const CardItemInner = ({
             "h-12 w-full rounded-t-lg",
             data.coverImageUrl
               ? "bg-cover bg-center [background-image:var(--cover-img)]"
-              : "[background-color:var(--cover-bg)]"
+              : "bg-(--cover-bg)"
           )}
           style={{
             '--cover-img': data.coverImageUrl ? `url(${data.coverImageUrl})` : undefined,
@@ -305,7 +305,7 @@ const CardItemInner = ({
                 <div
                   aria-hidden="true"
                   className={cn(
-                    "h-full rounded-full transition-[width] duration-500 [width:var(--progress-w)]",
+                    "h-full rounded-full transition-[width] duration-500 w-(--progress-w)",
                     pct === 100 ? "bg-emerald-500" : "bg-[#7B2FF7]"
                   )}
                   style={{ '--progress-w': `${pct}%` } as CSSProperties}
