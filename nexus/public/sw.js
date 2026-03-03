@@ -1,30 +1,180 @@
 /**
- * TASK-029 — Nexus Service Worker
- * Handles:
- *   1. Background push notification events (Web Push API)
- *   2. Notification click — focus existing tab or open a new one
+ * NEXUS Service Worker v2
+ *
+ * Performance caching strategies (Lighthouse-optimised):
+ * ┌─────────────────────────────────┬────────────────────────────────┐
+ * │ Resource                        │ Strategy                       │
+ * ├─────────────────────────────────┼────────────────────────────────┤
+ * │ /_next/static/* (JS/CSS chunks) │ Cache-first (immutable hash)   │
+ * │ Font files (.woff2 / gstatic)   │ Cache-first (stable URLs)      │
+ * │ Images (local + Unsplash + CDN) │ Stale-while-revalidate         │
+ * │ HTML navigation pages           │ Network-first + offline shell  │
+ * │ /api/* + Clerk + Supabase       │ Network-only (never cache)     │
+ * └─────────────────────────────────┴────────────────────────────────┘
+ *
+ * Push / notification click are also handled (Task-029).
  */
 
-const CACHE_NAME = "nexus-sw-v1";
+const STATIC_CACHE = "nexus-static-v2";   // Content-hashed JS/CSS — immutable
+const FONT_CACHE   = "nexus-fonts-v2";    // Web fonts — stable, cache forever
+const IMAGE_CACHE  = "nexus-images-v2";   // User images — stale-while-revalidate
+const PAGE_CACHE   = "nexus-pages-v2";    // HTML pages  — network-first
 
-// ─── Install / Activate ───────────────────────────────────────────────────────
+const ALL_CACHES = [STATIC_CACHE, FONT_CACHE, IMAGE_CACHE, PAGE_CACHE];
+
+// Max entries kept in each cache to prevent unbounded growth
+const IMAGE_CACHE_MAX = 60;
+const PAGE_CACHE_MAX  = 20;
+
+// Patterns that bypass the SW completely — always go to network
+const BYPASS_PATTERNS = [
+  /\/api\//,                                        // Nexus API
+  /\/sign-in/,  /\/sign-up/,  /\/sso-callback/,    // Auth pages
+  /clerk\.com/, /clerk\.dev/,                       // Clerk auth API
+  /supabase\.co/,                                   // Supabase realtime
+  /ingest\.sentry\.io/,                             // Sentry telemetry
+  /stripe\.com/,                                    // Stripe
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isBypassed(url) {
+  return BYPASS_PATTERNS.some((re) => re.test(url));
+}
+function isStaticAsset(url) {
+  return url.includes("/_next/static/");
+}
+function isFont(url) {
+  return url.includes("fonts.gstatic.com") || /\.(woff2?|ttf|otf|eot)(\?.*)?$/.test(url);
+}
+function isImage(url) {
+  return (
+    /\.(png|jpe?g|gif|webp|avif|svg|ico)(\?.*)?$/.test(url) ||
+    url.includes("images.unsplash.com") ||
+    url.includes("img.clerk.com") ||
+    url.includes("avatars.githubusercontent.com") ||
+    url.includes("lh3.googleusercontent.com")
+  );
+}
+
+/** Evict oldest entries once a cache exceeds maxEntries */
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys  = await cache.keys();
+  if (keys.length > maxEntries) {
+    await cache.delete(keys[0]);
+    await trimCache(cacheName, maxEntries); // recurse until within limit
+  }
+}
+
+// ─── Install — pre-cache offline shell ────────────────────────────────────────
 
 self.addEventListener("install", (event) => {
-  // Skip waiting so the new SW activates immediately
-  event.waitUntil(self.skipWaiting());
-});
-
-self.addEventListener("activate", (event) => {
-  // Claim all clients without waiting for a reload
   event.waitUntil(
     (async () => {
-      await self.clients.claim();
-      // Clean up old caches
-      const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
+      await self.skipWaiting();
+      // Pre-cache a minimal offline page if one exists
+      const pageCache = await caches.open(PAGE_CACHE);
+      await pageCache.add(new Request("/offline", { cache: "reload" })).catch(() => {
+        // /offline page is optional — ignore 404
+      });
     })()
   );
 });
+
+// ─── Activate — delete stale caches ──────────────────────────────────────────
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      await self.clients.claim();
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => !ALL_CACHES.includes(k)).map((k) => caches.delete(k)));
+    })()
+  );
+});
+
+// ─── Fetch — route to the right strategy ─────────────────────────────────────
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  const url = request.url;
+
+  // Only intercept same-scheme GET requests
+  if (request.method !== "GET") return;
+  if (!url.startsWith("http"))  return;
+  if (isBypassed(url))           return;
+
+  if (isStaticAsset(url)) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    return;
+  }
+  if (isFont(url)) {
+    event.respondWith(cacheFirst(request, FONT_CACHE));
+    return;
+  }
+  if (isImage(url)) {
+    event.respondWith(staleWhileRevalidate(request, IMAGE_CACHE, IMAGE_CACHE_MAX));
+    return;
+  }
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirst(request, PAGE_CACHE, PAGE_CACHE_MAX));
+    return;
+  }
+  // Everything else — straight network, no SW overhead
+});
+
+// ─── Strategy: Cache-first ────────────────────────────────────────────────────
+/** Serve from cache; populate on first miss. Ideal for immutable assets. */
+async function cacheFirst(request, cacheName) {
+  const cache  = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response.ok) cache.put(request, response.clone());
+  return response;
+}
+
+// ─── Strategy: Stale-while-revalidate ────────────────────────────────────────
+/** Return cache immediately; refresh in background. Ideal for images. */
+async function staleWhileRevalidate(request, cacheName, maxEntries) {
+  const cache  = await caches.open(cacheName);
+  const cached = await cache.match(request);
+
+  const fetchPromise = fetch(request).then((response) => {
+    if (response.ok) {
+      cache.put(request, response.clone());
+      trimCache(cacheName, maxEntries);
+    }
+    return response;
+  }).catch(() => cached); // network failed — keep showing stale
+
+  return cached ?? fetchPromise;
+}
+
+// ─── Strategy: Network-first ──────────────────────────────────────────────────
+/** Try network first; fall back to cache or offline page. Ideal for HTML. */
+async function networkFirst(request, cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      cache.put(request, response.clone());
+      trimCache(cacheName, maxEntries);
+    }
+    return response;
+  } catch {
+    const cached  = await cache.match(request);
+    if (cached) return cached;
+    // Last resort: generic offline shell
+    const offline = await cache.match("/offline");
+    return offline ?? new Response("You are offline", {
+      status: 503,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+}
 
 // ─── Push Notifications ───────────────────────────────────────────────────────
 

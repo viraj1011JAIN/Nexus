@@ -45,12 +45,59 @@ const outfit = Outfit({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.vercel.app";
+
 export const metadata: Metadata = {
-  title: "NEXUS | Enterprise Task Management",
-  description: "Production-level B2B SaaS Platform",
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: "NEXUS — Enterprise Project Management",
+    template: "%s | NEXUS",
+  },
+  description:
+    "NEXUS is a production-grade, multi-tenant project management platform. Real-time Kanban boards, sprints, analytics, and team collaboration — self-hostable and Trello/Jira-alternative.",
+  keywords: [
+    "project management", "kanban", "task management", "team collaboration",
+    "sprint planning", "agile", "saas", "nexus", "jira alternative", "trello alternative",
+  ],
+  authors: [{ name: "Viraj Jain", url: APP_URL }],
+  creator: "Viraj Jain",
+  publisher: "NEXUS",
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   manifest: "/manifest.json",
   icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
+    shortcut: "/favicon.ico",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_GB",
+    url: APP_URL,
+    siteName: "NEXUS",
+    title: "NEXUS — Enterprise Project Management",
+    description:
+      "Real-time Kanban boards, sprints, analytics, and multi-tenant team collaboration. The self-hostable Jira/Trello alternative built with Next.js 15 + AI.",
+    images: [
+      {
+        url: `${APP_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: "NEXUS — Enterprise Project Management dashboard",
+        type: "image/png",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@nexus_app",
+    creator: "@viraj_jain_dev",
+    title: "NEXUS — Enterprise Project Management",
+    description:
+      "Production-grade multi-tenant project management. Real-time boards, sprints, analytics and AI — built for teams.",
+    images: [`${APP_URL}/og-image.png`],
   },
   appleWebApp: {
     capable: true,
@@ -59,6 +106,9 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  alternates: {
+    canonical: APP_URL,
   },
 };
 
@@ -72,11 +122,29 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <head>
           {/*
-           * next/font/google (Inter, DM_Sans, Playfair_Display) automatically
+           * next/font/google (DM_Sans, Playfair_Display, Syne, Outfit) automatically
            * injects the required preconnect / preload link tags for
            * fonts.googleapis.com and fonts.gstatic.com, so manual <link> tags
-           * here are redundant and would trigger @next/next/google-font-preconnect.
+           * for those are redundant and would trigger @next/next/google-font-preconnect.
+           *
+           * The hints below target third-party origins that next/font does NOT handle.
            */}
+
+          {/* Clerk CDN — user avatars appear in every authenticated page header */}
+          <link rel="preconnect" href="https://img.clerk.com" />
+          <link rel="dns-prefetch" href="https://img.clerk.com" />
+
+          {/* Stripe — loaded on billing / checkout pages */}
+          <link rel="dns-prefetch" href="https://js.stripe.com" />
+          <link rel="dns-prefetch" href="https://api.stripe.com" />
+
+          {/* Unsplash — default board cover images */}
+          <link rel="dns-prefetch" href="https://images.unsplash.com" />
+          <link rel="dns-prefetch" href="https://plus.unsplash.com" />
+
+          {/* GitHub & Google — OAuth avatar sources */}
+          <link rel="dns-prefetch" href="https://avatars.githubusercontent.com" />
+          <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
 
           {/* Optimized theme script - runs before paint to prevent FOUC */}
           <Script

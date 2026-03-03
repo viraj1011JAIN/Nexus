@@ -1077,6 +1077,87 @@ html:not(.theme-mounted) * {
 }
 
 /* ============================================================================
+   LIGHTHOUSE / CORE WEB VITALS — TARGETED UTILITIES
+   ============================================================================ */
+
+/*
+ * overscroll-behavior: contain — prevents scroll-chaining from inner scrollable
+ * panels propagating to the page body, which can cause unexpected layout shifts
+ * (CLS) and janky pull-to-refresh on mobile.
+ */
+.overscroll-contain   { overscroll-behavior: contain; }
+.overscroll-x-contain { overscroll-behavior-x: contain; }
+.overscroll-y-contain { overscroll-behavior-y: contain; }
+
+/*
+ * isolation: isolate — creates a new stacking context, preventing
+ * composited children from painting into ancestor layers.
+ * Apply to modals, popovers, and hero sections to avoid repaints.
+ */
+.isolate-context { isolation: isolate; }
+
+/*
+ * Compositing hint for elements that will animate transform/opacity.
+ * Only applied during animation to avoid wasting GPU memory at rest.
+ * Use with Framer Motion's onAnimationStart / onAnimationComplete.
+ */
+.will-animate {
+  will-change: transform, opacity;
+}
+.will-animate-transform {
+  will-change: transform;
+}
+/* Remove will-change once animation ends (can be toggled via JS) */
+.animation-done {
+  will-change: auto;
+}
+
+/*
+ * touch-action: pan-y — allows vertical scrolling but blocks horizontal
+ * browser swipe gestures from interfering with drag-and-drop boards.
+ * Apply to the board canvas wrapper to improve dnd-kit precision on touch.
+ */
+.touch-pan-y  { touch-action: pan-y; }
+.touch-pan-x  { touch-action: pan-x; }
+.touch-none   { touch-action: none; }
+.touch-auto   { touch-action: auto; }
+
+/*
+ * backdrop-filter guard — on browsers that do not support backdrop-filter
+ * (older Chromium, some Firefox configurations) fall back to a solid
+ * semi-transparent background so text remains readable.
+ */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-effect {
+    background: oklch(var(--card) / 0.92) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/*
+ * Critical layout stability rule: images without explicit dimensions cause
+ * CLS because the browser doesn't know how much space to reserve.
+ * next/image always emits width + height, but any raw <img> should also
+ * be covered. This is a safety net — prefer using <Image> everywhere.
+ */
+img:not([width]):not([height]) {
+  aspect-ratio: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/*
+ * Prevent invisible text during web-font swap — applied as a fallback for
+ * any element that explicitly overrides font-display via CSS. The next/font
+ * loader already sets display:swap on every declared font family.
+ */
+@font-face {
+  font-display: swap;
+}
+
+
+/* ============================================================================
    PRINT STYLES
    ============================================================================ */
 

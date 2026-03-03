@@ -72,10 +72,20 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Cache public images / fonts for 1 day
+        // Cache public images / fonts for 7 days with a 30-day stale window.
+        // next/image rewrites most requests through /_next/image so these
+        // rules cover direct public/* serving (icons, logos, og-image, etc.).
         source: "/(.*)\\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|otf|eot)",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+          { key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" },
+        ],
+      },
+      {
+        // Hint the browser to prefetch the dashboard while the landing page
+        // renders — authenticated users get near-instant navigation.
+        source: "/",
+        headers: [
+          { key: "Link", value: "</dashboard>; rel=prefetch" },
         ],
       },
       {
@@ -94,7 +104,7 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 3600,
+    minimumCacheTTL: 86400, // 24 h — reduces origin fetches for user avatars & covers
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
@@ -131,6 +141,10 @@ const nextConfig: NextConfig = {
   
   // Experimental performance features
   experimental: {
+    // Inline above-the-fold CSS into the HTML document to eliminate one
+    // render-blocking stylesheet request → improves FCP / LCP scores.
+    inlineCss: true,
+
     // Server-side compile performance (build + dev)
     parallelServerCompiles: true,
     parallelServerBuildTraces: true,
