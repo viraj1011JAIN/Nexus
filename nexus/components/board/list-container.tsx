@@ -169,13 +169,16 @@ export const ListContainer = ({
             cards: sourceList.cards.filter((c) => c.id !== activeId)
         };
 
+        // Insert at the correct position — next to the card being hovered (overId)
+        const overCardIndex = destList.cards.findIndex((c) => c.id === overId);
+        const insertAt = overCardIndex === -1 ? destList.cards.length : overCardIndex;
+        const newDestCards = [...destList.cards];
+        newDestCards.splice(insertAt, 0, { ...movedCard, listId: destList.id });
+
         // Update Destination List
         newLists[overListIndex] = {
             ...destList,
-            cards: [
-                ...destList.cards, 
-                { ...movedCard, listId: destList.id } // Update listId here
-            ]
+            cards: newDestCards,
         };
 
         return newLists;

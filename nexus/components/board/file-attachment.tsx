@@ -6,7 +6,6 @@ import {
   useEffect,
   useCallback,
   type DragEvent,
-  type KeyboardEvent,
 } from "react";
 import {
   Paperclip,
@@ -28,8 +27,6 @@ import {
   Code,
   FileSpreadsheet,
   Presentation,
-  LayoutGrid,
-  List,
   SortAsc,
   SortDesc,
   Upload,
@@ -225,7 +222,6 @@ interface PreviewState {
 
 type SortKey = "date" | "name" | "size";
 type SortDir = "asc" | "desc";
-type ViewMode = "list" | "grid";
 
 interface FileAttachmentProps {
   cardId: string;
@@ -279,8 +275,7 @@ function PreviewModal({
           <iframe
             src={url}
             title={attachment.fileName}
-            className="w-full rounded"
-            style={{ height: "72vh" }}
+            className="h-[72vh] w-full rounded"
           />
         );
       case "video":
@@ -443,7 +438,6 @@ export function FileAttachment({
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -625,7 +619,6 @@ export function FileAttachment({
     return sortDir === "asc" ? cmp : -cmp;
   });
 
-  const hasImages = sorted.some((a) => categorize(a.mimeType) === "image");
   const isUploading = uploadQueue.length > 0;
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -697,27 +690,6 @@ export function FileAttachment({
             </DropdownMenu>
           )}
 
-          {/* Grid / List toggle (only when images are present) */}
-          {hasImages && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() =>
-                setViewMode((v) => (v === "list" ? "grid" : "list"))
-              }
-              title={
-                viewMode === "list" ? "Switch to grid view" : "Switch to list view"
-              }
-            >
-              {viewMode === "list" ? (
-                <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-              ) : (
-                <List className="h-3.5 w-3.5" aria-hidden />
-              )}
-            </Button>
-          )}
-
           {/* Upload button */}
           <input
             ref={inputRef}
@@ -785,12 +757,14 @@ export function FileAttachment({
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium truncate">{item.fileName}</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all duration-300 ease-out"
-                      style={{ width: `${item.progress}%` }}
-                    />
-                  </div>
+                  {/* Native <progress> uses value/max (standard HTML), not aria-value*
+                      expressions, so no ARIA lint errors and no inline style needed. */}
+                  <progress
+                    value={item.progress}
+                    max={100}
+                    aria-label={`Uploading ${item.fileName}: ${item.progress}%`}
+                    className="flex-1 h-1 rounded-full appearance-none bg-muted [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-muted [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary [&::-webkit-progress-value]:transition-all [&::-webkit-progress-value]:duration-300 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-primary"
+                  />
                   <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
                     {item.progress}%
                   </span>
@@ -801,94 +775,8 @@ export function FileAttachment({
         </ul>
       )}
 
-      {/* ── Grid view ───────────────────────────────────────────────────── */}
-      {viewMode === "grid" && sorted.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {sorted.map((att, i) => {
-            const cat = categorize(att.mimeType);
-            return (
-              <div
-                key={att.id}
-                className="relative group rounded-lg overflow-hidden bg-muted aspect-square cursor-pointer ring-1 ring-border/50 hover:ring-primary/60 transition-all"
-                onClick={() => setPreview({ attachment: att, index: i })}
-                onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-                  if (e.key === "Enter" || e.key === " ")
-                    setPreview({ attachment: att, index: i });
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={`Preview ${att.fileName}`}
-              >
-                {cat === "image" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={viewUrl(att.url)}
-                    alt={att.fileName}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3">
-                    <FileTypeIcon mimeType={att.mimeType} className="h-8 w-8" />
-                    <FileTypeBadge mimeType={att.mimeType} />
-                  </div>
-                )}
-
-                {/* Hover shimmer */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <Eye className="h-6 w-6 text-white drop-shadow" aria-hidden />
-                </div>
-
-                {/* Top-right actions */}
-                <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyLink(att.url, att.id);
-                    }}
-                    className="p-1 rounded bg-black/60 text-white/80 hover:text-white transition-colors"
-                    title="Copy link"
-                    aria-label="Copy link"
-                  >
-                    {copied === att.id ? (
-                      <Check className="h-3 w-3 text-green-400" aria-hidden />
-                    ) : (
-                      <Copy className="h-3 w-3" aria-hidden />
-                    )}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(att.id, att.fileName);
-                    }}
-                    disabled={deleting === att.id}
-                    className="p-1 rounded bg-black/60 text-white/80 hover:text-red-400 transition-colors disabled:opacity-50"
-                    title="Delete"
-                    aria-label={`Delete ${att.fileName}`}
-                  >
-                    {deleting === att.id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-                    ) : (
-                      <Trash2 className="h-3 w-3" aria-hidden />
-                    )}
-                  </button>
-                </div>
-
-                {/* Bottom label (slides up on hover) */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-                  <p className="text-[11px] text-white font-medium truncate leading-tight">
-                    {att.fileName}
-                  </p>
-                  <p className="text-[10px] text-white/60">{formatBytes(att.fileSize)}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── List view ───────────────────────────────────────────────────── */}
-      {viewMode === "list" && sorted.length > 0 && (
+      {/* ── Attachments list ─────────────────────────────────────────── */}
+      {sorted.length > 0 && (
         <ul className="space-y-1.5">
           {sorted.map((att, i) => {
             const cat = categorize(att.mimeType);
