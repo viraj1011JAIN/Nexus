@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useCallback, startTransition } from "react";
 import { ChevronLeft, Share2 } from "lucide-react";
 // Dynamic — both components import server actions; static import would create
 // a stale Turbopack stub reference after any HMR update.
@@ -38,7 +38,25 @@ export function BoardHeader({
   currentImageId,
   onTitleChange,
 }: BoardHeaderProps) {
+  const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
+
+  /**
+   * Navigate back using the View Transitions API when the browser supports it.
+   * Falls back to a plain router.push() wrapped in startTransition so React
+   * keeps rendering the current page during the async navigation — preventing
+   * the blank-flash that occurs with a synchronous href change.
+   */
+  const handleBack = useCallback(() => {
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      (document as Document & { startViewTransition: (cb: () => void) => void })
+        .startViewTransition(() => {
+          startTransition(() => router.push("/"));
+        });
+    } else {
+      startTransition(() => router.push("/"));
+    }
+  }, [router]);
 
   return (
     <>
@@ -47,14 +65,15 @@ export function BoardHeader({
 
         {/* LEFT: back + divider + board identity */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={handleBack}
             aria-label="Back to home"
-            className="flex items-center gap-1.25 text-[12.5px] font-medium no-underline py-1 px-2 rounded-[7px] transition-colors duration-150 ease-in-out text-[#9A8F85] hover:text-[#1A1714] dark:text-white/35 dark:hover:text-white/70 font-(family-name:--font-dm-sans) shrink-0"
+            className="flex items-center gap-1.25 text-[12.5px] font-medium py-1 px-2 rounded-[7px] transition-colors duration-150 ease-in-out text-[#9A8F85] hover:text-[#1A1714] dark:text-white/35 dark:hover:text-white/70 font-(family-name:--font-dm-sans) shrink-0 cursor-pointer bg-transparent border-0 outline-none"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Back</span>
-          </Link>
+          </button>
 
           {/* vertical rule — hidden on mobile to save space */}
           <div className="hidden sm:block w-px h-4.5 bg-black/10 dark:bg-white/10 shrink-0" />
@@ -102,8 +121,8 @@ export function BoardHeader({
           <button
             type="button"
             onClick={() => setShareOpen(true)}
-            aria-label="Share"
-            aria-expanded={shareOpen ? "true" : "false"}
+            aria-label="Share board"
+            aria-haspopup="dialog"
             className="flex items-center gap-1.25 py-1.5 px-2 sm:px-3 rounded-[9px] cursor-pointer text-[12.5px] font-semibold transition-all duration-150 ease-in-out font-(family-name:--font-dm-sans) bg-linear-to-br from-[#7B2FF7] to-[#F107A3] text-white border border-white/20 shadow-[0_0_14px_rgba(241,7,163,0.4),0_2px_8px_rgba(123,47,247,0.3)] hover:shadow-[0_0_22px_rgba(241,7,163,0.6),0_4px_14px_rgba(123,47,247,0.45)] hover:scale-[1.03] active:scale-[0.97]"
           >
             <Share2 className="w-3 h-3" />

@@ -54,10 +54,22 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
   // capturing stale closure values from the initial render.
   const channelRef = useRef<RealtimeChannel | null>(null);
   const supabaseRef = useRef<ReturnType<typeof getAuthenticatedSupabaseClient> | null>(null);
-  // Timestamp of the last time setOnlineUsers was called â€” used for throttling.
-  const lastSyncRef = useRef<number>(0);
-  /** Min ms between React state updates from Supabase presence sync events. */
-  const SYNC_THROTTLE_MS = 500;
+  /**
+   * Timer ref for trailing debounce on presence "sync" events.
+   *
+   * Why trailing debounce instead of the old leading throttle:
+   * - With N users on one board, Supabase fires a "sync" event for every
+   *   individual join/leave. During a burst (e.g. 50 users arriving within
+   *   200 ms) the old leading throttle captured the FIRST snapshot (mostly
+   *   empty) then silently dropped all subsequent events — the UI showed 1
+   *   user instead of 50 until the next event fired naturally.
+   * - A trailing debounce waits for the storm to settle, then reads the
+   *   channel's accumulated presence state exactly once. 300 ms covers any
+   *   realistic server-side fan-out delay while still feeling instant to humans.
+   */
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Debounce window in ms — presence state is computed once after events stop. */
+  const SYNC_DEBOUNCE_MS = 300;
 
   // Generate a consistent color for the current user
   const getUserColor = useCallback((userId: string) => {
@@ -88,6 +100,12 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
 
     /** Untrack, remove channel, and reset state. */
     const cleanup = () => {
+      // Cancel any pending debounced sync before tearing down the channel so
+      // a stale setTimeout callback can't attempt to read a removed channel.
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
       if (channelRef.current && supabaseRef.current) {
         channelRef.current.untrack();
         supabaseRef.current.removeChannel(channelRef.current);
@@ -134,16 +152,14 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
         });
         channelRef.current = channel;
 
-        // â”€â”€ Presence sync â€” throttled â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // With N users on one board, Supabase fires a "sync" event on every
-        // individual join/leave, producing O(NÂ²) events under load. We cap the
-        // React re-render rate at one per SYNC_THROTTLE_MS using a timestamp guard.
-        channel.on("presence", { event: "sync" }, () => {
-          const now = Date.now();
-          if (now - lastSyncRef.current < SYNC_THROTTLE_MS) return;
-          lastSyncRef.current = now;
-
-          const state = channel.presenceState();
+        // ── Presence sync — trailing debounce ─────────────────────────────────
+        // Each join/leave fires a "sync" event, so N user bursts produce O(N)
+        // rapid callbacks. We reschedule a single timer on each arrival and only
+        // compute + commit state once the storm settles — exactly one re-render
+        // per burst regardless of how many users join simultaneously.
+        const computePresenceState = () => {
+          if (!channelRef.current) return;
+          const state = channelRef.current.presenceState();
           const seen = new Set<string>();
           const users: PresenceUser[] = [];
 
@@ -169,14 +185,19 @@ export function usePresence({ boardId, orgId, enabled = true }: UsePresenceOptio
           });
 
           setOnlineUsers(users);
+        };
+
+        channel.on("presence", { event: "sync" }, () => {
+          if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+          syncTimerRef.current = setTimeout(computePresenceState, SYNC_DEBOUNCE_MS);
         });
 
         channel.on("presence", { event: "join" }, () => {
-          // Handled via throttled sync event above
+          // Handled via debounced sync event above
         });
 
         channel.on("presence", { event: "leave" }, () => {
-          // Handled via throttled sync event above
+          // Handled via debounced sync event above
         });
 
         channel.subscribe(async (status) => {
