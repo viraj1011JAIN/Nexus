@@ -142,16 +142,18 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     }
 
     // RSC navigation & prefetch requests — the Next.js client router uses
-    // fetch() with `RSC: 1` (navigation) or `Next-Router-Prefetch: 1`
-    // (prefetch) headers and expects an RSC flight payload in the response.
-    // Clerk's redirectToSignIn() returns a Clerk FAPI redirect chain that the
-    // RSC protocol cannot parse, causing "An unexpected response was received
-    // from the server". Use a standard NextResponse.redirect instead — the
-    // Next.js client router detects middleware redirects natively and performs
-    // a full client-side navigation to /sign-in without errors.
+    // fetch() with `RSC: 1` (navigation), `Next-Router-Prefetch: 1`
+    // (prefetch), or `Next-Router-State-Tree` (state-tree sync) headers and
+    // expects an RSC flight payload in the response. Clerk's redirectToSignIn()
+    // returns a Clerk FAPI redirect chain that the RSC protocol cannot parse,
+    // causing "An unexpected response was received from the server".
+    // Use a standard NextResponse.redirect instead — the Next.js client router
+    // detects middleware redirects natively and performs a full client-side
+    // navigation to /sign-in without errors.
     if (
       req.headers.get("rsc") !== null ||
-      req.headers.get("next-router-prefetch") !== null
+      req.headers.get("next-router-prefetch") !== null ||
+      req.headers.get("next-router-state-tree") !== null
     ) {
       const url = req.nextUrl.clone();
       url.pathname = "/sign-in";

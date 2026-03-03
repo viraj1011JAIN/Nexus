@@ -167,6 +167,7 @@ export function NotificationCenter() {
 
     async function subscribe() {
       const token = await getToken({ template: "supabase" }).catch(() => null);
+      if (!isMounted) return;
       const supabase = getAuthenticatedSupabaseClient(token);
 
       // Channel scoped to this user in this org — prevents cross-tenant leakage
