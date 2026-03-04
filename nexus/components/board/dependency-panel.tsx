@@ -211,12 +211,26 @@ export function DependencyPanel({
               open={isDirectionOpen}
               onOpenChange={setIsDirectionOpen}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-8 text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-none hover:from-violet-500 hover:to-indigo-500 focus:ring-2 focus:ring-violet-400/60 transition-all duration-150">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent avoidCollisions={false} side="bottom">
-                <SelectItem value="this_blocks">This card blocks…</SelectItem>
-                <SelectItem value="blocked_by_this">This card blocked by…</SelectItem>
+              <SelectContent
+                avoidCollisions={false}
+                side="bottom"
+                className="bg-[#1e1b2e] dark:bg-[#1e1b2e] border border-violet-500/40 text-white shadow-xl shadow-violet-900/30 rounded-xl"
+              >
+                <SelectItem
+                  value="this_blocks"
+                  className="text-xs font-medium text-white focus:bg-violet-600/40 focus:text-white data-[state=checked]:text-violet-300"
+                >
+                  This card blocks…
+                </SelectItem>
+                <SelectItem
+                  value="blocked_by_this"
+                  className="text-xs font-medium text-white focus:bg-violet-600/40 focus:text-white data-[state=checked]:text-violet-300"
+                >
+                  This card blocked by…
+                </SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -225,13 +239,32 @@ export function DependencyPanel({
               open={isTypeOpen}
               onOpenChange={setIsTypeOpen}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-8 text-xs font-semibold bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white border-none hover:from-fuchsia-500 hover:to-pink-500 focus:ring-2 focus:ring-fuchsia-400/60 transition-all duration-150">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent avoidCollisions={false} side="bottom">
-                <SelectItem value="BLOCKS">Blocks</SelectItem>
-                <SelectItem value="RELATES_TO">Relates to</SelectItem>
-                <SelectItem value="DUPLICATES">Duplicates</SelectItem>
+              <SelectContent
+                avoidCollisions={false}
+                side="bottom"
+                className="bg-[#1e1b2e] dark:bg-[#1e1b2e] border border-fuchsia-500/40 text-white shadow-xl shadow-fuchsia-900/30 rounded-xl"
+              >
+                <SelectItem
+                  value="BLOCKS"
+                  className="text-xs font-medium text-white focus:bg-fuchsia-600/40 focus:text-white data-[state=checked]:text-fuchsia-300"
+                >
+                  Blocks
+                </SelectItem>
+                <SelectItem
+                  value="RELATES_TO"
+                  className="text-xs font-medium text-white focus:bg-fuchsia-600/40 focus:text-white data-[state=checked]:text-fuchsia-300"
+                >
+                  Relates to
+                </SelectItem>
+                <SelectItem
+                  value="DUPLICATES"
+                  className="text-xs font-medium text-white focus:bg-fuchsia-600/40 focus:text-white data-[state=checked]:text-fuchsia-300"
+                >
+                  Duplicates
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
