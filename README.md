@@ -124,6 +124,8 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 | **CRDT Collaborative Editing** | `lib/yjs-supabase-provider.ts` + `components/collaborative-rich-text-editor.tsx` | Card descriptions use Yjs CRDTs over a Supabase Realtime broadcast channel — concurrent edits from any number of users merge automatically with no data loss; replaces last-write-wins debounce with an eventually-consistent operational transform that is idempotent and commutative |
 | **Database Shard Router** | `lib/shard-router.ts` + `app/api/health/shards/` | FNV-1a 32-bit hash routes each `orgId` to a deterministic shard; 30 s TTL health cache per shard; automatic failover to next healthy shard on failure; fail-open to shard 0 on total outage; `GET /api/health/shards` returns per-shard status map (200/207/503) |
 | **Step-Up Authentication** | `lib/step-up-action.ts` | `createStepUpAction(schema, handler, level)` factory wraps any destructive server action with a mandatory Clerk biometric/TOTP re-verification challenge; four levels (`strict` 10 min, `moderate` 1 hr, `lax` 24 hr, `strict_mfa`); client `useReverification()` hook detects the magic Clerk error object and shows the modal automatically |
+| **Service Layer Architecture** | `lib/services/` | Decouples heavy 3rd-party logic (jsPDF, OpenAI prompt engineering) from UI components and Server Actions — actions are thin orchestrators (auth → validate → rate-limit → delegate); service modules are independently testable and have zero coupling to Next.js internals |
+| **Deterministic Test Contracts** | `__tests__/unit/chaos/` | Eliminates fuzzy-matching in tests; Chaos Engineering assertions require the exact forensic log signature of a failure (e.g., `"[SHARD_ROUTER] All shards unhealthy — fail-open to shard 0"`) to pass — prevents false positives that hide real regressions |
 | **Chaos Engineering Suite** | `__tests__/unit/chaos/` + `e2e/chaos.spec.ts` | 40 tests across three resilience pillars: SK1-SK16 shard kill-switch (FNV-1a determinism, dead-shard failover, 30 s cache TTL, invalidation/recovery), AO1-AO12 Axiom audit outage (AbortSignal timeout, 429/503, Postgres trigger holds when Axiom is dark), NP1-NP10 step-up network partition (concurrent isolation, sequential independence); CE-1-CE-6 E2E: health endpoint shape, 401 guard on `/api/health/shards`, 5 s Supabase latency injection, offline/reconnect indicator, network recovery, step-up cancel leaves board intact |
 
 > If you are a recruiter or technical reviewer: the files above are the non-standard work in this project. The `lib/` directory is where bespoke business logic lives — not boilerplate.
@@ -1715,6 +1717,8 @@ All server actions follow the `createSafeAction` pattern from `lib/create-safe-a
 5. `emitCardEvent()` triggers automations and webhooks
 6. `createAuditLog()` records the action
 
+> **Thin Orchestrators:** Actions are deliberately kept under 200 lines. They handle auth, Zod validation, and rate-limiting, then delegate any complex business logic to isolated modules in the Service Layer (`lib/services/`). This keeps the action file readable, the service independently testable, and the boundary between orchestration and implementation explicit.
+
 **42 server actions across these domains:**
 
 | Domain | Action Files |
@@ -2116,9 +2120,12 @@ nexus/
 │   ├── use-realtime-analytics.ts
 │   └── use-realtime-board.ts
 │
-├── lib/                             # 40 utility modules
+├── lib/                             # 42 utility modules
 │   ├── performance/
 │   │   └── index.ts                 # Web Vitals + custom perf metrics
+│   ├── services/                    # Service layer — isolated 3rd-party business logic
+│   │   ├── ai-service.ts            # OpenAI singleton, prompt engineering, sanitization
+│   │   └── pdf-service.ts           # jsPDF / jspdf-autotable — board analytics report generation
 │   ├── supabase/
 │   │   └── client.ts               # Supabase client factory
 │   ├── action-protection.ts         # Action-level rate limiting + demo guard
@@ -2522,6 +2529,7 @@ stripe listen --forward-to localhost:3001/api/webhook/stripe
 - `chaos/shard-kill-switch.test.ts` (SK1-SK16) — FNV-1a determinism, getShardCount, single-shard dead (two ERROR log sequence), multi-shard failover (WARN + healthy fallback), 30 s TTL cache, `invalidateShardHealthCache` recovery
 - `chaos/audit-axiom-outage.test.ts` (AO1-AO12) — AbortSignal 5 s timeout, HTTP 429/503, three consecutive events captured, Postgres trigger holds when Axiom is dark, prod warn vs dev no-op, Sentry severity tags
 - `chaos/step-up-network-partition.test.ts` (NP1-NP10) — `has()` throws mid-check, billing handler isolation, three concurrent partitions, sequential independence
+- **Exact Log Contracts:** Tests do not pass on generic `expect.stringContaining()` partial matches. Every chaos assertion requires the exact forensic string signature of the failure (e.g., `"[SHARD_ROUTER] All shards unhealthy — fail-open to shard 0"`) — any change to the log message in the router is immediately surfaced as a test failure, guaranteeing deterministic resilience coverage with zero false positives.
 
 **E2E (Playwright)**
 - `boards.spec.ts` — Board creation, navigation, management
@@ -3601,6 +3609,8 @@ graph TB
 ---
 
 ## Contributing
+
+> **Software Craftsmanship — Atomic Commits:** This project enforces atomic commits for all architectural refactors. Each commit represents a single logical unit of change (e.g., `refactor: extract PDF logic to dedicated service layer`), ensuring a clean, peer-review-ready Git history that demonstrates deliberate engineering rather than a single bulk "Refactor Nexus" commit. All contributors are expected to follow this discipline.
 
 ```bash
 # 1. Fork the repository
