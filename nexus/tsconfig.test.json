@@ -15,13 +15,17 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "composite": true,
     "resolveJsonModule": true,
     "isolatedModules": true
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx"
+    "__tests__/**/*.ts",
+    "__tests__/**/*.tsx",
+    "__mocks__/**/*.ts",
+    "jest.setup.ts",
+    "jest.config.ts",
+    "jest.polyfills.ts",
+    "**/*.d.ts"
   ],
-  "exclude": ["node_modules", ".next", "coverage", "playwright-report", "e2e", "scripts", "examples"]
+  "exclude": ["node_modules", ".next", "coverage", "playwright-report", "e2e"]
 }

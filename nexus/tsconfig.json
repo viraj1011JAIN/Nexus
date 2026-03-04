@@ -48,9 +48,8 @@
     "**/*-redesigned.tsx",
     "**/*-original.tsx",
     "jest.setup.ts",
-    "jest.config.ts"
-  ],
-  "references": [
-    { "path": "./tsconfig.test.json" }
+    "jest.config.ts",
+    "jest.polyfills.ts",
+    "__mocks__/**"
   ]
 }

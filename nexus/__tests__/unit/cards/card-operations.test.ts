@@ -100,10 +100,6 @@ jest.mock("next/server", () => ({
   after: jest.fn((cb: () => unknown) => cb()),
 }));
 
-jest.mock("next/cache", () => ({
-  revalidatePath: jest.fn(),
-}));
-
 jest.mock("@/lib/logger", () => ({
   logger: {
     error: jest.fn(),

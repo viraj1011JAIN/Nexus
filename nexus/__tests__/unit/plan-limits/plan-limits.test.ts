@@ -181,7 +181,6 @@ jest.mock("next/server", () => {
 // ---------------------------------------------------------------------------
 // Supporting mocks
 // ---------------------------------------------------------------------------
-jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
 jest.mock("@/actions/template-actions", () => ({ createBoardFromTemplate: jest.fn() }));
 jest.mock("@/lib/lexorank", () => ({ generateNextOrder: jest.fn().mockReturnValue("m") }));
 jest.mock("@/lib/event-bus", () => ({ emitCardEvent: jest.fn().mockResolvedValue(undefined) }));

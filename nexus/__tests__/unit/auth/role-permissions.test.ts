@@ -92,8 +92,6 @@ jest.mock("@/lib/dal", () => ({
   }),
 }));
 
-jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
-
 // `after` runs the callback synchronously in the test environment so side
 // effects (emitCardEvent) complete before assertions run.
 jest.mock("next/server", () => ({

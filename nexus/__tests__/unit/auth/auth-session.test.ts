@@ -156,10 +156,6 @@ jest.mock("@/lib/dal", () => ({
   }),
 }));
 
-jest.mock("next/cache", () => ({
-  revalidatePath: jest.fn(),
-}));
-
 jest.mock("@/lib/action-protection", () => ({
   checkRateLimit: jest.fn().mockReturnValue({ allowed: true, remaining: 9, resetInMs: 60_000 }),
   RATE_LIMITS: { "create-board": 10 },

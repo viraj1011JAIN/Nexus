@@ -148,7 +148,6 @@ jest.mock("@clerk/nextjs/server",    () => ({
     users: { getUser: jest.fn().mockResolvedValue({ id: "user_clerk_0001", firstName: "Alice", emailAddresses: [] }) },
   }),
 }));
-jest.mock("next/cache",              () => ({ revalidatePath: jest.fn() }));
 jest.mock("next/server",             () => ({ after: jest.fn((fn: () => void) => fn()) }));
 
 // ─── Global fetch mock (Clerk User API) ──────────────────────────────────────

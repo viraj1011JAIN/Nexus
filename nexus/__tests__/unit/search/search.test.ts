@@ -93,8 +93,6 @@ jest.mock("@/lib/logger", () => ({
   logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
 }));
 
-jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Build a NextRequest for the search endpoint with the given query params. */
