@@ -129,6 +129,8 @@ export function DependencyPanel({
   const [depType, setDepType] = useState<DependencyType>("BLOCKS");
   const [depDirection, setDepDirection] = useState<"this_blocks" | "blocked_by_this">("this_blocks");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDirectionOpen, setIsDirectionOpen] = useState(false);
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
 
   const reload = async () => {
     const res = await getCardDependencies(cardId);
@@ -194,21 +196,39 @@ export function DependencyPanel({
       {/* Add form */}
       {isAdding && (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Select value={depDirection} onValueChange={(v) => setDepDirection(v as typeof depDirection)}>
+          {/* Selects sit in their own block; the block grows to reserve space
+              when a dropdown is open so the Target ID input is never overlaid. */}
+          <div
+            className={cn(
+              "grid grid-cols-2 gap-2 transition-[padding-bottom] duration-150",
+              isDirectionOpen && "pb-18",
+              isTypeOpen && !isDirectionOpen && "pb-26",
+            )}
+          >
+            <Select
+              value={depDirection}
+              onValueChange={(v) => setDepDirection(v as typeof depDirection)}
+              open={isDirectionOpen}
+              onOpenChange={setIsDirectionOpen}
+            >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent avoidCollisions={false} side="bottom">
                 <SelectItem value="this_blocks">This card blocks…</SelectItem>
                 <SelectItem value="blocked_by_this">This card blocked by…</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={depType} onValueChange={(v) => setDepType(v as DependencyType)}>
+            <Select
+              value={depType}
+              onValueChange={(v) => setDepType(v as DependencyType)}
+              open={isTypeOpen}
+              onOpenChange={setIsTypeOpen}
+            >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent avoidCollisions={false} side="bottom">
                 <SelectItem value="BLOCKS">Blocks</SelectItem>
                 <SelectItem value="RELATES_TO">Relates to</SelectItem>
                 <SelectItem value="DUPLICATES">Duplicates</SelectItem>
