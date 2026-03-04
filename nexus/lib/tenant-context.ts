@@ -93,8 +93,8 @@ const getCachedMembership = unstable_cache(
  * User or OrganizationUser rows so changes propagate within 1 request.
  */
 export function invalidateTenantCache(): void {
-  revalidateTag("tenant-user");
-  revalidateTag("tenant-membership");
+  revalidateTag("tenant-user", "default");
+  revalidateTag("tenant-membership", "default");
 }
 
 // ─── Core context getter ──────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
       }
       internalUserId = row.id;
     }
-    revalidateTag("tenant-user");
+    revalidateTag("tenant-user", "default");
   }
 
   // Step 2: Check the local membership record — cross-request cached.
@@ -267,7 +267,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
         memberStatus = healedMembership.status as MembershipStatus;
       }
       // Bust membership cache so new row is visible on the next request immediately
-      revalidateTag("tenant-membership");
+      revalidateTag("tenant-membership", "default");
     }
   }
 

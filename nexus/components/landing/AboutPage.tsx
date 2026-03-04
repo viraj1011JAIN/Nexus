@@ -646,7 +646,7 @@ export default function AboutPage() {
             transition={{ delay: 0.2, duration: 0.5 }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            Production-grade · Open-source · Portfolio
+            Full-stack · Open-source · Portfolio
           </motion.div>
 
           <h1
@@ -668,8 +668,8 @@ export default function AboutPage() {
           </h1>
 
           <p className="text-[18px] md:text-[20px] text-white/55 leading-relaxed max-w-2xl mx-auto mb-10 font-light">
-            A self-hostable, multi-tenant project management platform designed to compete with Jira and Trello —
-            built with principal-engineer architecture as a senior portfolio project.
+            A multi-tenant project management platform with real-time collaboration,
+            built from scratch by Viraj Jain as a full-stack engineering portfolio project.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
@@ -685,7 +685,7 @@ export default function AboutPage() {
               Explore the Facts
             </button>
             <Link
-              href="https://github.com"
+              href="https://github.com/viraj1011JAIN/Nexus"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3.5 rounded-full text-[14px] font-bold text-white/70 border border-white/15 hover:bg-white/5 hover:text-white transition-all duration-200"
@@ -1051,14 +1051,13 @@ export default function AboutPage() {
           </div>
 
           <p className="text-[12px] text-white/25 text-center">
-            Production-grade project management SaaS. MIT License.
-            Built as a principal-engineer portfolio project targeting UK developer roles £40k+.
+            Created by Viraj Jain. Open-source under MIT License.
           </p>
 
           <div className="flex items-center gap-4 text-[12px] text-white/35">
             <Link href="/" className="hover:text-white/70 transition-colors">Home</Link>
             <Link href="/dashboard" className="hover:text-white/70 transition-colors">Dashboard</Link>
-            <Link href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/70 transition-colors">GitHub</Link>
+            <Link href="https://github.com/viraj1011JAIN/Nexus" target="_blank" rel="noopener noreferrer" className="hover:text-white/70 transition-colors">GitHub</Link>
           </div>
         </div>
       </footer>
