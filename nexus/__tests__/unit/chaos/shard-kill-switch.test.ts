@@ -171,8 +171,7 @@ describe("SK5 — getDbForOrg(): fast path when assigned shard is healthy", () =
     expect(client).toBeDefined();
     expect(mockWarn).not.toHaveBeenCalled();
     expect(mockError).not.toHaveBeenCalledWith(
-      expect.stringContaining("All shards unhealthy"),
-      expect.anything(),
+      "[SHARD_ROUTER] All shards unhealthy \u2014 fail-open to shard 0",
     );
     // $queryRaw (the SELECT 1 probe) was called once for the health check
     expect(queryRawMocks[0]).toHaveBeenCalledTimes(1);
@@ -204,16 +203,19 @@ describe("SK6-SK9 — Shard Kill Switch: all shards dead (single-shard mode)", (
 
   it("SK7: logs ERROR '[SHARD_ROUTER] Shard 0 health probe failed' with the root cause", async () => {
     await router.getDbForOrg("org_dead_002");
+    // Exact message contract — any change to the log string in shard-router.ts
+    // must be reflected here, making accidental regressions visible immediately.
     expect(mockError).toHaveBeenCalledWith(
-      expect.stringContaining("Shard 0 health probe failed"),
+      "[SHARD_ROUTER] Shard 0 health probe failed",
       expect.objectContaining({ error: expect.any(Error) }),
     );
   });
 
   it("SK8: logs ERROR '[SHARD_ROUTER] All shards unhealthy — fail-open to shard 0'", async () => {
     await router.getDbForOrg("org_dead_003");
+    // Exact message contract — validates the complete fail-open log entry.
     expect(mockError).toHaveBeenCalledWith(
-      expect.stringContaining("All shards unhealthy"),
+      "[SHARD_ROUTER] All shards unhealthy \u2014 fail-open to shard 0",
     );
   });
 
@@ -319,7 +321,7 @@ describe("SK14-SK15 — Failover: WARN log when rerouting org to non-assigned sh
     // if all test orgIds happen to fall on shard 1, the WARN isn't raised —
     // in either case, no ERROR about "all shards unhealthy" should fire.
     expect(mockError).not.toHaveBeenCalledWith(
-      expect.stringContaining("All shards unhealthy"),
+      "[SHARD_ROUTER] All shards unhealthy \u2014 fail-open to shard 0",
     );
   });
 
@@ -356,7 +358,7 @@ describe("SK16 — Health probe: cache invalidation allows shard recovery detect
       // Shard 0 is dead initially — populates cache with healthy=false
       await router.getDbForOrg("org_recovery_001");
       expect(mockError).toHaveBeenCalledWith(
-        expect.stringContaining("Shard 0 health probe failed"),
+        "[SHARD_ROUTER] Shard 0 health probe failed",
         expect.objectContaining({ error: expect.any(Error) }),
       );
 
@@ -377,7 +379,7 @@ describe("SK16 — Health probe: cache invalidation allows shard recovery detect
 
       // After invalidation plus $queryRaw success, no errors
       expect(mockError).not.toHaveBeenCalledWith(
-        expect.stringContaining("All shards unhealthy"),
+        "[SHARD_ROUTER] All shards unhealthy \u2014 fail-open to shard 0",
       );
       expect(client).toBeDefined();
     } finally {
