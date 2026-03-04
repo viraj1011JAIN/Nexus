@@ -432,6 +432,37 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 ---
 
+### `/about` — About NEXUS
+
+![About](Web-screenshort/About.png)
+
+- Public marketing + engineering showcase page at `/about` — accessible without authentication
+- **Sticky navigation bar** — smooth-scrolls to each section (Overview, Features, Tech Stack, Timeline); highlights the active section as the user scrolls using an `IntersectionObserver`
+- **Hero section** — full-screen canvas particle background (WebGL-inspired JS canvas), animated headline with gradient text (`from-violet-400 via-purple-300 to-indigo-400`), subtitle with typewriter reveal, and two CTAs: "View Source" (GitHub) and "Get Started"  
+- **Animated stat counters** — 6 live-animating numbers that count up when scrolled into view:
+  - `57+` API Routes
+  - `28+` RBAC Permissions
+  - `5` Board Views (Kanban · Table · Timeline · Calendar · Analytics)
+  - `1,512+` Tests Written
+  - `99.9%` Uptime SLA
+  - `<50ms` Real-time Latency
+- **Feature cards grid** — 8 engineering highlight cards with icon, tag badge, and description:
+  - Zero-trust Multi-tenancy (orgId always from signed Clerk JWT, RLS at row level)
+  - Sub-50ms Real-time (Supabase WebSocket broadcast)
+  - AI-Powered Workflows (GPT-4o + DOMPurify sanitisation)
+  - Dual-Gate RBAC (org role × board role — neither alone grants access)
+  - LexoRank Ordering (one DB row updated per move, same algorithm as Jira)
+  - Webhook Automation Engine (HMAC-SHA256 signing + SSRF blocklist)
+  - Stripe Billing + Step-up Auth (Clerk re-auth on destructive billing actions)
+  - Sprint & Analytics (burndown, velocity, cumulative flow via Recharts 3.7)
+- **Technology stack grid** — 12 library cards each showing name, version, role, and a colour-coded badge: Next.js 16, React 19, TypeScript 5, Prisma 5.22, Clerk 6.36, Supabase 2.91, Stripe v20, Framer Motion 12.29, Tailwind CSS v4, Zod 4.3, OpenAI SDK 4.104, Sentry 10.36
+- **Build timeline** — 6-phase horizontal scroll timeline (Q1 2024 → 2025+): Architecture Born → Core Engine → Real-time + AI → Enterprise Layer → Test Coverage → Production Ready
+- **Footer** — links to GitHub repository, LinkedIn profile, and a "View Source" CTA
+- Fully animated with Framer Motion scroll-reveal; all motion wrapped in `useReducedMotion()` check for WCAG 2.3.3 compliance
+- Server Component wrapper (`app/about/page.tsx`) with full OpenGraph metadata; the `AboutPage` client component handles canvas, counters, and scroll-driven animations
+
+---
+
 ### `/sign-in` — Sign In
 
 - Clerk-managed authentication at `[[...sign-in]]` catch-all route
