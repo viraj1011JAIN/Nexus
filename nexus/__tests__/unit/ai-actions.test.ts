@@ -91,9 +91,12 @@ describe("ai-actions", () => {
       expect(mockCreate).toHaveBeenCalledTimes(1);
     });
 
-    it("increments aiCallsToday after successful call", async () => {
+    it("increments aiCallsToday by exactly 1 for the correct org after successful call", async () => {
       await suggestPriority({ title: "Test card", description: "" });
-      expect(db.organization.update).toHaveBeenCalled();
+      expect(db.organization.update).toHaveBeenCalledWith({
+        where: { id: "org_1" },
+        data:  { aiCallsToday: { increment: 1 } },
+      });
     });
 
     it("returns error when rate limit is reached", async () => {

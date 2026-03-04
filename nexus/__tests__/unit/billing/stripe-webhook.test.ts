@@ -149,6 +149,9 @@ jest.mock("@/lib/db", () => ({
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findUnique: jest.fn(),
     },
+    processedStripeEvent: {
+      create: jest.fn().mockResolvedValue({}),
+    },
   },
 }));
 
@@ -172,7 +175,7 @@ function makeWebhookReq(body = "raw-stripe-body"): NextRequest {
 }
 
 function getDb() {
-  return (jest.requireMock("@/lib/db") as { systemDb: { organization: { update: jest.Mock; updateMany: jest.Mock; findUnique: jest.Mock } } }).systemDb;
+  return (jest.requireMock("@/lib/db") as { systemDb: { organization: { update: jest.Mock; updateMany: jest.Mock; findUnique: jest.Mock }; processedStripeEvent: { create: jest.Mock } } }).systemDb;
 }
 
 function getStripe() {
@@ -194,6 +197,7 @@ function resetMocks() {
   getDb().organization.update.mockResolvedValue({});
   getDb().organization.updateMany.mockResolvedValue({ count: 1 });
   getDb().organization.findUnique.mockResolvedValue({ id: ORG_ID, stripeCustomerId: CUSTOMER_ID });
+  getDb().processedStripeEvent.create.mockResolvedValue({});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -226,7 +230,7 @@ describe("Section 11B — Stripe Webhook Handler", () => {
       getHeaders().mockResolvedValueOnce({ get: jest.fn().mockReturnValue(null) });
 
       const body = await POST(makeWebhookReq()).then(r => r.json()) as { error: string };
-      expect(body.error).toMatch(/Missing stripe-signature/i);
+      expect(body.error).toBe("Missing stripe-signature header");
     });
 
     it("does not call stripe.webhooks.constructEvent when signature is absent", async () => {
@@ -265,8 +269,8 @@ describe("Section 11B — Stripe Webhook Handler", () => {
 
       await POST(makeWebhookReq());
       expect(getLogger().error).toHaveBeenCalledWith(
-        expect.stringContaining("signature"),
-        expect.anything(),
+        "Stripe webhook signature validation failed",
+        expect.objectContaining({ error: expect.any(Error) }),
       );
     });
   });
@@ -765,5 +769,50 @@ describe("Section 11B — Stripe Webhook Handler", () => {
         expect(body.received).toBe(true);
       },
     );
+  });
+
+  // ─── 11.35 Idempotency: duplicate event (P2002) → second delivery skipped ────
+
+  describe("11.35 Replay guard — duplicate event ID rejected on second delivery", () => {
+    it("first delivery: db.organization.update is called once (normal processing)", async () => {
+      getStripe().webhooks.constructEvent.mockReturnValueOnce(makeCheckoutCompletedEvent());
+      getStripe().subscriptions.retrieve.mockResolvedValueOnce(MOCK_SUBSCRIPTION);
+      getDb().processedStripeEvent.create.mockResolvedValueOnce({});
+
+      await POST(makeWebhookReq());
+
+      expect(getDb().organization.update).toHaveBeenCalledTimes(1);
+    });
+
+    it("second delivery (P2002 duplicate key): db.organization.update is NOT called", async () => {
+      getStripe().webhooks.constructEvent.mockReturnValueOnce(makeCheckoutCompletedEvent());
+      getDb().processedStripeEvent.create.mockRejectedValueOnce({ code: "P2002" });
+
+      await POST(makeWebhookReq());
+
+      expect(getDb().organization.update).not.toHaveBeenCalled();
+    });
+
+    it("second delivery returns 200 { received: true } so Stripe stops retrying", async () => {
+      getStripe().webhooks.constructEvent.mockReturnValueOnce(makeCheckoutCompletedEvent());
+      getDb().processedStripeEvent.create.mockRejectedValueOnce({ code: "P2002" });
+
+      const res = await POST(makeWebhookReq());
+      expect(res.status).toBe(200);
+      const body = await res.json() as { received: boolean };
+      expect(body.received).toBe(true);
+    });
+
+    it("duplicate delivery logs info (not error) and does NOT log an error", async () => {
+      getStripe().webhooks.constructEvent.mockReturnValueOnce(makeCheckoutCompletedEvent());
+      getDb().processedStripeEvent.create.mockRejectedValueOnce({ code: "P2002" });
+
+      await POST(makeWebhookReq());
+
+      expect(getLogger().info).toHaveBeenCalledWith(
+        expect.stringContaining("Duplicate event skipped (idempotency)"),
+      );
+      expect(getLogger().error).not.toHaveBeenCalled();
+    });
   });
 });

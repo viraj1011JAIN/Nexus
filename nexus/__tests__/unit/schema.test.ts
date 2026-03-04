@@ -36,7 +36,7 @@ function expectInvalid(
   expect(result.success).toBe(false);
   if (expectedMessage) {
     const messages = result.error?.issues.map((i) => i.message) ?? [];
-    expect(messages.some((m) => m.includes(expectedMessage))).toBe(true);
+    expect(messages).toContain(expectedMessage);
   }
 }
 
@@ -50,11 +50,11 @@ describe("CreateBoard", () => {
   });
 
   it("rejects title shorter than 3 characters", () => {
-    expectInvalid(CreateBoard, { title: "AB" }, "at least 3 characters");
+    expectInvalid(CreateBoard, { title: "AB" }, "Title must be at least 3 characters");
   });
 
   it("rejects title longer than 50 characters", () => {
-    expectInvalid(CreateBoard, { title: "A".repeat(51) }, "less than 50");
+    expectInvalid(CreateBoard, { title: "A".repeat(51) }, "Title must be less than 50 characters");
   });
 
   it("accepts title at min boundary (3 chars)", () => {
@@ -85,12 +85,12 @@ describe("CreateBoard", () => {
     expectInvalid(CreateBoard, { title: "My Board", imageFullUrl: "just-plain-text-no-url" });
   });
 
-  it("accepts a valid UUID templateId", () => {
-    expectValid(CreateBoard, { title: "Board", templateId: VALID_UUID });
+  it("accepts any non-empty CUID-style templateId (templateId is z.string().min(1), not uuid)", () => {
+    expectValid(CreateBoard, { title: "Board", templateId: "clh12345678901234" });
   });
 
-  it("rejects non-UUID templateId", () => {
-    expectInvalid(CreateBoard, { title: "Board", templateId: "not-a-uuid" });
+  it("rejects empty string templateId (z.string().min(1) violated)", () => {
+    expectInvalid(CreateBoard, { title: "Board", templateId: "" });
   });
 
   it("allows templateId to be omitted", () => {
@@ -120,11 +120,11 @@ describe("CreateList", () => {
   });
 
   it("rejects empty title", () => {
-    expectInvalid(CreateList, { title: "", boardId: "board_1" }, "required");
+    expectInvalid(CreateList, { title: "", boardId: "board_1" }, "Title is required");
   });
 
   it("rejects title over 50 characters", () => {
-    expectInvalid(CreateList, { title: "A".repeat(51), boardId: "board_1" }, "less than 50");
+    expectInvalid(CreateList, { title: "A".repeat(51), boardId: "board_1" }, "Title must be less than 50 characters");
   });
 
   it("rejects missing boardId", () => {
@@ -140,7 +140,7 @@ describe("UpdateList", () => {
   });
 
   it("rejects empty title", () => {
-    expectInvalid(UpdateList, { title: "", id: "list_1", boardId: "board_1" }, "required");
+    expectInvalid(UpdateList, { title: "", id: "list_1", boardId: "board_1" }, "Title is required");
   });
 
   it("requires all three fields", () => {
@@ -156,14 +156,14 @@ describe("CreateCard", () => {
   });
 
   it("rejects empty title", () => {
-    expectInvalid(CreateCard, { title: "", listId: "list_1", boardId: "board_1" }, "required");
+    expectInvalid(CreateCard, { title: "", listId: "list_1", boardId: "board_1" }, "Title is required");
   });
 
   it("rejects title over 100 characters", () => {
     expectInvalid(
       CreateCard,
       { title: "A".repeat(101), listId: "list_1", boardId: "board_1" },
-      "less than 100"
+      "Title must be less than 100 characters"
     );
   });
 });
@@ -195,12 +195,12 @@ describe("UpdateCard", () => {
     expectInvalid(
       UpdateCard,
       { id: VALID_UUID, boardId: VALID_UUID, description: "Hi" },
-      "too short"
+      "Description is too short"
     );
   });
 
   it("rejects title shorter than 3 characters", () => {
-    expectInvalid(UpdateCard, { id: VALID_UUID, boardId: VALID_UUID, title: "AB" }, "too short");
+    expectInvalid(UpdateCard, { id: VALID_UUID, boardId: VALID_UUID, title: "AB" }, "Title is too short");
   });
 
   it("allows both title and description simultaneously", () => {
@@ -225,23 +225,23 @@ describe("CreateLabel", () => {
   });
 
   it("rejects empty name", () => {
-    expectInvalid(CreateLabel, { name: "", color: "#FF0000", orgId: VALID_UUID }, "required");
+    expectInvalid(CreateLabel, { name: "", color: "#FF0000", orgId: VALID_UUID }, "Label name is required");
   });
 
   it("rejects name over 50 characters", () => {
     expectInvalid(
       CreateLabel,
       { name: "A".repeat(51), color: "#FF0000", orgId: VALID_UUID },
-      "less than 50"
+      "Label name must be less than 50 characters"
     );
   });
 
   it("rejects invalid hex color (short)", () => {
-    expectInvalid(CreateLabel, { name: "Bug", color: "#FFF", orgId: VALID_UUID }, "Invalid color format");
+    expectInvalid(CreateLabel, { name: "Bug", color: "#FFF", orgId: VALID_UUID }, "Invalid color format (must be hex)");
   });
 
   it("rejects invalid hex color (wrong prefix)", () => {
-    expectInvalid(CreateLabel, { name: "Bug", color: "FF0000", orgId: VALID_UUID }, "Invalid color format");
+    expectInvalid(CreateLabel, { name: "Bug", color: "FF0000", orgId: VALID_UUID }, "Invalid color format (must be hex)");
   });
 
   it("accepts all 6-digit hex colour formats", () => {
@@ -253,7 +253,7 @@ describe("CreateLabel", () => {
     expectInvalid(
       CreateLabel,
       { name: "<script>", color: "#FF0000", orgId: VALID_UUID },
-      "invalid characters"
+      "Label name contains invalid characters"
     );
   });
 
