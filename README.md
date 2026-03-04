@@ -84,7 +84,7 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 - TypeScript: **0 errors** across all 100 components, 42 server actions, and 36 lib modules
 - ESLint: **0 warnings** — all Tailwind v4 utilities, a11y rules, and import rules pass cleanly
 - Hydration: **0 mismatches** — all CSS utilities use bracket syntax (`gap-[5px]`, `h-[30px]`) for consistency between server and client renders
-- Tests: **1,512 passing, 0 failing** across 50 test suites (Jest 30 + ts-jest + Playwright)
+- Tests: **1,516 passing, 0 failing** across 50 test suites (Jest 30 + ts-jest + Playwright)
 - Accessibility: **WCAG 2.1 AA** — 10 design-system color tokens validated by CI; ARIA live region delivers real-time collaborative announcements to screen readers
 
 **What makes the architecture distinct:**
@@ -106,7 +106,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 | **SSRF Blocklist on Webhooks** | `lib/webhook-delivery.ts` | User-supplied webhook URLs are validated against RFC-1918 + loopback ranges before any outbound HTTP call |
 | **Audit Log with Diffs** | `lib/create-audit-log.ts` | Every mutation records `previousValues` / `newValues` diffs — not just "action taken" |
 | **Immutable Forensic Audit Sink** | `lib/audit-sink.ts` + `supabase-audit-immutability.sql` | Dual-write: every audit event is streamed to Axiom (append-only, no delete API) via `after()` + a Postgres `BEFORE DELETE OR UPDATE` trigger blocks mutations from all roles including `service_role` — attacker can't erase evidence even with a leaked DB credential |
-| **Stripe Idempotency Guard** | `app/api/webhook/stripe/route.ts` | `ProcessedStripeEvent` table + Prisma `P2002` guard prevents double-processing replayed webhooks |
+| **Stripe Idempotency Guard** | `app/api/webhook/stripe/route.ts` | `ProcessedStripeEvent` table + Prisma `P2002` guard prevents double-processing replayed webhooks; Section 11.35 (4 tests) proves first delivery processes and second delivery returns `200 { received: true }` without touching `db.organization.update` — replay protection verified, not just coded |
 | **Supabase Channel Pre-Flight** | `hooks/use-presence.ts` | Calls `/api/realtime-auth` before opening any WebSocket channel — board membership verified server-side |
 | **Presence Throttle + Visibility API** | `hooks/use-presence.ts` | Presence unsubscribes immediately when the user switches away from the tab; throttled state sync prevents N² event storms |
 | **AI Prompt Injection Protection** | `actions/ai-actions.ts` | `sanitizeForPrompt()` strips control characters; all OpenAI calls use `system`/`user` role separation |
@@ -125,7 +125,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 | **Database Shard Router** | `lib/shard-router.ts` + `app/api/health/shards/` | FNV-1a 32-bit hash routes each `orgId` to a deterministic shard; 30 s TTL health cache per shard; automatic failover to next healthy shard on failure; fail-open to shard 0 on total outage; `GET /api/health/shards` returns per-shard status map (200/207/503) |
 | **Step-Up Authentication** | `lib/step-up-action.ts` | `createStepUpAction(schema, handler, level)` factory wraps any destructive server action with a mandatory Clerk biometric/TOTP re-verification challenge; four levels (`strict` 10 min, `moderate` 1 hr, `lax` 24 hr, `strict_mfa`); client `useReverification()` hook detects the magic Clerk error object and shows the modal automatically |
 | **Service Layer Architecture** | `lib/services/` | Decouples heavy 3rd-party logic (jsPDF, OpenAI prompt engineering) from UI components and Server Actions — actions are thin orchestrators (auth → validate → rate-limit → delegate); service modules are independently testable and have zero coupling to Next.js internals |
-| **Deterministic Test Contracts** | `__tests__/unit/chaos/` | Eliminates fuzzy-matching in tests; Chaos Engineering assertions require the exact forensic log signature of a failure (e.g., `"[SHARD_ROUTER] All shards unhealthy — fail-open to shard 0"`) to pass — prevents false positives that hide real regressions |
+| **Deterministic Test Contracts** | `__tests__/unit/` (chaos, billing, schema, ai) | Eliminates fuzzy-matching suite-wide: Zod error messages are asserted verbatim (e.g., `"Title must be at least 3 characters"`, not `toContain("3 characters")`); Stripe logger call first-arg is an exact string (not `stringContaining("signature")`); AI DB update is `toHaveBeenCalledWith({ data: { aiCallsToday: { increment: 1 } } })` not just `toHaveBeenCalled()` — every assertion either passes or fails for the right reason |
 | **Chaos Engineering Suite** | `__tests__/unit/chaos/` + `e2e/chaos.spec.ts` | 40 tests across three resilience pillars: SK1-SK16 shard kill-switch (FNV-1a determinism, dead-shard failover, 30 s cache TTL, invalidation/recovery), AO1-AO12 Axiom audit outage (AbortSignal timeout, 429/503, Postgres trigger holds when Axiom is dark), NP1-NP10 step-up network partition (concurrent isolation, sequential independence); CE-1-CE-6 E2E: health endpoint shape, 401 guard on `/api/health/shards`, 5 s Supabase latency injection, offline/reconnect indicator, network recovery, step-up cancel leaves board intact |
 
 > If you are a recruiter or technical reviewer: the files above are the non-standard work in this project. The `lib/` directory is where bespoke business logic lives — not boilerplate.
@@ -445,7 +445,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
   - `57+` API Routes
   - `28+` RBAC Permissions
   - `5` Board Views (Kanban · Table · Timeline · Calendar · Analytics)
-  - `1,512+` Tests Written
+  - `1,516+` Tests Written
   - `99.9%` Uptime SLA
   - `<50ms` Real-time Latency
 - **Feature cards grid** — 8 engineering highlight cards with icon, tag badge, and description:
