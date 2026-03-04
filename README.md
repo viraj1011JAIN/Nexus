@@ -1849,116 +1849,316 @@ Located in `nexus/emails/`:
 
 ```
 nexus/
+├── .github/
+│   └── workflows/
+│       ├── bundle-size.yml          # CI bundle size check
+│       └── lighthouse-ci.yml        # Lighthouse performance audits
+│
+├── __mocks__/
+│   └── server-only.ts              # Jest mock for server-only imports
+│
 ├── actions/                         # 42 server actions (createSafeAction pattern)
+│   ├── analytics/
+│   │   ├── get-advanced-analytics.ts
+│   │   └── get-board-analytics.ts
+│   ├── ai-actions.ts
+│   ├── ai-checklist-actions.ts
+│   ├── api-key-actions.ts
+│   ├── assignee-actions.ts
+│   ├── attachment-actions.ts
+│   ├── automation-actions.ts
+│   ├── billing-step-up.ts           # Step-up auth for billing changes
+│   ├── board-member-actions.ts
+│   ├── board-share-actions.ts
+│   ├── bulk-card-actions.ts
+│   ├── checklist-actions.ts
 │   ├── create-board.ts
 │   ├── create-card.ts
 │   ├── create-list.ts
-│   ├── update-card-order.ts         # LexoRank reordering
-│   ├── board-member-actions.ts
-│   ├── permission-scheme-actions.ts
-│   ├── membership-request-actions.ts
-│   ├── board-share-actions.ts
-│   ├── automation-actions.ts
-│   ├── ai-actions.ts
-│   ├── sprint-actions.ts
-│   ├── roadmap-actions.ts
-│   ├── time-tracking-actions.ts
 │   ├── custom-field-actions.ts
-│   ├── webhook-actions.ts
-│   ├── api-key-actions.ts
+│   ├── delete-board.ts
+│   ├── delete-card.ts
+│   ├── delete-list.ts
+│   ├── dependency-actions.ts
+│   ├── get-audit-logs.ts
+│   ├── get-card.ts
+│   ├── import-export-actions.ts
+│   ├── label-actions.ts
+│   ├── membership-request-actions.ts
+│   ├── notification-actions.ts
+│   ├── permission-scheme-actions.ts
+│   ├── phase3-actions.ts
+│   ├── roadmap-actions.ts
+│   ├── saved-view-actions.ts
 │   ├── schema.ts                    # Shared Zod validation schemas
-│   └── ...                          # 20+ more
+│   ├── sprint-actions.ts
+│   ├── template-actions.ts
+│   ├── time-tracking-actions.ts
+│   ├── update-board.ts
+│   ├── update-card-order.ts         # LexoRank reordering
+│   ├── update-card.ts
+│   ├── update-list-order.ts
+│   ├── update-list.ts
+│   ├── user-preferences.ts
+│   └── webhook-actions.ts
 │
 ├── app/
 │   ├── api/
 │   │   ├── v1/                      # Public REST API (API key auth)
 │   │   │   ├── boards/
+│   │   │   │   └── [boardId]/
 │   │   │   └── cards/
-│   │   ├── stripe/                  # Checkout + portal
-│   │   ├── webhook/stripe/          # Stripe webhook handler
+│   │   │       └── [cardId]/
+│   │   ├── admin/seed-templates/    # Template seeding endpoint
+│   │   ├── ai/                      # AI completions (rate-limited)
+│   │   ├── attachment/              # File attachment upload
+│   │   ├── audit-logs/              # Audit log queries
+│   │   ├── boards/
+│   │   │   └── requestable/         # Boards user can request access to
+│   │   ├── cards/search/            # Full-text card search
+│   │   ├── cron/
+│   │   │   ├── daily-reports/       # Scheduled daily digest
+│   │   │   └── lexorank-rebalance/  # Periodic LexoRank key rebalancing
+│   │   ├── export/[boardId]/        # Board CSV/JSON export
+│   │   ├── gdpr/
+│   │   │   ├── delete-request/      # GDPR data deletion
+│   │   │   └── export/              # GDPR data export
 │   │   ├── health/
-│   │   │   └── shards/              # GET /api/health/shards — per-shard status map (200/207/503)
-│   │   ├── ai/
-│   │   ├── audit-logs/
-│   │   ├── integrations/            # GitHub + Slack
-│   │   ├── gdpr/                    # Export + deletion
-│   │   ├── cron/                    # Scheduled jobs
-│   │   └── ...                      # Upload, search, push, media
+│   │   │   └── shards/              # Per-shard status map (200/207/503)
+│   │   ├── import/                  # Board import (Trello, CSV)
+│   │   ├── integrations/
+│   │   │   ├── github/
+│   │   │   └── slack/
+│   │   ├── members/                 # Org member listing
+│   │   ├── membership-requests/
+│   │   │   └── mine/                # Current user's pending requests
+│   │   ├── push/
+│   │   │   ├── send/                # Send push notification
+│   │   │   └── subscribe/           # Register push subscription
+│   │   ├── realtime-auth/           # Supabase Realtime token exchange
+│   │   ├── stripe/
+│   │   │   ├── checkout/            # Create Stripe checkout session
+│   │   │   └── portal/              # Stripe customer portal redirect
+│   │   ├── tenor/
+│   │   │   ├── featured/            # Featured GIFs
+│   │   │   └── search/              # GIF search
+│   │   ├── unsplash/                # Unsplash image search
+│   │   ├── upload/                  # General file upload
+│   │   └── webhook/stripe/          # Stripe webhook handler
 │   │
-│   ├── board/[boardId]/             # Board views
-│   │   └── settings/
-│   ├── dashboard/
-│   ├── onboarding/
+│   ├── about/                       # About page
+│   ├── activity/                    # Activity feed
+│   ├── billing/                     # Billing & subscription management
+│   ├── board/[boardId]/
+│   │   ├── settings/                # Board settings
+│   │   │   └── _components/
+│   │   └── workload/                # Workload heatmap view
+│   ├── dashboard/                   # Main dashboard (board list)
+│   ├── onboarding/                  # New user onboarding flow
+│   ├── organization/[orgId]/        # Organization overview
+│   ├── pending-approval/            # Waiting for org approval page
+│   ├── request-board-access/        # Board access request page
+│   ├── roadmap/                     # Roadmap timeline view
+│   ├── search/                      # Global search
+│   ├── select-org/                  # Org switcher
 │   ├── settings/
 │   │   ├── api-keys/
 │   │   ├── automations/
 │   │   ├── gdpr/
 │   │   ├── integrations/
 │   │   └── webhooks/
-│   ├── billing/
-│   ├── activity/
-│   ├── roadmap/
-│   ├── search/
-│   ├── shared/[token]/              # Public guest view
+│   ├── shared/[token]/              # Public guest view (password-gated)
+│   │   └── _components/
 │   ├── sign-in/[[...sign-in]]/
 │   ├── sign-up/[[...sign-up]]/
-│   ├── select-org/
-│   ├── privacy/
-│   ├── terms/
-│   ├── layout.tsx
-│   └── error.tsx
+│   ├── privacy/                     # Privacy policy
+│   ├── terms/                       # Terms of service
+│   ├── layout.tsx                   # Root layout (Clerk, theme, providers)
+│   ├── error.tsx                    # Global error boundary
+│   ├── global-error.tsx             # Root error boundary
+│   ├── not-found.tsx                # 404 page
+│   ├── page.tsx                     # Landing page
+│   ├── robots.ts                    # SEO robots.txt
+│   ├── sitemap.ts                   # SEO sitemap
+│   ├── globals.css
+│   └── editor.css
 │
 ├── components/
+│   ├── accessibility/
+│   │   └── aria-live-region.tsx     # Polite + assertive dual regions, announce() helper, SSR-safe, ring-buffer
+│   ├── activity/
+│   │   └── activity-skeleton.tsx
+│   ├── analytics/
+│   │   ├── advanced-analytics.tsx
+│   │   ├── analytics-dashboard.tsx
+│   │   └── export-pdf.tsx
 │   ├── board/                       # 28 board UI components
+│   │   ├── board-header.tsx
+│   │   ├── board-page-client.tsx
+│   │   ├── board-presence.tsx
+│   │   ├── board-settings-dropdown.tsx
+│   │   ├── board-skeleton.tsx
+│   │   ├── board-tabs.tsx
+│   │   ├── board-tabs-client.tsx
+│   │   ├── bulk-action-bar.tsx
+│   │   ├── calendar-view.tsx
+│   │   ├── card-cover-picker.tsx
+│   │   ├── card-item.tsx
+│   │   ├── checklist-panel.tsx
+│   │   ├── custom-fields-panel.tsx
+│   │   ├── dependency-panel.tsx
+│   │   ├── file-attachment.tsx
+│   │   ├── filter-bar.tsx
+│   │   ├── gantt-view.tsx
+│   │   ├── list-container.tsx
+│   │   ├── list-item.tsx
+│   │   ├── online-users.tsx
+│   │   ├── share-board-dialog.tsx
+│   │   ├── shared-board-view.tsx
+│   │   ├── sprint-panel.tsx
+│   │   ├── table-view.tsx
+│   │   ├── template-picker.tsx
+│   │   ├── time-tracking-panel.tsx
+│   │   ├── unsplash-picker.tsx
+│   │   └── workload-view.tsx
+│   ├── editor/                      # 7 rich text editor components
+│   │   ├── editor-toolbar.tsx
+│   │   ├── emoji-picker.tsx
+│   │   ├── gif-picker.tsx
+│   │   ├── link-popover.tsx
+│   │   ├── mention-list.tsx
+│   │   ├── mention-suggestion.ts
+│   │   └── toolbar-button.tsx
+│   ├── landing/
+│   │   ├── AboutPage.tsx
+│   │   ├── LandingPage.tsx
+│   │   └── landing-page.css
+│   ├── layout/
+│   │   ├── mobile-nav.tsx
+│   │   ├── notification-center.tsx
+│   │   └── sidebar.tsx
 │   ├── modals/
-│   │   ├── card-modal/              # 6 sub-components
+│   │   ├── card-modal/              # 6 card modal sub-components
+│   │   │   ├── index.tsx
+│   │   │   ├── activity.tsx
+│   │   │   ├── attachments.tsx
+│   │   │   ├── checklists.tsx
+│   │   │   ├── cover.tsx
+│   │   │   └── dependencies.tsx
 │   │   └── pro-upgrade-modal.tsx
+│   ├── performance/
+│   │   └── index.ts                 # Performance monitoring utilities
+│   ├── providers/
+│   │   ├── command-palette-provider.tsx
+│   │   ├── modal-provider.tsx
+│   │   └── sonner-provider.tsx
+│   ├── settings/
+│   │   ├── api-keys-settings.tsx
+│   │   ├── automation-builder.tsx
+│   │   └── webhooks-settings.tsx
 │   ├── ui/                          # 24 shadcn/ui primitives
-│   ├── layout/                      # Sidebar, mobile nav, notifications
-│   ├── editor/                      # 7 rich text components
-│   ├── settings/                    # 3 settings components
-│   ├── analytics/                   # 3 chart components
-│   ├── providers/                   # Clerk, modals, toast
-│   ├── accessibility/               # ARIA live regions (polite + assertive dual regions, announce() helper, SSR-safe, ring-buffer)
-│   └── ...                          # Theme, billing, command palette, etc.
+│   │   ├── alert-dialog.tsx
+│   │   ├── avatar.tsx
+│   │   ├── badge.tsx
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── checkbox.tsx
+│   │   ├── collapsible.tsx
+│   │   ├── command.tsx
+│   │   ├── dialog.tsx
+│   │   ├── dropdown-menu.tsx
+│   │   ├── input.tsx
+│   │   ├── label.tsx
+│   │   ├── popover.tsx
+│   │   ├── progress.tsx
+│   │   ├── scroll-area.tsx
+│   │   ├── select.tsx
+│   │   ├── separator.tsx
+│   │   ├── skeleton.tsx
+│   │   ├── switch.tsx
+│   │   ├── tabs.tsx
+│   │   ├── textarea.tsx
+│   │   ├── toaster.tsx
+│   │   ├── tooltip.tsx
+│   │   └── visually-hidden.tsx
+│   ├── assignee-picker.tsx
+│   ├── billing-client.tsx
+│   ├── board-list.tsx
+│   ├── collaborative-rich-text-editor.tsx
+│   ├── command-palette.tsx
+│   ├── error-boundary.tsx
+│   ├── error-boundary-realtime.tsx
+│   ├── keyboard-shortcuts-modal.tsx
+│   ├── label-manager.tsx
+│   ├── lazy-load.tsx
+│   ├── mention-list.tsx
+│   ├── notification-center.tsx
+│   ├── performance-wrapper.tsx
+│   ├── priority-badge.tsx
+│   ├── rich-comments.tsx
+│   ├── rich-text-editor.tsx
+│   ├── roadmap-client.tsx
+│   ├── smart-due-date.tsx
+│   ├── smooth-scroll.tsx
+│   ├── theme-provider.tsx
+│   └── virtual-scroll.tsx
 │
 ├── hooks/                           # 11 custom React hooks
-│   ├── use-realtime-board.ts
-│   ├── use-presence.ts
+│   ├── use-ai-cooldown.ts
 │   ├── use-card-lock.ts
 │   ├── use-card-modal.ts
-│   ├── use-keyboard-shortcuts.ts
 │   ├── use-debounce.ts
+│   ├── use-demo-mode.ts
+│   ├── use-keyboard-shortcuts.ts
 │   ├── use-optimistic-card.ts
+│   ├── use-presence.ts
 │   ├── use-push-notifications.ts
 │   ├── use-realtime-analytics.ts
-│   ├── use-demo-mode.ts
-│   └── use-ai-cooldown.ts
+│   └── use-realtime-board.ts
 │
-├── lib/                             # 38 utility modules
-│   ├── db.ts                        # Prisma client (db + systemDb)
-│   ├── tenant-context.ts            # Multi-tenant auth resolution
-│   ├── board-permissions.ts         # RBAC permission matrix
-│   ├── shard-router.ts              # FNV-1a shard router — org→shard hashing, health cache, failover
-│   ├── audit-sink.ts                # Axiom append-only forensic audit sink (dual-write via after())
-│   ├── step-up-action.ts            # createStepUpAction factory — biometric/TOTP re-verification gate
-│   ├── yjs-supabase-provider.ts     # Yjs CRDT transport over Supabase Realtime broadcast
-│   ├── rate-limit.ts                # Route-level sliding-window rate limiter (used by /api/ai)
+├── lib/                             # 40 utility modules
+│   ├── performance/
+│   │   └── index.ts                 # Web Vitals + custom perf metrics
+│   ├── supabase/
+│   │   └── client.ts               # Supabase client factory
 │   ├── action-protection.ts         # Action-level rate limiting + demo guard
-│   ├── create-safe-action.ts        # Server action wrapper
-│   ├── create-audit-log.ts          # Audit trail + dual-write to Axiom via audit-sink
-│   ├── event-bus.ts                 # Card event emission
-│   ├── automation-engine.ts         # Automation rule evaluation
-│   ├── webhook-delivery.ts          # Outbound webhooks + SSRF protection
-│   ├── lexorank.ts                  # String-based ordering
 │   ├── api-key-auth.ts              # API key validation
-│   ├── realtime-channels.ts         # Tenant-isolated channel names (+ cardYjsChannel)
-│   ├── stripe.ts                    # Stripe client + config
-│   ├── colors.ts                    # WCAG 2.1 contrast math — hexToRgb, getLuminance, getContrastRatio, getContrastingTextColor, getWcagLevel; PRIORITY_COLORS + STATUS_COLORS palettes; auditAllContrast() CI gate for all 10 tokens
+│   ├── api-key-constants.ts         # API key config constants
+│   ├── audit-sink.ts                # Axiom append-only forensic audit sink (dual-write via after())
+│   ├── automation-engine.ts         # Automation rule evaluation
+│   ├── board-permissions.ts         # RBAC permission matrix
+│   ├── bulk-selection-context.tsx    # React context for bulk card selection
+│   ├── colors.ts                    # WCAG 2.1 contrast math, PRIORITY_COLORS + STATUS_COLORS palettes, auditAllContrast() CI gate
+│   ├── create-audit-log.ts          # Audit trail + dual-write to Axiom via audit-sink
+│   ├── create-safe-action.ts        # Server action wrapper
+│   ├── cross-board-access.ts        # Cross-board card linking permissions
+│   ├── dal.ts                       # Data access layer (query helpers)
+│   ├── db.ts                        # Prisma client (db + systemDb)
+│   ├── design-tokens.ts             # Theme design tokens
+│   ├── email.ts                     # Resend email sending
+│   ├── env.ts                       # Environment variable validation
+│   ├── event-bus.ts                 # Card event emission
+│   ├── format-utils.ts              # Date/number formatting helpers
+│   ├── legal.ts                     # Legal document content
+│   ├── lexorank.ts                  # String-based ordering
 │   ├── logger.ts                    # Structured logging + Sentry
+│   ├── performance.ts               # Performance tracking utilities
+│   ├── prefetch.ts                  # Route prefetching helpers
+│   ├── priority-values.ts           # Priority enum + ordering
+│   ├── rate-limit.ts                # Route-level sliding-window rate limiter
+│   ├── realtime-channels.ts         # Tenant-isolated channel names (+ cardYjsChannel)
 │   ├── request-context.ts           # IP + User-Agent extraction
-│   ├── supabase/client.ts           # Supabase client factory
-│   └── ...                          # DAL, email, utils, design tokens, etc.
+│   ├── sentry-helpers.ts            # Sentry error capture utilities
+│   ├── settings-defaults.ts         # Default settings values
+│   ├── shard-router.ts              # FNV-1a shard router — org→shard hashing, health cache, failover
+│   ├── spacing.ts                   # Spacing scale constants
+│   ├── step-up-action.ts            # createStepUpAction factory — biometric/TOTP re-verification gate
+│   ├── stripe.ts                    # Stripe client + config
+│   ├── tenant-context.ts            # Multi-tenant auth resolution
+│   ├── utils.ts                     # General utility functions (cn, etc.)
+│   ├── webhook-constants.ts         # Webhook event type constants
+│   ├── webhook-delivery.ts          # Outbound webhooks + SSRF protection
+│   └── yjs-supabase-provider.ts     # Yjs CRDT transport over Supabase Realtime broadcast
 │
 ├── prisma/
 │   ├── schema.prisma                # 41 models, 13 enums
@@ -1966,45 +2166,137 @@ nexus/
 │   └── migrations/
 │
 ├── __tests__/
+│   ├── a11y/                        # CI accessibility shield — 57 tests (contrast, axe audits, WCAG guards)
+│   │   └── accessibility.test.tsx
+│   ├── integration/
+│   │   └── server-actions.test.ts
 │   ├── unit/                        # 48 unit test files
-│   │   ├── a11y/                    # ARIA live region unit tests — 26 tests (hydration safety, ring-buffer, SSR guard, real-time scenarios)
+│   │   ├── a11y/
 │   │   │   └── aria-live-region.test.tsx
-│   │   └── chaos/                   # Chaos Engineering suite — 3 files, 38 tests (SK + AO + NP)
-│   ├── integration/                 # 1 integration test file
-│   └── a11y/                        # CI accessibility shield — 57 tests (contrast contracts, axe audits, WCAG pattern guards, board regression tests)
-│       └── accessibility.test.tsx
+│   │   ├── ai-quota/
+│   │   │   └── ai-quota.test.ts
+│   │   ├── api-keys/
+│   │   │   └── api-key-auth.test.ts
+│   │   ├── audit/
+│   │   │   └── audit-forensic-integrity.test.ts
+│   │   ├── auth/
+│   │   │   ├── auth-session.test.ts
+│   │   │   └── role-permissions.test.ts
+│   │   ├── automations/
+│   │   │   └── automation-engine.test.ts
+│   │   ├── billing/
+│   │   │   ├── billing-client.test.tsx
+│   │   │   ├── stripe-checkout.test.ts
+│   │   │   ├── stripe-config.test.ts
+│   │   │   └── stripe-webhook.test.ts
+│   │   ├── cards/
+│   │   │   └── card-operations.test.ts
+│   │   ├── chaos/                   # Chaos Engineering — 3 files, 38 tests
+│   │   │   ├── audit-axiom-outage.test.ts
+│   │   │   ├── shard-kill-switch.test.ts
+│   │   │   └── step-up-network-partition.test.ts
+│   │   ├── comments/
+│   │   │   └── comments-reactions.test.ts
+│   │   ├── crdt/
+│   │   │   └── yjs-provider.test.ts
+│   │   ├── cron/
+│   │   │   └── cron-jobs.test.ts
+│   │   ├── external-services/
+│   │   │   └── external-services.test.ts
+│   │   ├── import-export/
+│   │   │   ├── import-export-actions.test.ts
+│   │   │   └── import-export-route.test.ts
+│   │   ├── lexorank/
+│   │   │   └── lexorank.test.ts
+│   │   ├── plan-limits/
+│   │   │   └── plan-limits.test.ts
+│   │   ├── realtime/
+│   │   │   └── realtime-presence.test.ts
+│   │   ├── search/
+│   │   │   └── search.test.ts
+│   │   ├── security/
+│   │   │   └── security-injection.test.ts
+│   │   ├── step-up/
+│   │   │   └── step-up-action.test.ts
+│   │   ├── webhooks/
+│   │   │   └── webhook-delivery.test.ts
+│   │   ├── action-protection.test.ts
+│   │   ├── ai-actions.test.ts
+│   │   ├── api-key-actions.test.ts
+│   │   ├── attachment-actions.test.ts
+│   │   ├── automation-actions.test.ts
+│   │   ├── board-share-actions.test.ts
+│   │   ├── custom-field-actions.test.ts
+│   │   ├── dal.test.ts
+│   │   ├── dependency-actions.test.ts
+│   │   ├── email.test.ts
+│   │   ├── notification-actions.test.ts
+│   │   ├── phase3-bulk-actions.test.ts
+│   │   ├── rate-limit.test.ts
+│   │   ├── saved-view-actions.test.ts
+│   │   ├── schema.test.ts
+│   │   ├── sprint-actions.test.ts
+│   │   ├── template-actions.test.ts
+│   │   ├── tenant-context.test.ts
+│   │   ├── time-tracking-actions.test.ts
+│   │   └── webhook-actions.test.ts
 │
 ├── e2e/                             # 8 Playwright E2E specs
 │   ├── auth.setup.ts
 │   ├── auth-user-b.setup.ts
 │   ├── boards.spec.ts
 │   ├── cards.spec.ts
-│   ├── tenant-isolation.spec.ts
-│   ├── user-journeys.spec.ts
+│   ├── chaos.spec.ts               # CE-1–CE-6: shard health, latency injection, reconnect, step-up cancel
 │   ├── golden-path.spec.ts          # Full happy-path user journey
-│   └── chaos.spec.ts                # CE-1-CE-6: shard health, latency injection, reconnect, step-up cancel
+│   ├── tenant-isolation.spec.ts
+│   └── user-journeys.spec.ts
 │
 ├── emails/                          # 6 Resend email templates
-├── scripts/                         # 5 utility scripts
+│   ├── _base.ts                     # Shared email layout
+│   ├── assigned.ts
+│   ├── digest.ts
+│   ├── due-soon.ts
+│   ├── invite.ts
+│   └── mention.ts
+│
+├── scripts/                         # 6 utility scripts
+│   ├── migrate-automation-actions.ts
 │   ├── migrate-org-to-shard.ts      # Dual-write org migration (FK-ordered, batched, idempotent)
+│   ├── seed-demo.ts                 # Seed demo org data
+│   ├── setup-storage.ts             # Supabase storage bucket setup
+│   ├── test-board.mjs               # Quick board creation script
 │   └── test-shard-failover.ts       # 4-step shard failover verification
-├── types/                           # TypeScript type definitions
+│
+├── types/
+│   └── supabase.ts                  # Supabase generated types
+│
 ├── public/
 │   ├── manifest.json                # PWA manifest
 │   ├── sw.js                        # Service Worker
 │   ├── icon-192.png
-│   └── icon-512.png
+│   ├── icon-512.png
+│   └── apple-touch-icon.png
 │
 ├── supabase-realtime-rls.sql        # RLS policies for realtime.messages + realtime.subscription
-├── supabase-audit-immutability.sql  # BEFORE DELETE OR UPDATE trigger — blocks audit_log mutations for all DB roles
+├── supabase-audit-immutability.sql  # BEFORE DELETE OR UPDATE trigger — blocks audit_log mutations
+├── supabase-enable-realtime.sql     # Enable Supabase Realtime on tables
+├── supabase-performance-indexes.sql # Performance-critical DB indexes
 ├── proxy.ts                         # Next.js 16 middleware (Clerk auth, route protection, security headers)
+├── instrumentation.ts               # Next.js instrumentation (Sentry init)
+├── sentry.client.config.ts          # Sentry browser config
+├── sentry.server.config.ts          # Sentry server config
+├── sentry.edge.config.ts            # Sentry edge runtime config
 ├── next.config.ts
 ├── tailwind.config.ts
 ├── jest.config.ts
+├── jest.setup.ts
 ├── playwright.config.ts
 ├── vercel.json
 ├── components.json
 ├── eslint.config.mjs
+├── postcss.config.mjs
+├── tsconfig.json
+├── tsconfig.test.json
 └── package.json
 ```
 
@@ -2012,15 +2304,16 @@ nexus/
 
 | Section | Count |
 |---|---|
-| Components | 101 files |
+| Components | 104 files |
 | Custom Hooks | 11 files |
-| Pages | 25 pages |
-| API Routes | 33 routes |
+| Pages | 26 pages |
+| API Routes | 34 routes |
 | Server Actions | 42 files |
-| Lib Modules | 39 files |
+| Lib Modules | 40 files |
 | Test Files | 50 files |
 | E2E Specs | 8 files |
 | Email Templates | 6 files |
+| Scripts | 6 files |
 
 ---
 
