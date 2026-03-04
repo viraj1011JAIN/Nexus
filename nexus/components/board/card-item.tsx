@@ -4,7 +4,7 @@ import { memo, type CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@prisma/client";
-import { Clock, Lock, CheckSquare, Check, Paperclip, GripVertical } from "lucide-react";
+import { Clock, Lock, CheckSquare, Check, Paperclip } from "lucide-react";
 import { useBulkSelection } from "@/lib/bulk-selection-context";
 import { motion, useReducedMotion } from "framer-motion";
 import { deleteCard } from "@/actions/delete-card";
@@ -108,6 +108,7 @@ const CardItemInner = ({
       ref={setNodeRef}
       style={{ ...style, animationDelay: `${index * 0.07}s` }}
       {...attributes}
+      {...listeners}
       aria-label={cardAriaLabel}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
@@ -126,7 +127,7 @@ const CardItemInner = ({
         cardModal.onOpen(data.id);
       }}
       className={cn(
-        "group relative cursor-pointer animate-card-enter rounded-xl kanban-card",
+        "group relative cursor-grab active:cursor-grabbing select-none animate-card-enter rounded-xl kanban-card",
         "bg-white dark:bg-[#1C1824]",
         "border border-gray-100 dark:border-white/[0.07]",
         "shadow-sm hover:shadow-md hover:border-violet-200/70 dark:hover:border-violet-400/20",
@@ -185,23 +186,16 @@ const CardItemInner = ({
             {data.title}
           </p>
 
-          {/* Grip + 3-dot — touch: always visible; pointer: reveal on hover */}
+          {/* 3-dot actions — touch: always visible; pointer: reveal on hover */}
           <div
             className={cn(
-              "flex items-center gap-0.5 shrink-0 -mt-0.5 -mr-0.5",
+              "flex items-center shrink-0 -mt-0.5 -mr-0.5",
               "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100",
               "transition-opacity duration-150"
             )}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
-            <div
-              {...listeners}
-              aria-label="Drag to reorder card"
-              className="w-6 h-6 flex items-center justify-center rounded-md text-gray-300 dark:text-white/20 hover:text-gray-500 dark:hover:text-white/50 hover:bg-gray-100 dark:hover:bg-white/[0.07] cursor-grab active:cursor-grabbing touch-none select-none transition-colors duration-100"
-            >
-              <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
-            </div>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
