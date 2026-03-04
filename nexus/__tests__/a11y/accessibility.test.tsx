@@ -437,9 +437,9 @@ describe("ARIA progressbar (WCAG 4.1.2 / 1.3.1)", () => {
     await checkA11y(
       <div
         role="progressbar"
-        aria-valuenow="65"
-        aria-valuemin="0"
-        aria-valuemax="100"
+        aria-valuenow={65}
+        aria-valuemin={0}
+        aria-valuemax={100}
         aria-label="Checklist progress: 65%"
       >
         <div className="w-[65%]" aria-hidden="true" />
@@ -451,9 +451,9 @@ describe("ARIA progressbar (WCAG 4.1.2 / 1.3.1)", () => {
     await checkA11y(
       <div
         role="progressbar"
-        aria-valuenow="24"
-        aria-valuemin="0"
-        aria-valuemax="100"
+        aria-valuenow={24}
+        aria-valuemin={0}
+        aria-valuemax={100}
         aria-label="Storage usage: 24%"
       >
         <span className="sr-only">24%</span>
@@ -548,9 +548,9 @@ describe("Board card ARIA pattern (regression guard)", () => {
         <span>Fix login bug</span>
         <div
           role="progressbar"
-          aria-valuenow="3"
-          aria-valuemin="0"
-          aria-valuemax="5"
+          aria-valuenow={3}
+          aria-valuemin={0}
+          aria-valuemax={5}
           aria-label="Checklist: 3 of 5 done"
         >
           <div aria-hidden="true" />
