@@ -49,5 +49,8 @@
     "**/*-original.tsx",
     "jest.setup.ts",
     "jest.config.ts"
+  ],
+  "references": [
+    { "path": "./tsconfig.test.json" }
   ]
 }
