@@ -146,30 +146,19 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   // redirectToSignIn() preserves the return URL via Clerk's own mechanism
   // and handles cross-domain sign-in flows correctly.
   if (!userId) {
-    // Server Actions (identified by the `Next-Action` header) cannot handle
-    // 307 redirects — fetchServerAction in Next.js throws "unexpected response"
-    // if the response is not a valid action reply. Return 401 JSON instead so
-    // the client can surface a "session expired" message gracefully rather than
-    // crashing with a runtime overlay (e.g. on sign-out while actions are in flight).
-    if (req.headers.get("next-action") !== null) {
-      return applySecurityHeaders(
-        NextResponse.json(
-          { error: "Session expired. Please sign in again." },
-          { status: 401 }
-        )
-      );
-    }
-
-    // RSC navigation & prefetch requests — the Next.js client router uses
-    // fetch() with `RSC: 1` (navigation), `Next-Router-Prefetch: 1`
-    // (prefetch), or `Next-Router-State-Tree` (state-tree sync) headers and
-    // expects an RSC flight payload in the response. Clerk's redirectToSignIn()
-    // returns a Clerk FAPI redirect chain that the RSC protocol cannot parse,
-    // causing "An unexpected response was received from the server".
-    // Use a standard NextResponse.redirect instead — the Next.js client router
-    // detects middleware redirects natively and performs a full client-side
-    // navigation to /sign-in without errors.
+    // ── Fetch-based requests (RSC, Server Actions, prefetch) ─────────────
+    // All of these use fetch() internally and expect either a valid RSC
+    // flight payload or a middleware redirect in the response. Clerk's
+    // redirectToSignIn() returns a multi-hop FAPI redirect chain that none
+    // of these protocols can parse, causing "An unexpected response was
+    // received from the server". A standard NextResponse.redirect works
+    // because Next.js detects middleware redirects natively.
+    //
+    // NOTE: Server Actions (next-action header) in Next.js 16 also handle
+    // redirects correctly — returning 401 JSON does NOT work because
+    // fetchServerAction cannot parse non-RSC responses either.
     if (
+      req.headers.get("next-action") !== null ||
       req.headers.get("rsc") !== null ||
       req.headers.get("next-router-prefetch") !== null ||
       req.headers.get("next-router-state-tree") !== null
