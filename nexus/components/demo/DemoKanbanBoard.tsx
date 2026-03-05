@@ -37,7 +37,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Plus,
   Trash2,
-  GripVertical,
   X,
 } from "lucide-react";
 import {
@@ -92,7 +91,6 @@ function SortableCard({
       {...attributes}
       {...listeners}
     >
-      <GripVertical className="w-[14px] h-[14px] text-white/20 mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="flex-1 min-w-0">
         <p className="text-[13px] text-white font-medium leading-snug truncate">
           {card.title}
