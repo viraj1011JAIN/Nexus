@@ -145,7 +145,7 @@ export default function SignInContent() {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-[#0D0C14] relative overflow-hidden">
+    <div className="h-[100dvh] flex items-center justify-center bg-[#0D0C14] relative overflow-hidden">
       {/* Particle canvas — client only, no SSR */}
       <canvas
         ref={canvasRef}
@@ -169,7 +169,7 @@ export default function SignInContent() {
       />
 
       <div
-        className={`relative z-10 w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-700 ${
+        className={`relative z-10 w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-4 transition-all duration-700 ${
           visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[20px]"
         }`}
       >
@@ -246,79 +246,78 @@ export default function SignInContent() {
             </div>
 
             {/* Auth card */}
-            <div className="relative rounded-[20px] sm:rounded-[24px] bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl p-5 sm:p-8 shadow-2xl shadow-black/40 animate-auth-scale-up">
+            <div className="relative rounded-[20px] sm:rounded-[24px] bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl p-5 sm:p-6 shadow-2xl shadow-black/40 animate-auth-scale-up flex flex-col max-h-[calc(100dvh-80px)]">
               {/* Top border accent */}
               <div className="absolute top-0 left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent rounded-full" />
 
-              <SignIn
-                signUpUrl="/sign-up"
-                fallbackRedirectUrl="/"
-                appearance={{
-                  elements: {
-                    rootBox: "w-full",
-                    card: "bg-transparent shadow-none w-full p-0",
-                    headerTitle: "text-[18px] sm:text-[20px] font-bold text-white",
-                    headerSubtitle: "text-[13px] text-slate-400",
-                    socialButtonsBlockButton:
-                      "bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] hover:border-purple-500/30 transition-all duration-200 text-white text-[14px] min-h-[44px] rounded-[12px]",
-                    socialButtonsBlockButtonText: "text-slate-200",
-                    dividerLine: "bg-white/[0.08]",
-                    dividerText: "text-slate-500 text-[12px]",
-                    formButtonPrimary:
-                      "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/25 active:scale-[0.98] min-h-[44px] rounded-[12px] text-[14px] font-semibold",
-                    formFieldInput:
-                      "bg-white/[0.06] border border-white/[0.1] text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-[15px] min-h-[44px] rounded-[12px] transition-all duration-200",
-                    formFieldLabel: "text-[13px] text-slate-300 font-medium",
-                    footerActionLink: "text-purple-400 hover:text-purple-300 transition-colors text-[13px]",
-                    footerActionText: "text-slate-500 text-[13px]",
-                    identityPreviewEditButton: "text-purple-400 hover:text-purple-300",
-                    formFieldAction: "text-purple-400 hover:text-purple-300 text-[13px]",
-                    alert: "bg-red-500/10 border border-red-500/20 text-red-300 rounded-[12px]",
-                    alertText: "text-red-300 text-[13px]",
-                  },
-                }}
-              />
-
-              {/* Demo separator */}
-              <div className="relative my-5 sm:my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-white/[0.08]" />
+              {/* Guest Demo — pinned at top, always visible without scrolling */}
+              <div className="shrink-0 pb-4">
+                <div className="relative group">
+                  <div className="absolute -inset-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 rounded-[14px] opacity-60 blur-sm group-hover:opacity-90 transition-opacity animate-[pulse_2s_ease-in-out_infinite]" />
+                  <Button
+                    onClick={handleGuestDemo}
+                    disabled={isDemoLoading}
+                    size="lg"
+                    className="relative w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-extrabold shadow-xl shadow-amber-500/30 hover:shadow-amber-500/40 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px] text-[15px] sm:text-[16px] rounded-[12px] tracking-wide"
+                  >
+                    {isDemoLoading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-[18px] h-[18px] border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Loading Demo…</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2.5">
+                        <span className="text-[20px]">🚀</span>
+                        <span>Live Demo — No Sign-Up Needed</span>
+                      </div>
+                    )}
+                  </Button>
                 </div>
-                <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
-                  <span className="bg-[#0D0C14]/80 backdrop-blur-sm px-3 py-1 text-slate-500 font-semibold rounded-full">
-                    or try guest mode
-                  </span>
+                <p className="text-[11px] text-amber-300/60 text-center mt-1.5">
+                  Full Kanban board · Drag-and-drop · Resets on exit
+                </p>
+                <div className="relative mt-3">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-white/[0.08]" />
+                  </div>
+                  <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+                    <span className="bg-[#0D0C14]/80 backdrop-blur-sm px-3 py-1 text-slate-500 font-semibold rounded-full">
+                      or sign in
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Guest Demo button */}
-              <Button
-                onClick={handleGuestDemo}
-                disabled={isDemoLoading}
-                size="lg"
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] text-[14px] rounded-[12px]"
-              >
-                {isDemoLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-[16px] h-[16px] border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Loading Demo...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-[18px]">🎯</span>
-                    <span>View Demo (No Signup Required)</span>
-                  </div>
-                )}
-              </Button>
-
-              {/* Demo info banner */}
-              <div className="mt-3 sm:mt-4 p-3 bg-amber-500/[0.08] border border-amber-500/[0.15] rounded-[12px]">
-                <p className="text-[11px] sm:text-[12px] text-amber-300/80 text-center leading-relaxed">
-                  <strong className="font-semibold text-amber-300">Guest Mode:</strong> Explore all features with sample data.
-                  <br className="hidden sm:block" />
-                  <span className="sm:hidden"> </span>
-                  Changes are not saved. Sign up to create your own workspace.
-                </p>
+              {/* Clerk form — scrollable when viewport is short */}
+              <div className="min-h-0 overflow-y-auto">
+                <SignIn
+                  signUpUrl="/sign-up"
+                  fallbackRedirectUrl="/"
+                  appearance={{
+                    elements: {
+                      rootBox: "w-full",
+                      card: "bg-transparent shadow-none w-full p-0",
+                      headerTitle: "text-[18px] sm:text-[20px] font-bold text-white",
+                      headerSubtitle: "text-[13px] text-slate-400",
+                      socialButtonsBlockButton:
+                        "bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] hover:border-purple-500/30 transition-all duration-200 text-white text-[14px] min-h-[44px] rounded-[12px]",
+                      socialButtonsBlockButtonText: "text-slate-200",
+                      dividerLine: "bg-white/[0.08]",
+                      dividerText: "text-slate-500 text-[12px]",
+                      formButtonPrimary:
+                        "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/25 active:scale-[0.98] min-h-[44px] rounded-[12px] text-[14px] font-semibold",
+                      formFieldInput:
+                        "bg-white/[0.06] border border-white/[0.1] text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-[15px] min-h-[44px] rounded-[12px] transition-all duration-200",
+                      formFieldLabel: "text-[13px] text-slate-300 font-medium",
+                      footerActionLink: "text-purple-400 hover:text-purple-300 transition-colors text-[13px]",
+                      footerActionText: "text-slate-500 text-[13px]",
+                      identityPreviewEditButton: "text-purple-400 hover:text-purple-300",
+                      formFieldAction: "text-purple-400 hover:text-purple-300 text-[13px]",
+                      alert: "bg-red-500/10 border border-red-500/20 text-red-300 rounded-[12px]",
+                      alertText: "text-red-300 text-[13px]",
+                    },
+                  }}
+                />
               </div>
             </div>
           </div>
