@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Playfair_Display, Syne, Outfit } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import Script from "next/script";
 import { validateEnv } from "@/lib/env";
 
 // Validate required env vars at server startup — throws clearly if misconfigured
@@ -14,6 +13,7 @@ import { PerformanceWrapper } from "@/components/performance-wrapper";
 import { CommandPaletteProvider } from "@/components/providers/command-palette-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AriaLiveRegion } from "@/components/accessibility/aria-live-region";
+import { NavigationErrorGuard } from "@/components/navigation-error-guard";
 import "./globals.css";
 // editor.css is imported directly in rich-text-editor.tsx — no longer global
 
@@ -146,10 +146,10 @@ export default function RootLayout({
           <link rel="dns-prefetch" href="https://avatars.githubusercontent.com" />
           <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
 
-          {/* Optimized theme script - runs before paint to prevent FOUC */}
-          <Script
+          {/* Inline theme script - runs before paint to prevent FOUC */}
+          <script
+            suppressHydrationWarning
             id="theme-script"
-            strategy="beforeInteractive"
             dangerouslySetInnerHTML={{ __html: themeScript }}
           />
 
@@ -174,6 +174,7 @@ export default function RootLayout({
                * nav to scroll with the page rather than stick to the viewport.
                */}
               <div id="main-content" tabIndex={-1} className="bg-background text-foreground min-h-screen focus-visible:outline-none" suppressHydrationWarning>
+                <NavigationErrorGuard />
                 <AriaLiveRegion />
                 <CommandPaletteProvider />
                 <ModalProvider />

@@ -10,11 +10,16 @@
  */
 
 import { SignUp } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DEMO_ORG_ID } from "@/hooks/use-demo-mode";
 
 export default function SignUpContent() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -96,6 +101,17 @@ export default function SignUpContent() {
       window.removeEventListener("resize", resize);
     };
   }, []);
+
+  const handleGuestDemo = async () => {
+    setIsDemoLoading(true);
+    try {
+      sessionStorage.setItem("demo-mode", "true");
+      sessionStorage.setItem("demo-start-time", Date.now().toString());
+      router.push(`/organization/${DEMO_ORG_ID}`);
+    } catch {
+      setIsDemoLoading(false);
+    }
+  };
 
   const benefits = [
     "Unlimited boards & cards on Pro",
@@ -241,8 +257,50 @@ export default function SignUpContent() {
                 }}
               />
 
+              {/* Demo separator */}
+              <div className="relative my-5 sm:my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-white/[0.08]" />
+                </div>
+                <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+                  <span className="bg-[#0D0C14]/80 backdrop-blur-sm px-3 py-1 text-slate-500 font-semibold rounded-full">
+                    or try demo mode
+                  </span>
+                </div>
+              </div>
+
+              {/* Guest Demo button */}
+              <Button
+                onClick={handleGuestDemo}
+                disabled={isDemoLoading}
+                size="lg"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] text-[14px] rounded-[12px]"
+              >
+                {isDemoLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-[16px] h-[16px] border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Loading Demo...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-[18px]">🎯</span>
+                    <span>Try Demo Mode (No Signup Required)</span>
+                  </div>
+                )}
+              </Button>
+
+              {/* Demo info */}
+              <div className="mt-3 sm:mt-4 p-3 bg-amber-500/[0.08] border border-amber-500/[0.15] rounded-[12px]">
+                <p className="text-[11px] sm:text-[12px] text-amber-300/80 text-center leading-relaxed">
+                  <strong className="font-semibold text-amber-300">Demo Mode:</strong> Explore features with sample data for 30 min.
+                  <br className="hidden sm:block" />
+                  <span className="sm:hidden"> </span>
+                  Sign up anytime to create your own workspace.
+                </p>
+              </div>
+
               {/* Free plan note on mobile */}
-              <div className="mt-4 lg:hidden p-3 bg-green-500/[0.06] border border-green-500/[0.12] rounded-[12px]">
+              <div className="mt-3 lg:hidden p-3 bg-green-500/[0.06] border border-green-500/[0.12] rounded-[12px]">
                 <p className="text-[11px] sm:text-[12px] text-green-400/80 text-center leading-relaxed">
                   ✨{" "}
                   <strong className="text-green-400">Free plan includes:</strong> 50

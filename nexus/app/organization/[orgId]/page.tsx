@@ -21,6 +21,7 @@ import {
   MessageSquare, MoreHorizontal,
 } from "lucide-react";
 import { DEMO_ORG_ID } from "@/hooks/use-demo-mode";
+import DemoModeProvider from "@/components/demo/DemoModeProvider";
 
 // ─── Sample demo data ────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ export default function OrganizationPage({
   if (orgId !== DEMO_ORG_ID) return null;
 
   return (
+    <DemoModeProvider>
     <div className="min-h-screen bg-[#07070f] text-white font-sans overflow-hidden">
 
       {/* ── Demo banner ────────────────────────────────────────────────── */}
@@ -406,5 +408,6 @@ export default function OrganizationPage({
         </aside>
       </div>
     </div>
+    </DemoModeProvider>
   );
 }
