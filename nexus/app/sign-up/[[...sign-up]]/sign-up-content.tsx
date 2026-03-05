@@ -188,23 +188,8 @@ export default function SignUpContent() {
               ))}
             </div>
 
-            {/* Testimonial card */}
-            <div className="p-5 rounded-[16px] bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
-              <p className="text-[14px] text-slate-400 italic leading-relaxed mb-3">
-                &ldquo;NEXUS replaced three different tools for our team. The real-time
-                collaboration is incredibly smooth.&rdquo;
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-[36px] h-[36px] rounded-full bg-gradient-to-br from-purple-500 to-pink-500" />
-                <div>
-                  <p className="text-[13px] text-white font-medium">Sarah Chen</p>
-                  <p className="text-[12px] text-slate-500">Product Lead, TechCorp</p>
-                </div>
-              </div>
-            </div>
-
             {/* Guest Demo — left panel */}
-            <div className="mt-8">
+            <div className="mb-8">
               <div className="relative group">
                 <div className="absolute -inset-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 rounded-[14px] opacity-60 blur-sm group-hover:opacity-90 transition-opacity animate-[pulse_2s_ease-in-out_infinite]" />
                 <Button
@@ -229,6 +214,21 @@ export default function SignUpContent() {
               <p className="text-[11px] text-amber-300/60 text-center mt-2">
                 Full Kanban board · Drag-and-drop · Resets on exit
               </p>
+            </div>
+
+            {/* Testimonial card */}
+            <div className="p-5 rounded-[16px] bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
+              <p className="text-[14px] text-slate-400 italic leading-relaxed mb-3">
+                &ldquo;NEXUS replaced three different tools for our team. The real-time
+                collaboration is incredibly smooth.&rdquo;
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-[36px] h-[36px] rounded-full bg-gradient-to-br from-purple-500 to-pink-500" />
+                <div>
+                  <p className="text-[13px] text-white font-medium">Sarah Chen</p>
+                  <p className="text-[12px] text-slate-500">Product Lead, TechCorp</p>
+                </div>
+              </div>
             </div>
           </div>
 

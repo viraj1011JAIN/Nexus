@@ -210,22 +210,6 @@ export default function SignInContent() {
               ))}
             </div>
 
-            {/* Social proof */}
-            <div className="mt-8 flex items-center gap-3">
-              <div className="flex -space-x-[8px]">
-                {([0, 1, 2, 3] as const).map((i) => (
-                  <div
-                    key={i}
-                    className="w-[32px] h-[32px] rounded-full border-2 border-[#0D0C14] bg-gradient-to-br from-purple-500 to-pink-500"
-                    style={{ opacity: 1 - i * 0.15 }}
-                  />
-                ))}
-              </div>
-              <p className="text-[13px] text-slate-500">
-                Trusted by <span className="text-slate-300 font-semibold">2,000+</span> teams worldwide
-              </p>
-            </div>
-
             {/* Guest Demo — left panel */}
             <div className="mt-8">
               <div className="relative group">
@@ -251,6 +235,22 @@ export default function SignInContent() {
               </div>
               <p className="text-[11px] text-amber-300/60 text-center mt-2">
                 Full Kanban board · Drag-and-drop · Resets on exit
+              </p>
+            </div>
+
+            {/* Social proof */}
+            <div className="mt-8 flex items-center gap-3">
+              <div className="flex -space-x-[8px]">
+                {([0, 1, 2, 3] as const).map((i) => (
+                  <div
+                    key={i}
+                    className="w-[32px] h-[32px] rounded-full border-2 border-[#0D0C14] bg-gradient-to-br from-purple-500 to-pink-500"
+                    style={{ opacity: 1 - i * 0.15 }}
+                  />
+                ))}
+              </div>
+              <p className="text-[13px] text-slate-500">
+                Trusted by <span className="text-slate-300 font-semibold">2,000+</span> teams worldwide
               </p>
             </div>
           </div>
