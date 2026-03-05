@@ -145,7 +145,7 @@ export default function SignInContent() {
   ];
 
   return (
-    <div className="h-[100dvh] flex items-center justify-center bg-[#0D0C14] relative overflow-hidden">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-[#0D0C14] relative overflow-hidden">
       {/* Particle canvas — client only, no SSR */}
       <canvas
         ref={canvasRef}
@@ -169,7 +169,7 @@ export default function SignInContent() {
       />
 
       <div
-        className={`relative z-10 w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-4 transition-all duration-700 ${
+        className={`relative z-10 w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-700 ${
           visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[20px]"
         }`}
       >
@@ -225,81 +225,108 @@ export default function SignInContent() {
                 Trusted by <span className="text-slate-300 font-semibold">2,000+</span> teams worldwide
               </p>
             </div>
+
+            {/* Guest Demo — left panel */}
+            <div className="mt-8">
+              <div className="relative group">
+                <div className="absolute -inset-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 rounded-[14px] opacity-60 blur-sm group-hover:opacity-90 transition-opacity animate-[pulse_2s_ease-in-out_infinite]" />
+                <Button
+                  onClick={handleGuestDemo}
+                  disabled={isDemoLoading}
+                  size="lg"
+                  className="relative w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-extrabold shadow-xl shadow-amber-500/30 hover:shadow-amber-500/40 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px] text-[15px] sm:text-[16px] rounded-[12px] tracking-wide"
+                >
+                  {isDemoLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-[18px] h-[18px] border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Loading Demo…</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2.5">
+                      <span className="text-[20px]">🚀</span>
+                      <span>Live Demo — No Sign-Up Needed</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+              <p className="text-[11px] text-amber-300/60 text-center mt-2">
+                Full Kanban board · Drag-and-drop · Resets on exit
+              </p>
+            </div>
           </div>
 
           {/* Right — Auth card */}
           <div className="w-full max-w-[95vw] sm:max-w-[440px] lg:max-w-[420px]">
+            {/* Mobile branding header + demo button */}
+            <div className="flex lg:hidden flex-col items-center mb-6 animate-auth-fade-up">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-[36px] h-[36px] rounded-[10px] bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-purple-500/25">
+                  <span className="text-white font-bold text-[16px]">N</span>
+                </div>
+                <span className="text-white font-bold text-[22px]">NEXUS</span>
+              </div>
+              <h1 className="text-[22px] sm:text-[26px] font-bold text-white text-center">
+                Welcome Back
+              </h1>
+              <p className="text-[13px] sm:text-[14px] text-slate-400 mt-1 mb-4">
+                Sign in to continue to your workspace
+              </p>
+              <div className="w-full relative group">
+                <div className="absolute -inset-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 rounded-[14px] opacity-60 blur-sm group-hover:opacity-90 transition-opacity animate-[pulse_2s_ease-in-out_infinite]" />
+                <Button
+                  onClick={handleGuestDemo}
+                  disabled={isDemoLoading}
+                  size="lg"
+                  className="relative w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-extrabold shadow-xl shadow-amber-500/30 hover:shadow-amber-500/40 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] text-[14px] sm:text-[15px] rounded-[12px] tracking-wide"
+                >
+                  {isDemoLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-[16px] h-[16px] border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Loading Demo…</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-[18px]">🚀</span>
+                      <span>Live Demo — No Sign-Up Needed</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
+
             {/* Auth card */}
-            <div className="relative rounded-[20px] sm:rounded-[24px] bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl p-4 sm:p-5 shadow-2xl shadow-black/40 animate-auth-scale-up flex flex-col max-h-[calc(100dvh-32px)]">
+            <div className="relative rounded-[20px] sm:rounded-[24px] bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl p-5 sm:p-8 shadow-2xl shadow-black/40 animate-auth-scale-up">
               {/* Top border accent */}
               <div className="absolute top-0 left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent rounded-full" />
 
-              {/* Guest Demo — pinned at top, always visible without scrolling */}
-              <div className="shrink-0 pb-3">
-                <div className="relative group">
-                  <div className="absolute -inset-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 rounded-[14px] opacity-60 blur-sm group-hover:opacity-90 transition-opacity animate-[pulse_2s_ease-in-out_infinite]" />
-                  <Button
-                    onClick={handleGuestDemo}
-                    disabled={isDemoLoading}
-                    size="lg"
-                    className="relative w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-extrabold shadow-xl shadow-amber-500/30 hover:shadow-amber-500/40 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px] text-[15px] sm:text-[16px] rounded-[12px] tracking-wide"
-                  >
-                    {isDemoLoading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-[18px] h-[18px] border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Loading Demo…</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2.5">
-                        <span className="text-[20px]">🚀</span>
-                        <span>Live Demo — No Sign-Up Needed</span>
-                      </div>
-                    )}
-                  </Button>
-                </div>
-                <div className="relative mt-2.5">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-white/[0.08]" />
-                  </div>
-                  <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
-                    <span className="bg-[#0D0C14]/80 backdrop-blur-sm px-3 py-1 text-slate-500 font-semibold rounded-full">
-                      or sign in
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Clerk form — scrollable when viewport is short */}
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <SignIn
-                  signUpUrl="/sign-up"
-                  fallbackRedirectUrl="/"
-                  appearance={{
-                    elements: {
-                      rootBox: "w-full",
-                      card: "bg-transparent shadow-none w-full p-0",
-                      headerTitle: "text-[18px] sm:text-[20px] font-bold text-white",
-                      headerSubtitle: "text-[13px] text-slate-400",
-                      socialButtonsBlockButton:
-                        "bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] hover:border-purple-500/30 transition-all duration-200 text-white text-[14px] min-h-[44px] rounded-[12px]",
-                      socialButtonsBlockButtonText: "text-slate-200",
-                      dividerLine: "bg-white/[0.08]",
-                      dividerText: "text-slate-500 text-[12px]",
-                      formButtonPrimary:
-                        "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/25 active:scale-[0.98] min-h-[44px] rounded-[12px] text-[14px] font-semibold",
-                      formFieldInput:
-                        "bg-white/[0.06] border border-white/[0.1] text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-[15px] min-h-[44px] rounded-[12px] transition-all duration-200",
-                      formFieldLabel: "text-[13px] text-slate-300 font-medium",
-                      footerActionLink: "text-purple-400 hover:text-purple-300 transition-colors text-[13px]",
-                      footerActionText: "text-slate-500 text-[13px]",
-                      identityPreviewEditButton: "text-purple-400 hover:text-purple-300",
-                      formFieldAction: "text-purple-400 hover:text-purple-300 text-[13px]",
-                      alert: "bg-red-500/10 border border-red-500/20 text-red-300 rounded-[12px]",
-                      alertText: "text-red-300 text-[13px]",
-                    },
-                  }}
-                />
-              </div>
+              <SignIn
+                signUpUrl="/sign-up"
+                fallbackRedirectUrl="/"
+                appearance={{
+                  elements: {
+                    rootBox: "w-full",
+                    card: "bg-transparent shadow-none w-full p-0",
+                    headerTitle: "text-[18px] sm:text-[20px] font-bold text-white",
+                    headerSubtitle: "text-[13px] text-slate-400",
+                    socialButtonsBlockButton:
+                      "bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] hover:border-purple-500/30 transition-all duration-200 text-white text-[14px] min-h-[44px] rounded-[12px]",
+                    socialButtonsBlockButtonText: "text-slate-200",
+                    dividerLine: "bg-white/[0.08]",
+                    dividerText: "text-slate-500 text-[12px]",
+                    formButtonPrimary:
+                      "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/25 active:scale-[0.98] min-h-[44px] rounded-[12px] text-[14px] font-semibold",
+                    formFieldInput:
+                      "bg-white/[0.06] border border-white/[0.1] text-white placeholder:text-slate-500 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 text-[15px] min-h-[44px] rounded-[12px] transition-all duration-200",
+                    formFieldLabel: "text-[13px] text-slate-300 font-medium",
+                    footerActionLink: "text-purple-400 hover:text-purple-300 transition-colors text-[13px]",
+                    footerActionText: "text-slate-500 text-[13px]",
+                    identityPreviewEditButton: "text-purple-400 hover:text-purple-300",
+                    formFieldAction: "text-purple-400 hover:text-purple-300 text-[13px]",
+                    alert: "bg-red-500/10 border border-red-500/20 text-red-300 rounded-[12px]",
+                    alertText: "text-red-300 text-[13px]",
+                  },
+                }}
+              />
             </div>
           </div>
         </div>
