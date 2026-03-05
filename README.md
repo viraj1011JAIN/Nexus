@@ -27,6 +27,7 @@ Real-time collaboration · Dual-gate RBAC · AI-powered workflows · Stripe bill
 
 - [About](#about)
 - [Screenshots](#screenshots)
+- [Demo Mode](#demo-mode)
 - [Tech Stack](#tech-stack)
 - [Feature List](#feature-list)
 - [System Architecture](#system-architecture)
@@ -81,7 +82,7 @@ Nexus is a full-stack, multi-tenant project management platform built for teams 
 > Built as a self-hostable alternative to Trello and Jira — with multi-organization support, a public API, and enterprise-grade security architecture out of the box.
 
 **Code quality status:**
-- TypeScript: **0 errors** across all 100 components, 42 server actions, and 36 lib modules
+- TypeScript: **0 errors** across all 104 components, 42 server actions, and 36 lib modules
 - ESLint: **0 warnings** — all Tailwind v4 utilities, a11y rules, and import rules pass cleanly
 - Hydration: **0 mismatches** — all CSS utilities use bracket syntax (`gap-[5px]`, `h-[30px]`) for consistency between server and client renders
 - Tests: **1,516 passing, 0 failing** across 50 test suites (Jest 30 + ts-jest + Playwright)
@@ -171,7 +172,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 - **Social proof** — "Trusted by 2,000+ teams worldwide" with stacked avatar indicators
 - **Clerk `<SignIn>` component** — dark-themed appearance overrides: translucent inputs, purple accent gradients, rounded-[12px] elements
 - **Guest Demo Mode** — amber gradient button to explore the app without signup; sets `sessionStorage` flags and routes to demo org
-- **Demo info banner** — explains guest mode limitations (changes not saved, sign up for full access)
+- **Demo info banner** — explains 30-minute interactive demo with board/card limits and sign-up CTA
 - **Fully responsive** — mobile header shows NEXUS branding inline; auth card expands to full width; 44px minimum touch targets
 - **Smooth entrance** — opacity + translateY transition on mount, staggered `animate-auth-*` keyframes for each section
 - Grid overlay at 3% opacity for subtle texture
@@ -190,7 +191,39 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 - **Free plan note** (mobile only) — green-tinted banner: "Free plan includes: 50 boards, 500 cards/board, real-time updates"
 - After registration, automatically triggers the "healing" path in `getTenantContext()` — creates `User` and `OrganizationUser` rows
 - Organization creation prompt appears immediately after sign-up if no org exists
+- **Guest Demo Mode** — amber gradient button below the sign-up form to explore the app without creating an account
+- **Demo info banner** — explains 30-minute interactive demo with board/card limits
 - Redirect URL configurable via `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL`
+
+---
+
+### Demo Mode
+
+![Demo Mode](Web-screenshort/Demo%20mode.png)
+
+- Interactive demo experience at `/organization/demo-org-id` — no authentication required
+- Accessible via **"Try Demo"** buttons on both the sign-in and sign-up pages
+- **Interactive Kanban board** — full drag-and-drop support via `@dnd-kit` with cards movable across lists
+- **Board creation** — users can create up to 2 boards with custom names; "New Board" button shows inline input
+- **Card creation** — users can add cards to any list, up to 10 cards total across all boards
+- **Card deletion** — hover to reveal delete button on individual cards
+- **Board switching** — sidebar lists all created boards; click to switch active board view
+- **Real-time limits display** — right sidebar shows live progress bars for boards (X/2) and cards (X/10)
+- **Seeded demo data** — starts with 2 pre-built boards ("Product Roadmap" and "Sprint 47"), 3 lists each, 6 sample cards with varied priorities
+- **Timed sign-up nudges** — popup appears every 10 minutes encouraging sign-up:
+  - Guest users see "Sign Up Free" CTA
+  - Already signed-in users see "Go to My Workspace" CTA
+  - Popup shows dismissal count (e.g., "1 of 3") and warns on last popup
+  - Cancel button available on each popup
+- **30-minute freeze** — after 3 popup dismissals (30 minutes), the demo freezes with a full-screen overlay:
+  - Guest variant: sign-up CTA + sign-in link
+  - Authenticated variant: "Return to My Workspace" + restart demo option
+- **Demo banner** — amber gradient bar at the top showing board/card usage and sign-up link
+- **Feature highlights panel** — right sidebar showcases locked features (analytics, permissions, custom fields, unlimited members) to encourage conversion
+- **In-memory only** — all data stored in Zustand; nothing persists to the database; timer state persists in `localStorage`
+- **Priority badges** — cards display colored priority indicators (Urgent = red, High = orange, Medium = cyan, Low = green)
+- **Drag overlay** — ghost card with slight rotation follows cursor during drag for visual feedback
+- Built with: `hooks/use-demo-session.ts` (timer/popup Zustand store), `hooks/use-demo-data.ts` (board/card Zustand store), `components/demo/DemoKanbanBoard.tsx` (Kanban with DnD), `components/demo/DemoModePopup.tsx`, `components/demo/DemoModeFreezeOverlay.tsx`, `components/demo/DemoModeProvider.tsx`
 
 ---
 
@@ -608,7 +641,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 - Optional password prompt before content is shown
 - Optional view count limit (board becomes inaccessible after N views)
 - Optional expiry date
-- Read-only view — no mutations allowed (demo mode protection active)
+- Read-only view — no mutations allowed (share link protection active)
 - Guest users see the Kanban view only; no settings, no member list
 
 ---
@@ -812,7 +845,18 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 - AI prompt injection protection: `sanitizeForPrompt()` + `system`/`user` role separation
 - GDPR data export endpoint
 - GDPR account deletion endpoint
-- Demo mode read-only protection
+- Demo mode with enforced board/card limits and 30-minute session freeze
+
+### Demo Mode
+
+- Interactive guest demo at `/organization/demo-org-id` — no authentication required
+- In-memory Zustand stores — zero database writes, zero real tenant contamination
+- Board limit: 2 boards maximum; card limit: 10 cards maximum
+- Timed popup system: 10-minute intervals, 3 dismissals max, then full-screen freeze
+- `localStorage`-backed session persistence — timer survives page refreshes
+- Separate popup variants for guest (sign-up CTA) and authenticated (workspace CTA) users
+- `DemoModeProvider` orchestrates timers; `DemoKanbanBoard` provides full `@dnd-kit` DnD
+- Demo banner shows real-time board/card usage counters
 
 ### UI/UX
 
@@ -1759,7 +1803,9 @@ All server actions follow the `createSafeAction` pattern from `lib/create-safe-a
 | `use-optimistic-card` | React `useOptimistic` wrapper for instant label add/remove on cards |
 | `use-push-notifications` | Web Push registration via Service Worker and PushManager API |
 | `use-realtime-analytics` | Live analytics via Supabase broadcast — card created/completed/deleted events |
-| `use-demo-mode` | Guest demo mode detection, read-only enforcement, session tracking |
+| `use-demo-mode` | Guest demo mode detection, `DEMO_ORG_ID` constant, `isDemoOrganization()` guard, `assertNotDemoMode()` for server actions |
+| `use-demo-session` | Zustand store for timed demo experience — 10-minute popup intervals, 3 max dismissals, `localStorage`-backed freeze state, guest vs authenticated popup variants |
+| `use-demo-data` | In-memory Zustand store for demo boards/lists/cards — `DEMO_MAX_BOARDS` (2), `DEMO_MAX_CARDS` (10), CRUD actions with limit enforcement, seeded sample data |
 | `use-ai-cooldown` | Per-button 10-second client-side cooldown for AI trigger actions — countdown display, independent per component instance, cleans up timers on unmount |
 
 ---
@@ -1827,6 +1873,15 @@ All server actions follow the `createSafeAction` pattern from `lib/create-safe-a
 | `api-keys-settings.tsx` | API key CRUD — create, revoke, copy, view usage |
 | `automation-builder.tsx` | Visual automation rule builder with trigger/action config |
 | `webhooks-settings.tsx` | Webhook endpoint management with delivery logs |
+
+### Demo Components (4 files)
+
+| Component | Description |
+|---|---|
+| `DemoKanbanBoard.tsx` | Self-contained Kanban board with `@dnd-kit` drag-and-drop, sortable cards, inline card creation with limit enforcement, card deletion, priority badges, and drag overlay |
+| `DemoModePopup.tsx` | Timed nudge popup with guest (sign-up CTA) and authenticated (workspace CTA) variants, dismissal counter, and last-popup warning |
+| `DemoModeFreezeOverlay.tsx` | Full-screen blocking overlay after 30 minutes with sign-up/workspace CTAs and restart demo option |
+| `DemoModeProvider.tsx` | Timer orchestrator — 1-second polling, `useAuth()` integration, popup/freeze state management, wraps demo pages |
 
 ### UI Primitives (shadcn/ui — 24 components)
 
@@ -1959,7 +2014,7 @@ nexus/
 │   │   └── workload/                # Workload heatmap view
 │   ├── dashboard/                   # Main dashboard (board list)
 │   ├── onboarding/                  # New user onboarding flow
-│   ├── organization/[orgId]/        # Organization overview
+│   ├── organization/[orgId]/        # Organization overview / interactive demo
 │   ├── pending-approval/            # Waiting for org approval page
 │   ├── request-board-access/        # Board access request page
 │   ├── roadmap/                     # Roadmap timeline view
@@ -2052,6 +2107,11 @@ nexus/
 │   │   └── pro-upgrade-modal.tsx
 │   ├── performance/
 │   │   └── index.ts                 # Performance monitoring utilities
+│   ├── demo/                       # 4 demo mode components
+│   │   ├── DemoKanbanBoard.tsx      # Interactive Kanban with @dnd-kit DnD
+│   │   ├── DemoModeFreezeOverlay.tsx # Full-screen freeze after 30 min
+│   │   ├── DemoModePopup.tsx        # Timed sign-up nudge popup
+│   │   └── DemoModeProvider.tsx     # Timer orchestrator
 │   ├── providers/
 │   │   ├── command-palette-provider.tsx
 │   │   ├── modal-provider.tsx
@@ -2107,12 +2167,14 @@ nexus/
 │   ├── theme-provider.tsx
 │   └── virtual-scroll.tsx
 │
-├── hooks/                           # 11 custom React hooks
+├── hooks/                           # 13 custom React hooks
 │   ├── use-ai-cooldown.ts
 │   ├── use-card-lock.ts
 │   ├── use-card-modal.ts
 │   ├── use-debounce.ts
+│   ├── use-demo-data.ts             # In-memory Zustand store (boards/cards with limits)
 │   ├── use-demo-mode.ts
+│   ├── use-demo-session.ts          # Timed popup/freeze Zustand store
 │   ├── use-keyboard-shortcuts.ts
 │   ├── use-optimistic-card.ts
 │   ├── use-presence.ts
