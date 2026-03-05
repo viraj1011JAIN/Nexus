@@ -208,7 +208,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 ### Boards & Lists (Kanban)
 
-![Boards and Lists](Web-screenshort/Boards_and_List.png)
+![Boards and Lists](Web-screenshort/Boards%20and%20List.png)
 
 - Drag-and-drop lists and cards via `@dnd-kit` with LexoRank ordering
 - Optimistic UI updates — card appears in new position before the server responds
@@ -228,7 +228,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 ### Real-Time Activity
 
-![Realtime Activity](Web-screenshort/Realtime_Activity.png)
+![Realtime Activity](Web-screenshort/Realtime%20Activity.png)
 
 - Organisation-wide audit log feed with real-time new entries via Supabase broadcast
 - Filterable by action type, board, user, and date range
@@ -238,7 +238,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 ### Real-Time Analytics Dashboard
 
-![Realtime Analytics Dashboard](Web-screenshort/Realtime_Analytics_Dashboard.png)
+![Realtime Analytics Dashboard](Web-screenshort/Realtime%20Analytics%20Dashboard.png)
 
 - Live board metrics, card completion rates, assignee workload distribution
 - PDF export via jsPDF
@@ -248,7 +248,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 ### Command Palette (⌘K)
 
-![Command Palette](Web-screenshort/Command_Pallete_ctrl__K.png)
+![Command Palette](Web-screenshort/Command%20Pallete%20(ctrl%20%2B%20K).png)
 
 - Global keyboard-driven navigation
 - Jump to boards, create cards, switch organisation, access settings
@@ -275,7 +275,7 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 ### Light Mode
 
-![Light Mode](Web-screenshort/Light_Mode.png)
+![Light Mode](Web-screenshort/Light%20Mode.png)
 
 - Full light-mode implementation with the same design system — not just a color inversion
 
