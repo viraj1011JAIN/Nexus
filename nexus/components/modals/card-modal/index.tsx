@@ -557,6 +557,7 @@ export const CardModal = () => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         data-cm-modal
+        showCloseButton={false}
         className="p-0 gap-0 border border-white/20 dark:border-white/10 overflow-hidden"
       >
         <style>{`
