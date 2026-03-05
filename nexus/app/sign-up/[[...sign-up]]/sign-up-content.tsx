@@ -206,29 +206,13 @@ export default function SignUpContent() {
 
           {/* Right — Auth card */}
           <div className="w-full max-w-[95vw] sm:max-w-[440px] lg:max-w-[420px]">
-            {/* Mobile branding header */}
-            <div className="flex lg:hidden flex-col items-center mb-6 animate-auth-fade-up">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-[36px] h-[36px] rounded-[10px] bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-purple-500/25">
-                  <span className="text-white font-bold text-[16px]">N</span>
-                </div>
-                <span className="text-white font-bold text-[22px]">NEXUS</span>
-              </div>
-              <h1 className="text-[22px] sm:text-[26px] font-bold text-white text-center">
-                Create Your Account
-              </h1>
-              <p className="text-[13px] sm:text-[14px] text-slate-400 mt-1">
-                Free to start — no credit card required
-              </p>
-            </div>
-
             {/* Auth card container */}
-            <div className="relative rounded-[20px] sm:rounded-[24px] bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl p-5 sm:p-6 shadow-2xl shadow-black/40 animate-auth-scale-up flex flex-col max-h-[calc(100dvh-80px)]">
+            <div className="relative rounded-[20px] sm:rounded-[24px] bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl p-4 sm:p-5 shadow-2xl shadow-black/40 animate-auth-scale-up flex flex-col max-h-[calc(100dvh-32px)]">
               {/* Top border accent */}
               <div className="absolute top-0 left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full" />
 
               {/* Guest Demo — pinned at top, always visible without scrolling */}
-              <div className="shrink-0 pb-4">
+              <div className="shrink-0 pb-3">
                 <div className="relative group">
                   <div className="absolute -inset-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 rounded-[14px] opacity-60 blur-sm group-hover:opacity-90 transition-opacity animate-[pulse_2s_ease-in-out_infinite]" />
                   <Button
@@ -250,10 +234,7 @@ export default function SignUpContent() {
                     )}
                   </Button>
                 </div>
-                <p className="text-[11px] text-amber-300/60 text-center mt-1.5">
-                  Full Kanban board · Drag-and-drop · Resets on exit
-                </p>
-                <div className="relative mt-3">
+                <div className="relative mt-2.5">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-white/[0.08]" />
                   </div>
@@ -266,7 +247,7 @@ export default function SignUpContent() {
               </div>
 
               {/* Clerk form — scrollable when viewport is short */}
-              <div className="min-h-0 overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto">
                 <SignUp
                   signInUrl="/sign-in"
                   fallbackRedirectUrl="/"
