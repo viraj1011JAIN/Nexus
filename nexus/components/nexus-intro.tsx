@@ -1,643 +1,825 @@
-﻿"use client";
+"use client";
 
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// ─── Brand palette ────────────────────────────────────────────────────────────
-const C = {
-  bg:      "#07070f",
-  purple:  "#7c3aed",
-  violet:  "#8b5cf6",
-  cyan:    "#06b6d4",
-  pink:    "#ec4899",
-  magenta: "#d946ef",
-  indigo:  "#6366f1",
-  blue:    "#3b82f6",
-} as const;
+// ─── Constants ────────────────────────────────────────────────────────────────
+const SESSION_KEY = "nexus_intro_v3";
+const TOTAL_FRAMES = 700;
 
-const PARTICLE_PALETTE = [
-  C.purple, C.violet, C.magenta, C.pink, C.cyan, C.indigo, C.blue,
-  "#a78bfa", "#c084fc", "#e879f9", "#60a5fa", "#67e8f9", "#f472b6", "#818cf8",
+const PAL = ["#7C3AED", "#A855F7", "#EC4899", "#06B6D4", "#14B8A6", "#00FF88", "#F59E0B"];
+
+const TECH_WORDS = [
+  "Next.js", "React", "TypeScript", "Prisma", "PostgreSQL", "Supabase", "Clerk", "Stripe",
+  "LexoRank", "Zod", "TipTap", "Yjs", "Framer", "Recharts", "Vercel", "OpenAI", "Sentry",
+  "Axiom", "Playwright", "Jest", "WebPush", "VAPID", "Tailwind", "shadcn", "Radix", "dnd-kit",
+  "Zustand", "Resend",
 ];
 
-const LETTERS      = ["N", "E", "X", "U", "S"] as const;
-const SESSION_KEY  = "nexus_intro_v2";
-const SHOW_MS      = 3200;
+const STACK = [
+  { n: "Next.js",    c: "#E2E8F0", bg: "rgba(226,232,240,.06)", bd: "rgba(226,232,240,.14)" },
+  { n: "React 19",   c: "#61DAFB", bg: "rgba(97,218,251,.07)",  bd: "rgba(97,218,251,.18)"  },
+  { n: "TypeScript", c: "#60A5FA", bg: "rgba(96,165,250,.07)",  bd: "rgba(96,165,250,.18)"  },
+  { n: "Prisma",     c: "#C084FC", bg: "rgba(192,132,252,.07)", bd: "rgba(192,132,252,.18)" },
+  { n: "Supabase",   c: "#34D399", bg: "rgba(52,211,153,.07)",  bd: "rgba(52,211,153,.18)"  },
+  { n: "Clerk",      c: "#818CF8", bg: "rgba(129,140,248,.07)", bd: "rgba(129,140,248,.18)" },
+  { n: "Stripe",     c: "#A78BFA", bg: "rgba(167,139,250,.07)", bd: "rgba(167,139,250,.18)" },
+  { n: "OpenAI",     c: "#4ADE80", bg: "rgba(74,222,128,.06)",  bd: "rgba(74,222,128,.16)"  },
+  { n: "Framer",     c: "#F472B6", bg: "rgba(244,114,182,.07)", bd: "rgba(244,114,182,.18)" },
+  { n: "Vercel",     c: "#F1F5F9", bg: "rgba(241,245,249,.05)", bd: "rgba(241,245,249,.12)" },
+  { n: "Tailwind",   c: "#22D3EE", bg: "rgba(34,211,238,.07)",  bd: "rgba(34,211,238,.18)"  },
+  { n: "TipTap",     c: "#FCD34D", bg: "rgba(252,211,77,.07)",  bd: "rgba(252,211,77,.18)"  },
+  { n: "LexoRank",   c: "#C084FC", bg: "rgba(192,132,252,.07)", bd: "rgba(192,132,252,.18)" },
+  { n: "Playwright", c: "#86EFAC", bg: "rgba(134,239,172,.06)", bd: "rgba(134,239,172,.16)" },
+  { n: "Jest",       c: "#FCA5A5", bg: "rgba(252,165,165,.07)", bd: "rgba(252,165,165,.18)" },
+  { n: "Zod",        c: "#93C5FD", bg: "rgba(147,197,253,.07)", bd: "rgba(147,197,253,.16)" },
+  { n: "Recharts",   c: "#22D3EE", bg: "rgba(34,211,238,.06)",  bd: "rgba(34,211,238,.14)"  },
+  { n: "Zustand",    c: "#FB923C", bg: "rgba(251,146,60,.07)",  bd: "rgba(251,146,60,.18)"  },
+];
 
-const LETTER_GRADIENTS = [
-  "linear-gradient(155deg,#fff 0%,#ddd6fe 18%,#a78bfa 44%,#7c3aed 70%,#4c1d95 100%)",
-  "linear-gradient(155deg,#fff 0%,#e0e7ff 18%,#a5b4fc 44%,#6366f1 70%,#3730a3 100%)",
-  "linear-gradient(155deg,#fce7f3 0%,#f9a8d4 18%,#ec4899 40%,#d946ef 65%,#7c3aed 100%)",
-  "linear-gradient(155deg,#ecfeff 0%,#a5f3fc 18%,#22d3ee 44%,#06b6d4 70%,#0e7490 100%)",
-  "linear-gradient(155deg,#fff 0%,#ddd6fe 18%,#a78bfa 44%,#8b5cf6 70%,#5b21b6 100%)",
-] as const;
+const BADGE_POS = [
+  { l: "5%",  t: "6%"  }, { l: "22%", t: "4%"  }, { l: "40%", t: "5%"  },
+  { l: "57%", t: "4%"  }, { l: "74%", t: "6%"  }, { l: "87%", t: "5%"  },
+  { l: "1%",  t: "22%" }, { l: "0%",  t: "38%" }, { l: "1%",  t: "55%" },
+  { l: "2%",  t: "70%" }, { l: "1%",  t: "83%" }, { l: "88%", t: "18%" },
+  { l: "90%", t: "34%" }, { l: "89%", t: "50%" }, { l: "88%", t: "65%" },
+  { l: "89%", t: "80%" }, { l: "15%", t: "91%" }, { l: "52%", t: "92%" },
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Particle {
-  id: number;
-  x: number; y: number;
-  size: number;
-  color: string;
-  delay: number;
-  duration: number;
-  tx: number; ty: number;
-  opacity: number;
+type Phase = "drift" | "converge" | "orbit" | "ambient";
+
+interface Star {
+  x: number; y: number; r: number; a: number;
+  tw: number; spd: number; col: string;
 }
 
-// ─── Web Audio synthesis ──────────────────────────────────────────────────────
-function playSounds(): void {
-  try {
-    type WA = Window & { webkitAudioContext?: typeof AudioContext };
-    const AC = (window as WA).webkitAudioContext ?? AudioContext;
-    if (!AC) return;
-    const ctx = new AC();
-    ctx.resume().catch(() => {});
-    const master = ctx.createGain();
-    master.gain.setValueAtTime(0.4, ctx.currentTime);
-    master.connect(ctx.destination);
-    const now = ctx.currentTime;
+interface Shockwave {
+  x: number; y: number; r: number; col: string; a: number; spd: number;
+}
 
-    // Bass drone
-    const bass = ctx.createOscillator();
-    const bassG = ctx.createGain();
-    bass.type = "sine";
-    bass.frequency.setValueAtTime(55, now);
-    bass.frequency.linearRampToValueAtTime(36, now + 3.1);
-    bassG.gain.setValueAtTime(0, now);
-    bassG.gain.linearRampToValueAtTime(0.5, now + 0.38);
-    bassG.gain.setValueAtTime(0.5, now + 2.5);
-    bassG.gain.exponentialRampToValueAtTime(0.001, now + 3.1);
-    bass.connect(bassG); bassG.connect(master);
-    bass.start(now); bass.stop(now + 3.2);
+interface Ray {
+  x: number; y: number; ang: number; len: number; maxLen: number;
+  a: number; spd: number; col: string; w: number;
+}
 
-    // Letter impact ticks
-    for (let i = 0; i < 5; i++) {
-      const t = now + 0.45 + i * 0.14;
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = "triangle";
-      o.frequency.setValueAtTime(420 - i * 22, t);
-      o.frequency.exponentialRampToValueAtTime(88, t + 0.18);
-      g.gain.setValueAtTime(0.22, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-      o.connect(g); g.connect(master);
-      o.start(t); o.stop(t + 0.22);
-    }
+interface TrailPoint { x: number; y: number; a: number; }
 
-    // Glitch burst — highpass white noise
-    const tG = now + 1.28;
-    const nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.08), ctx.sampleRate);
-    const nd = nb.getChannelData(0);
-    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    const gn = ctx.createBufferSource(); gn.buffer = nb;
-    const gnF = ctx.createBiquadFilter(); gnF.type = "highpass"; gnF.frequency.setValueAtTime(2400, tG);
-    const gnG = ctx.createGain();
-    gnG.gain.setValueAtTime(0.28, tG);
-    gnG.gain.exponentialRampToValueAtTime(0.001, tG + 0.08);
-    gn.connect(gnF); gnF.connect(gnG); gnG.connect(master);
-    gn.start(tG); gn.stop(tG + 0.1);
+interface Particle {
+  x: number; y: number; vx: number; vy: number; r: number;
+  a: number; ma: number; col: string;
+  trail: TrailPoint[]; tLen: number;
+  orA: number; orR: number; orSpd: number;
+  pulse: number; ps: number; noiseO: number;
+  convDelay: number; tx: number; ty: number; life: number;
+}
 
-    // Beam whoosh — bandpass noise + sawtooth sweep
-    const tB = now + 1.45;
-    const wb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.55), ctx.sampleRate);
-    const wd = wb.getChannelData(0);
-    for (let i = 0; i < wd.length; i++) wd[i] = Math.random() * 2 - 1;
-    const bn = ctx.createBufferSource(); bn.buffer = wb;
-    const bF = ctx.createBiquadFilter(); bF.type = "bandpass";
-    bF.frequency.setValueAtTime(500, tB);
-    bF.frequency.exponentialRampToValueAtTime(4200, tB + 0.13);
-    bF.frequency.exponentialRampToValueAtTime(250,  tB + 0.46);
-    bF.Q.setValueAtTime(1.2, tB);
-    const bG = ctx.createGain();
-    bG.gain.setValueAtTime(0, tB - 0.01);
-    bG.gain.linearRampToValueAtTime(0.9, tB + 0.06);
-    bG.gain.exponentialRampToValueAtTime(0.001, tB + 0.5);
-    bn.connect(bF); bF.connect(bG); bG.connect(master);
-    bn.start(tB); bn.stop(tB + 0.55);
+// ─── Pure utils ───────────────────────────────────────────────────────────────
+const PI2 = Math.PI * 2;
+const rand = (a: number, b: number) => Math.random() * (b - a) + a;
+const ri   = (a: number, b: number) => Math.floor(rand(a, b + 1));
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+const lerp  = (a: number, b: number, t: number) => a + (b - a) * t;
+const hex2  = (n: number) => Math.floor(clamp(n, 0, 1) * 255).toString(16).padStart(2, "0");
 
-    const sw = ctx.createOscillator(); sw.type = "sawtooth";
-    const swG = ctx.createGain();
-    sw.frequency.setValueAtTime(95, tB);
-    sw.frequency.exponentialRampToValueAtTime(3400, tB + 0.12);
-    sw.frequency.exponentialRampToValueAtTime(55,   tB + 0.42);
-    swG.gain.setValueAtTime(0, tB - 0.01);
-    swG.gain.linearRampToValueAtTime(0.35, tB + 0.04);
-    swG.gain.exponentialRampToValueAtTime(0.001, tB + 0.44);
-    sw.connect(swG); swG.connect(master);
-    sw.start(tB); sw.stop(tB + 0.48);
+// ─── Canvas helpers ───────────────────────────────────────────────────────────
+function buildStars(W: number, H: number): Star[] {
+  return Array.from({ length: 220 }, () => ({
+    x: rand(0, W), y: rand(0, H), r: rand(0.25, 1.6),
+    a: rand(0.1, 0.55), tw: rand(0, PI2), spd: rand(0.008, 0.035),
+    col: PAL[ri(0, PAL.length - 1)],
+  }));
+}
 
-    // Impact ring harmonics
-    const tR = now + 1.58;
-    ([880, 1320, 1760] as const).forEach((freq, i) => {
-      const o = ctx.createOscillator(); o.type = "sine";
-      const g = ctx.createGain();
-      o.frequency.setValueAtTime(freq, tR + i * 0.02);
-      g.gain.setValueAtTime(0.14 - i * 0.03, tR + i * 0.02);
-      g.gain.exponentialRampToValueAtTime(0.001, tR + 1.35);
-      o.connect(g); g.connect(master);
-      o.start(tR + i * 0.02); o.stop(tR + 1.4);
-    });
-  } catch {
-    // Web Audio not available — silent fail
+function drawStars(ctx: CanvasRenderingContext2D, stars: Star[], W: number, H: number) {
+  ctx.clearRect(0, 0, W, H);
+  for (const s of stars) {
+    s.tw += s.spd;
+    const a = s.a * (0.5 + 0.5 * Math.sin(s.tw));
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, PI2);
+    ctx.fillStyle = s.col + hex2(a);
+    ctx.fill();
   }
 }
 
-// ─── Particle factory ─────────────────────────────────────────────────────────
-function buildParticles(n: number): Particle[] {
-  return Array.from({ length: n }, (_, i) => {
-    const angle = Math.random() * Math.PI * 2;
-    const dist  = Math.random() * 24 + 6;
-    return {
-      id:       i,
-      x:        47 + (Math.random() - 0.5) * 30,
-      y:        45 + (Math.random() - 0.5) * 18,
-      size:     Math.random() * 4.8 + 1.2,
-      color:    PARTICLE_PALETTE[i % PARTICLE_PALETTE.length],
-      delay:    Math.random() * 0.28 + 1.56,
-      duration: Math.random() * 1.6 + 1.0,
-      tx:       Math.cos(angle) * dist,
-      ty:       Math.sin(angle) * dist,
-      opacity:  Math.random() * 0.75 + 0.25,
-    };
-  });
+function tickShockwaves(ctx: CanvasRenderingContext2D, sw: Shockwave[]) {
+  for (let i = sw.length - 1; i >= 0; i--) {
+    const s = sw[i];
+    s.r += s.spd; s.a *= 0.935; s.spd *= 0.98;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, PI2);
+    ctx.strokeStyle = s.col + hex2(s.a);
+    ctx.lineWidth = 2; ctx.stroke();
+    if (s.a < 0.01) sw.splice(i, 1);
+  }
 }
 
-// ─── Corner bracket config ────────────────────────────────────────────────────
-const CORNERS: Array<{
-  pos: React.CSSProperties;
-  borders: React.CSSProperties;
-  delay: number;
-}> = [
-  { pos: { top: 24, left: 24 },     borders: { borderTop: "1.5px solid", borderLeft: "1.5px solid" },    delay: 0.22 },
-  { pos: { top: 24, right: 24 },    borders: { borderTop: "1.5px solid", borderRight: "1.5px solid" },   delay: 0.27 },
-  { pos: { bottom: 24, left: 24 },  borders: { borderBottom: "1.5px solid", borderLeft: "1.5px solid" }, delay: 0.32 },
-  { pos: { bottom: 24, right: 24 }, borders: { borderBottom: "1.5px solid", borderRight: "1.5px solid" },delay: 0.37 },
-];
+function tickRays(ctx: CanvasRenderingContext2D, rays: Ray[]) {
+  for (let i = rays.length - 1; i >= 0; i--) {
+    const r = rays[i];
+    r.len = Math.min(r.len + r.spd, r.maxLen); r.a *= 0.965;
+    ctx.beginPath(); ctx.moveTo(r.x, r.y);
+    ctx.lineTo(r.x + Math.cos(r.ang) * r.len, r.y + Math.sin(r.ang) * r.len);
+    ctx.strokeStyle = r.col + hex2(r.a * (200 / 255));
+    ctx.lineWidth = r.w; ctx.stroke();
+    if (r.a < 0.01) rays.splice(i, 1);
+  }
+}
 
-const TAGLINE = "Project Management, Elevated";
+function newParticle(W: number, H: number, CX: number, CY: number): Particle {
+  return {
+    x: rand(0, W), y: rand(0, H), vx: rand(-0.4, 0.4), vy: rand(-0.4, 0.4),
+    r: rand(0.8, 2.8), a: 0, ma: rand(0.3, 0.95),
+    col: PAL[ri(0, PAL.length - 1)],
+    trail: [], tLen: ri(2, 7),
+    orA: rand(0, PI2), orR: rand(95, Math.min(W, H) * 0.38),
+    orSpd: rand(0.003, 0.018) * (Math.random() > 0.5 ? 1 : -1),
+    pulse: rand(0, PI2), ps: rand(0.02, 0.06),
+    noiseO: rand(0, 1000),
+    convDelay: rand(0, 80),
+    tx: CX, ty: CY, life: 0,
+  };
+}
+
+function updateParticle(p: Particle, phase: Phase, CX: number, CY: number, W: number, H: number) {
+  p.pulse += p.ps;
+  p.life++;
+  if (phase === "drift") {
+    p.vx += (Math.random() - 0.5) * 0.018;
+    p.vy += (Math.random() - 0.5) * 0.018;
+    p.vx *= 0.98; p.vy *= 0.98;
+    p.x += p.vx; p.y += p.vy;
+    p.a = lerp(p.a, p.ma * 0.45, 0.025);
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+  } else if (phase === "converge") {
+    if (p.life > p.convDelay) {
+      const dx = p.tx - p.x, dy = p.ty - p.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const spd = clamp(d * 0.065, 1, 22);
+      p.vx += (dx / d) * spd * 0.16; p.vy += (dy / d) * spd * 0.16;
+      p.vx *= 0.87; p.vy *= 0.87;
+      p.x += p.vx; p.y += p.vy;
+      p.a = lerp(p.a, p.ma, 0.055);
+    }
+  } else if (phase === "orbit") {
+    p.orA += p.orSpd;
+    const j = Math.sin(p.life * 0.028 + p.noiseO) * 5;
+    p.tx = CX + Math.cos(p.orA) * (p.orR + j);
+    p.ty = CY + Math.sin(p.orA) * (p.orR + j);
+    p.x = lerp(p.x, p.tx, 0.11); p.y = lerp(p.y, p.ty, 0.11);
+    p.a = lerp(p.a, p.ma * (0.65 + 0.35 * Math.sin(p.pulse)), 0.04);
+  } else {
+    p.x += p.vx + Math.sin(p.life * 0.018 + p.noiseO) * 0.28;
+    p.y += p.vy + Math.cos(p.life * 0.018 + p.noiseO) * 0.28;
+    p.a = lerp(p.a, p.ma * 0.38, 0.018);
+    if (p.x < -8) p.x = W + 8; if (p.x > W + 8) p.x = -8;
+    if (p.y < -8) p.y = H + 8; if (p.y > H + 8) p.y = -8;
+  }
+  p.trail.unshift({ x: p.x, y: p.y, a: p.a });
+  if (p.trail.length > p.tLen) p.trail.pop();
+}
+
+function drawParticle(ctx: CanvasRenderingContext2D, p: Particle) {
+  if (p.a < 0.01) return;
+  for (let i = 1; i < p.trail.length; i++) {
+    const t = p.trail[i], ta = t.a * (1 - i / p.trail.length) * 0.4;
+    ctx.beginPath(); ctx.arc(t.x, t.y, p.r * (1 - i / p.trail.length), 0, PI2);
+    ctx.fillStyle = p.col + hex2(ta); ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, PI2);
+  ctx.fillStyle = p.col + hex2(p.a); ctx.fill();
+  if (p.r > 1.6) {
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 2.8, 0, PI2);
+    ctx.fillStyle = p.col + "16"; ctx.fill();
+  }
+}
+
+function drawConnections(ctx: CanvasRenderingContext2D, parts: Particle[], maxD: number, ba: number) {
+  for (let i = 0; i < parts.length; i++) {
+    for (let j = i + 1; j < parts.length; j++) {
+      const a = parts[i], b = parts[j];
+      const dx = a.x - b.x, dy = a.y - b.y, d = Math.sqrt(dx * dx + dy * dy);
+      if (d < maxD) {
+        const alpha = ba * (1 - d / maxD) * Math.min(a.a, b.a);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = `rgba(124,58,237,${alpha})`; ctx.lineWidth = 0.5; ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawCenterGlow(ctx: CanvasRenderingContext2D, CX: number, CY: number, W: number, H: number, alpha: number) {
+  if (alpha < 0.01) return;
+  const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, 250);
+  g.addColorStop(0,    `rgba(124,58,237,${alpha * 0.38})`);
+  g.addColorStop(0.45, `rgba(6,182,212,${alpha * 0.14})`);
+  g.addColorStop(0.75, `rgba(236,72,153,${alpha * 0.07})`);
+  g.addColorStop(1,    "transparent");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function NexusIntro() {
-  const [visible,   setVisible]   = useState(false);
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [glitch,    setGlitch]    = useState(false);
-  const [showGlow,  setShowGlow]  = useState(false);
-  const audioFiredRef             = useRef(false);
-  const shouldReduce              = useReducedMotion();
+  const bgRef   = useRef<HTMLCanvasElement>(null);
+  const midRef  = useRef<HTMLCanvasElement>(null);
+  const fxRef   = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Visibility state drives opacity transitions
+  const [logoVisible,    setLogoVisible]    = useState(false);
+  const [orbitsVisible,  setOrbitsVisible]  = useState(false);
+  const [accentFull,     setAccentFull]     = useState(false);
+  const [taglineVisible, setTaglineVisible] = useState(false);
+  const [metricsVisible, setMetricsVisible] = useState(false);
+  const [badgesVisible,  setBadgesVisible]  = useState(false);
+  const [creatorVisible, setCreatorVisible] = useState(false);
+  const [creatorBarFull, setCreatorBarFull] = useState(false);
+  const [hexVisible,     setHexVisible]     = useState(false);
+  const [dotsHidden,     setDotsHidden]     = useState(false);
+  const [progress,       setProgress]       = useState(0);
+  const [dismissed,      setDismissed]      = useState(false);
+
+  // Imperative refs for the animation state
+  const stateRef = useRef({
+    frame: 0,
+    phase: "drift" as Phase,
+    cgAlpha: 0,
+    done: false,
+    parts: [] as Particle[],
+    stars: [] as Star[],
+    sw: [] as Shockwave[],
+    rays: [] as Ray[],
+    W: 0, H: 0, CX: 0, CY: 0,
+    rafId: 0,
+    lt: 0, acc: 0,
+  });
 
   useEffect(() => {
-    if (shouldReduce) return;
     if (typeof sessionStorage === "undefined") return;
     if (sessionStorage.getItem(SESSION_KEY)) return;
     sessionStorage.setItem(SESSION_KEY, "1");
 
-    // setTimeout 0 satisfies react-hooks/set-state-in-effect
-    setTimeout(() => {
-      setParticles(buildParticles(60));
-      setVisible(true);
-    }, 0);
+    const bgC  = bgRef.current;
+    const midC = midRef.current;
+    const fxC  = fxRef.current;
+    if (!bgC || !midC || !fxC) return;
 
-    if (!audioFiredRef.current) {
-      audioFiredRef.current = true;
-      playSounds();
+    const bgX  = bgC.getContext("2d")!;
+    const midX = midC.getContext("2d")!;
+    const fxX  = fxC.getContext("2d")!;
+    const st           = stateRef.current;
+    // Capture non-null refs so nested functions see narrowed types
+    const bgCanvas     = bgC;
+    const midCanvas    = midC;
+    const fxCanvas     = fxC;
+
+    function resize() {
+      st.W  = bgCanvas.width  = midCanvas.width  = fxCanvas.width  = window.innerWidth;
+      st.H  = bgCanvas.height = midCanvas.height = fxCanvas.height = window.innerHeight;
+      st.CX = st.W / 2;
+      st.CY = st.H / 2;
+      st.stars = buildStars(st.W, st.H);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    // Spawn 200 particles
+    st.parts = Array.from({ length: 200 }, () => newParticle(st.W, st.H, st.CX, st.CY));
+
+    function setPhase(ph: Phase) {
+      st.phase = ph;
+      if (ph === "converge") {
+        st.parts.forEach(p => {
+          const ang = rand(0, PI2), d = rand(8, 55);
+          p.tx = st.CX + Math.cos(ang) * d;
+          p.ty = st.CY + Math.sin(ang) * d;
+          p.convDelay = rand(0, 100);
+          p.life = 0;
+        });
+      } else if (ph === "orbit") {
+        st.parts.forEach(p => {
+          p.orR = rand(90, Math.min(st.W, st.H) * 0.36);
+          p.orA = rand(0, PI2);
+        });
+      }
     }
 
-    const g1on  = setTimeout(() => setGlitch(true),   1280);
-    const g1off = setTimeout(() => setGlitch(false),  1355);
-    const g2on  = setTimeout(() => setGlitch(true),   1385);
-    const g2off = setTimeout(() => setGlitch(false),  1445);
-    const glow  = setTimeout(() => setShowGlow(true), 1680);
-    const exit  = setTimeout(() => setVisible(false), SHOW_MS);
+    function triggerFlash(intensity = 0.7) {
+      const f = document.getElementById("ni-flash");
+      if (!f) return;
+      f.style.transition = "opacity .07s ease";
+      f.style.opacity = String(intensity);
+      setTimeout(() => {
+        f.style.transition = "opacity .7s ease";
+        f.style.opacity = "0";
+      }, 70);
+    }
 
-    return () => [g1on, g1off, g2on, g2off, glow, exit].forEach(clearTimeout);
-  }, [shouldReduce]);
+    // Timeline — frame numbers match the original HTML
+    const TL: Array<{ at: number; fn: () => void }> = [
+      { at: 28,  fn: () => setHexVisible(true) },
+      { at: 105, fn: () => setPhase("converge") },
+      { at: 168, fn: () => {
+        setLogoVisible(true);
+        triggerFlash(0.55);
+        st.sw.push({ x: st.CX, y: st.CY, r: 2, col: "#7C3AED", a: 0.85, spd: 14 });
+        st.sw.push({ x: st.CX, y: st.CY, r: 2, col: "#06B6D4", a: 0.85, spd: 10 });
+        for (let i = 0; i < 14; i++) {
+          const ang = (i / 14) * PI2 + rand(-0.15, 0.15);
+          st.rays.push({ x: st.CX, y: st.CY, ang, len: 0, maxLen: rand(160, 500), a: 0.85, spd: rand(14, 32), col: PAL[ri(0, PAL.length - 1)], w: rand(0.8, 3) });
+        }
+        setTimeout(() => setOrbitsVisible(true),  600);
+        setTimeout(() => setAccentFull(true),      700);
+        setDotsHidden(true);
+      }},
+      { at: 210, fn: () => setPhase("orbit") },
+      { at: 260, fn: () => setTaglineVisible(true) },
+      { at: 300, fn: () => setMetricsVisible(true) },
+      { at: 340, fn: () => setBadgesVisible(true) },
+      { at: 390, fn: () => {
+        st.sw.push({ x: st.CX, y: st.CY, r: 2, col: "#EC4899", a: 0.85, spd: 12 });
+        for (let i = 0; i < 10; i++) {
+          const ang = (i / 10) * PI2 + rand(-0.15, 0.15);
+          st.rays.push({ x: st.CX, y: st.CY, ang, len: 0, maxLen: rand(160, 500), a: 0.85, spd: rand(14, 32), col: PAL[ri(0, PAL.length - 1)], w: rand(0.8, 3) });
+        }
+      }},
+      { at: 440, fn: () => {
+        setCreatorVisible(true);
+        setTimeout(() => setCreatorBarFull(true), 400);
+      }},
+      { at: 560, fn: () => setPhase("ambient") },
+      { at: 690, fn: () => { if (!st.done) { st.done = true; triggerFlash(0.25); } } },
+    ];
+
+    const FPS = 1000 / 60;
+
+    function tick() {
+      const { W, H, CX, CY } = st;
+      st.frame++;
+      for (const e of TL) if (e.at === st.frame) e.fn();
+      if (st.frame > 168) st.cgAlpha = Math.min(st.cgAlpha + 0.012, 1);
+
+      setProgress(Math.min((st.frame / TOTAL_FRAMES) * 100, 100));
+
+      drawStars(bgX, st.stars, W, H);
+
+      midX.clearRect(0, 0, W, H);
+      drawCenterGlow(midX, CX, CY, W, H, st.cgAlpha);
+      drawConnections(midX, st.parts.filter(p => p.a > 0.18), 130, 0.45);
+      for (const p of st.parts) { updateParticle(p, st.phase, CX, CY, W, H); drawParticle(midX, p); }
+
+      fxX.clearRect(0, 0, W, H);
+      tickShockwaves(fxX, st.sw);
+      tickRays(fxX, st.rays);
+    }
+
+    function loop(ts: number) {
+      st.acc += ts - st.lt; st.lt = ts;
+      while (st.acc >= FPS) { tick(); st.acc -= FPS; }
+      st.rafId = requestAnimationFrame(loop);
+    }
+
+    // Mouse interaction
+    function onMouseMove(e: MouseEvent) {
+      if (st.phase === "converge") return;
+      const mx = e.clientX, my = e.clientY;
+      for (const p of st.parts) {
+        const dx = p.x - mx, dy = p.y - my;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 90) { p.vx += (dx / d) * 1.8; p.vy += (dy / d) * 1.8; }
+      }
+    }
+    window.addEventListener("mousemove", onMouseMove);
+
+    st.rafId = requestAnimationFrame(ts => { st.lt = ts; loop(ts); });
+
+    return () => {
+      cancelAnimationFrame(st.rafId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouseMove);
+    };
+  }, []);
+
+  function skipIntro() {
+    const st = stateRef.current;
+    st.frame = TOTAL_FRAMES;
+    setLogoVisible(true); setOrbitsVisible(true); setAccentFull(true);
+    setTaglineVisible(true); setMetricsVisible(true); setBadgesVisible(true);
+    setCreatorVisible(true); setCreatorBarFull(true);
+    setHexVisible(true); setDotsHidden(true);
+    setProgress(100); st.done = true;
+    st.cgAlpha = 1;
+    st.parts.forEach(p => { p.orR = rand(90, Math.min(st.W, st.H) * 0.36); p.orA = rand(0, PI2); });
+    st.phase = "ambient";
+  }
+
+  if (dismissed) return null;
+
+  // Data streams — rendered as DOM (no canvas needed)
+  const streamColors = ["#7C3AED", "#06B6D4", "#EC4899", "#14B8A6", "#A855F7"];
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          key="nexus-intro-v2"
-          aria-hidden="true"
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden select-none"
-          style={{ backgroundColor: C.bg }}
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.06, filter: "blur(8px)" }}
-          transition={{ duration: 0.65, ease: [0.4, 0, 0.6, 1] }}
-        >
-          {/* ── Mesh gradient background ── */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.0 }}
+    <div
+      ref={wrapRef}
+      aria-hidden="true"
+      className="fixed inset-0 overflow-hidden select-none"
+      style={{ zIndex: 9999, background: "#060609", cursor: "none", fontFamily: "'Rajdhani', sans-serif" }}
+    >
+      {/* ── Canvases ── */}
+      <canvas ref={bgRef}  className="fixed inset-0 pointer-events-none" style={{ zIndex: 1 }} />
+      <canvas ref={midRef} className="fixed inset-0 pointer-events-none" style={{ zIndex: 2 }} />
+      <canvas ref={fxRef}  className="fixed inset-0 pointer-events-none" style={{ zIndex: 3 }} />
+
+      {/* ── Ambient glow ── */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        zIndex: 1,
+        background: [
+          "radial-gradient(ellipse 70% 50% at 50% 50%, rgba(124,58,237,.14) 0, transparent 70%)",
+          "radial-gradient(ellipse 35% 25% at 20% 25%, rgba(6,182,212,.07) 0, transparent 60%)",
+          "radial-gradient(ellipse 35% 25% at 80% 75%, rgba(236,72,153,.07) 0, transparent 60%)",
+        ].join(", "),
+      }} />
+
+      {/* ── Hex grid ── */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        zIndex: 2,
+        opacity: hexVisible ? 0.55 : 0,
+        transition: "opacity 0.8s ease",
+        backgroundImage: [
+          "repeating-linear-gradient(60deg, rgba(124,58,237,.035) 0, rgba(124,58,237,.035) 1px, transparent 0, transparent 50%)",
+          "repeating-linear-gradient(120deg, rgba(6,182,212,.035) 0, rgba(6,182,212,.035) 1px, transparent 0, transparent 50%)",
+        ].join(", "),
+        backgroundSize: "60px 104px",
+      }} />
+
+      {/* ── Vignette ── */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        zIndex: 9,
+        background: "radial-gradient(ellipse at center, transparent 35%, rgba(6,6,9,.9) 100%)",
+      }} />
+
+      {/* ── Flash overlay ── */}
+      <div id="ni-flash" className="fixed inset-0 pointer-events-none" style={{ zIndex: 50, background: "#fff", opacity: 0 }} />
+
+      {/* ── Data streams ── */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 4, opacity: hexVisible ? 0.65 : 0, transition: "opacity 1s ease" }}>
+        {Array.from({ length: 20 }, (_, i) => (
+          <div
+            key={i}
+            className="absolute"
             style={{
-              background: [
-                "radial-gradient(ellipse 80% 55% at 18% 18%, rgba(124,58,237,0.22) 0%, transparent 60%)",
-                "radial-gradient(ellipse 65% 50% at 85% 12%, rgba(59,130,246,0.14) 0%, transparent 55%)",
-                "radial-gradient(ellipse 55% 62% at 50% 90%, rgba(217,70,239,0.18) 0%, transparent 55%)",
-                "radial-gradient(ellipse 75% 52% at 72% 68%, rgba(6,182,212,0.10) 0%, transparent 58%)",
-              ].join(", "),
+              top: -120, left: `${(i / 20) * 100 + rand(-1, 1)}%`,
+              fontSize: 10, fontWeight: 300, letterSpacing: "0.18em",
+              writingMode: "vertical-rl",
+              color: streamColors[i % streamColors.length],
+              animation: `ni-streamFall ${rand(3.5, 8).toFixed(1)}s ${rand(0, 4).toFixed(1)}s linear infinite`,
+              opacity: 0,
             }}
-          />
+          >
+            {Array.from({ length: 14 }, (_, j) => (
+              <span key={j} style={{ display: "block" }}>{TECH_WORDS[ri(0, TECH_WORDS.length - 1)]}</span>
+            ))}
+          </div>
+        ))}
+      </div>
 
-          {/* ── Breathing depth orbs ── */}
-          {([
-            { s: { top: "4%",    left: "8%",   width: 720, height: 720 } as React.CSSProperties, color: "rgba(124,58,237,0.13)", d: 4.8, delay: 0   },
-            { s: { bottom: "2%", right: "6%",  width: 600, height: 600 } as React.CSSProperties, color: "rgba(217,70,239,0.10)", d: 5.5, delay: 1.2 },
-            { s: { top: "28%",   right: "12%", width: 420, height: 420 } as React.CSSProperties, color: "rgba(6,182,212,0.09)",  d: 3.6, delay: 0.7 },
-            { s: { bottom: "22%",left: "14%",  width: 340, height: 340 } as React.CSSProperties, color: "rgba(59,130,246,0.10)", d: 4.2, delay: 2.1 },
-          ]).map(({ s, color, d, delay }, i) => (
-            <motion.div
-              key={`orb-${i}`}
-              className="absolute pointer-events-none rounded-full"
-              style={{
-                ...s,
-                background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
-                filter: "blur(50px)",
-              }}
-              animate={{ scale: [1, 1.3, 1], opacity: [0.55, 1, 0.55] }}
-              transition={{ duration: d, repeat: Infinity, ease: "easeInOut", delay }}
-            />
-          ))}
+      {/* ── Top brand label ── */}
+      <div className="fixed" style={{
+        top: 26, left: 34, zIndex: 100,
+        fontFamily: "'Orbitron', monospace", fontSize: 13, fontWeight: 700,
+        letterSpacing: "0.32em", color: "rgba(255,255,255,.88)",
+        opacity: 0, animation: "ni-fadeIn 1s ease 2.5s forwards",
+      }}>
+        NEXUS
+      </div>
 
-          {/* ── Holographic grid ── */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.07, 0.035] }}
-            transition={{ delay: 0.2, duration: 1.8, times: [0, 0.3, 1] }}
-            style={{
-              backgroundImage: [
-                "linear-gradient(rgba(139,92,246,0.45) 1px, transparent 1px)",
-                "linear-gradient(90deg, rgba(139,92,246,0.45) 1px, transparent 1px)",
-              ].join(", "),
-              backgroundSize: "88px 88px",
-            }}
-          />
+      {/* ── Skip button ── */}
+      <button
+        onClick={() => { skipIntro(); setTimeout(() => setDismissed(true), 600); }}
+        style={{
+          position: "fixed", top: 26, right: 34, zIndex: 100,
+          fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 600,
+          letterSpacing: "0.22em", textTransform: "uppercase",
+          color: "rgba(255,255,255,.32)", background: "none",
+          border: "1px solid rgba(255,255,255,.09)", borderRadius: 4,
+          padding: "7px 16px", cursor: "pointer",
+          opacity: 0, animation: "ni-fadeIn 1s ease 2.5s forwards",
+          transition: "color .3s, border-color .3s",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.65)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,.22)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,.32)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,.09)"; }}
+      >
+        Skip ›
+      </button>
 
-          {/* ── Scan-line sweep ── */}
-          <motion.div
-            className="absolute left-0 right-0 pointer-events-none"
-            style={{
-              height: 2,
-              background: `linear-gradient(90deg, transparent 0%, ${C.cyan} 20%, ${C.magenta} 50%, ${C.purple} 80%, transparent 100%)`,
-              boxShadow: `0 0 18px 4px rgba(6,182,212,0.5), 0 0 40px 10px rgba(217,70,239,0.2)`,
-            }}
-            initial={{ top: "0%", opacity: 0 }}
-            animate={{ top: "102%", opacity: [0, 0.9, 0.9, 0] }}
-            transition={{ delay: 0.15, duration: 1.9, ease: "linear" }}
-          />
+      {/* ── Loading dots ── */}
+      <div className="fixed" style={{
+        bottom: 76, left: "50%", transform: "translateX(-50%)",
+        zIndex: 20, display: "flex", gap: 9,
+        opacity: dotsHidden ? 0 : 1, transition: "opacity 0.5s ease",
+        animation: "ni-fadeIn .5s ease .4s forwards",
+      }}>
+        {[
+          { bg: "#06B6D4", delay: "0s" },
+          { bg: "#A855F7", delay: ".22s" },
+          { bg: "#EC4899", delay: ".44s" },
+        ].map((d, i) => (
+          <div key={i} style={{
+            width: 5, height: 5, borderRadius: "50%",
+            background: d.bg, boxShadow: `0 0 10px ${d.bg}`,
+            animation: `ni-dotBounce 1.3s ${d.delay} ease-in-out infinite`,
+          }} />
+        ))}
+      </div>
 
-          {/* ── 60 particles ── */}
-          {particles.map((p) => (
-            <motion.div
-              key={p.id}
-              className="absolute pointer-events-none rounded-full"
-              style={{
-                left: `${p.x}%`, top: `${p.y}%`,
-                width: p.size, height: p.size,
-                background: p.color,
-                boxShadow: `0 0 ${p.size * 3}px ${p.size}px ${p.color}66`,
-              }}
-              initial={{ opacity: 0, x: 0, y: 0 }}
-              animate={{
-                opacity: [0, p.opacity, p.opacity * 0.6, 0],
-                x: ["0vw", `${p.tx}vw`],
-                y: ["0vh", `${p.ty}vh`],
-              }}
-              transition={{ delay: p.delay, duration: p.duration, ease: "easeOut" }}
-            />
-          ))}
+      {/* ── Stage ── */}
+      <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 10 }}>
+        <div className="relative flex flex-col items-center justify-center text-center">
 
-          {/* ── Corner brackets ── */}
-          {CORNERS.map((c, i) => (
-            <motion.div
-              key={`cn-${i}`}
-              className="absolute pointer-events-none"
-              style={{ width: 34, height: 34, ...c.pos, ...c.borders, borderColor: "rgba(139,92,246,0.6)" }}
-              initial={{ opacity: 0, scale: 0.3 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: c.delay, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            />
-          ))}
+          {/* Logo ring */}
+          <div className="relative flex items-center justify-center" style={{ width: 360, height: 360 }}>
+            {/* Static pulse rings */}
+            {[
+              { size: 340, color: "rgba(124,58,237,.22)", delay: "0s"  },
+              { size: 295, color: "rgba(6,182,212,.18)",  delay: ".5s" },
+              { size: 252, color: "rgba(236,72,153,.14)", delay: "1s"  },
+            ].map((ring, i) => (
+              <div key={i} className="absolute rounded-full" style={{
+                width: ring.size, height: ring.size,
+                border: `1px solid ${ring.color}`,
+                animation: `ni-ringPulse 3.5s ${ring.delay} ease-in-out infinite`,
+              }} />
+            ))}
 
-          {/* ── Corner glow dots ── */}
-          {([
-            { top: 22,    left: 22  } as React.CSSProperties,
-            { top: 22,    right: 22 } as React.CSSProperties,
-            { bottom: 22, left: 22  } as React.CSSProperties,
-            { bottom: 22, right: 22 } as React.CSSProperties,
-          ]).map((pos, i) => (
-            <motion.div
-              key={`cd-${i}`}
-              className="absolute pointer-events-none rounded-full"
-              style={{
-                width: 5, height: 5,
-                background: i % 2 === 0 ? C.violet : C.cyan,
-                boxShadow: `0 0 10px 4px ${i % 2 === 0 ? "rgba(139,92,246,0.9)" : "rgba(6,182,212,0.9)"}`,
-                ...pos,
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 0.5, 1] }}
-              transition={{ delay: 0.4 + i * 0.06, duration: 0.5, repeat: Infinity, repeatDelay: 2.5 }}
-            />
-          ))}
-
-          {/* ── Main stage ── */}
-          <div className="relative flex flex-col items-center" style={{ gap: 22 }}>
-
-            {/* Top accent line */}
-            <motion.div
-              style={{
-                height: 1.5, width: 520, originX: 0.5,
-                background: `linear-gradient(90deg, transparent, ${C.purple} 28%, ${C.magenta} 50%, ${C.cyan} 72%, transparent)`,
-                boxShadow: `0 0 14px 2px rgba(124,58,237,0.55)`,
-              }}
-              initial={{ scaleX: 0, opacity: 0 }}
-              animate={{ scaleX: 1, opacity: 1 }}
-              transition={{ delay: 0.28, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            />
-
-            {/* 3D block tilt */}
-            <motion.div
-              style={{ perspective: "900px" }}
-              animate={{ rotateX: [0, 0, 6,  3,  0], rotateY: [0, 0, -4, -2, 0] }}
-              transition={{ times: [0, 0.3, 0.56, 0.72, 1], duration: 2.8, delay: 0.38 }}
-            >
-              {/* Glitch wrapper */}
+            {/* Orbit tracks */}
+            {[
+              { size: 328, borderColor: "#06B6D4", borderFade: "rgba(6,182,212,.25)",   side: "top"    as const, dotBg: "#06B6D4", dotSize: 8, animDur: "9s",  dir: 1  },
+              { size: 270, borderColor: "#EC4899", borderFade: "rgba(236,72,153,.25)",  side: "top"    as const, dotBg: "#EC4899", dotSize: 7, animDur: "14s", dir: -1 },
+              { size: 310, borderColor: "#A855F7", borderFade: "rgba(168,85,247,.2)",   side: "bottom" as const, dotBg: "#A855F7", dotSize: 6, animDur: "20s", dir: 1  },
+            ].map((ot, i) => (
               <div
+                key={i}
+                className="absolute rounded-full"
                 style={{
-                  filter:    glitch ? "hue-rotate(148deg) saturate(5) brightness(2.4) contrast(1.3)" : "none",
-                  transform: glitch ? "translate3d(-3px,0,0)" : "none",
-                  transition: glitch ? "none" : "filter 0.04s, transform 0.04s",
-                  transformStyle: "preserve-3d" as const,
+                  width: ot.size, height: ot.size,
+                  border: "1px solid transparent",
+                  borderTopColor:    ot.dir === 1  ? ot.borderColor : "transparent",
+                  borderRightColor:  ot.dir === 1  ? ot.borderFade  : "transparent",
+                  borderBottomColor: ot.dir === -1 ? ot.borderColor : "transparent",
+                  borderLeftColor:   ot.dir === -1 ? ot.borderFade  : "transparent",
+                  opacity: orbitsVisible ? 1 : 0,
+                  transition: "opacity 1s ease",
+                  animation: `${ot.dir === 1 ? "ni-spinFwd" : "ni-spinRev"} ${ot.animDur} linear infinite`,
                 }}
               >
-                {/* Letters + beam layers */}
-                <div className="relative flex items-center" style={{ gap: 5 }}>
-
-                  {/* Letters */}
-                  {LETTERS.map((letter, i) => (
-                    <div key={`lw-${i}`} style={{ display: "inline-block", perspective: "340px" }}>
-                      <motion.span
-                        initial={{ opacity: 0, rotateY: -88, y: 22, filter: "blur(16px)" }}
-                        animate={{ opacity: 1, rotateY: 0,   y: 0,  filter: "blur(0px)"  }}
-                        transition={{ delay: 0.45 + i * 0.14, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                        style={{
-                          display: "inline-block",
-                          transformStyle: "preserve-3d" as const,
-                          fontFamily: "var(--font-playfair),'Playfair Display',serif",
-                          fontSize: "clamp(62px, 10.5vw, 128px)",
-                          fontWeight: 700,
-                          letterSpacing: "0.16em",
-                          lineHeight: 1,
-                          background: LETTER_GRADIENTS[i],
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          backgroundClip: "text",
-                          filter: showGlow
-                            ? "drop-shadow(0 0 28px rgba(139,92,246,1)) drop-shadow(0 0 12px rgba(217,70,239,0.7))"
-                            : "none",
-                          transition: "filter 0.4s ease",
-                        }}
-                      >
-                        {letter}
-                      </motion.span>
-                    </div>
-                  ))}
-
-                  {/* Red crosshair flash */}
-                  <motion.div
-                    className="absolute left-0 right-0 pointer-events-none"
-                    style={{
-                      top: "50%", height: 1,
-                      background: "rgba(239,68,68,0.65)",
-                      boxShadow: "0 0 12px 2px rgba(239,68,68,0.5)",
-                    }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 0.8, 0] }}
-                    transition={{ delay: 1.33, duration: 0.14 }}
-                  />
-
-                  {/* Blue fringe beam */}
-                  <motion.div
-                    className="absolute top-[-6%] bottom-[-6%] pointer-events-none"
-                    style={{
-                      width: "24%",
-                      mixBlendMode: "screen" as const,
-                      background: "linear-gradient(90deg, transparent 0%, rgba(6,182,212,0.5) 40%, rgba(96,165,250,0.75) 60%, transparent 100%)",
-                    }}
-                    initial={{ x: "-32%", opacity: 1 }}
-                    animate={{ x: "560%", opacity: 0 }}
-                    transition={{ delay: 1.43, duration: 0.38, ease: [0.18, 0, 0.82, 1] }}
-                  />
-
-                  {/* White main beam */}
-                  <motion.div
-                    className="absolute top-[-12%] bottom-[-12%] pointer-events-none"
-                    style={{
-                      width: "20%",
-                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 15%, rgba(255,255,255,0.99) 50%, rgba(255,255,255,0.55) 85%, transparent 100%)",
-                      boxShadow: "0 0 60px 20px rgba(255,255,255,0.35)",
-                    }}
-                    initial={{ x: "-28%", opacity: 1 }}
-                    animate={{ x: "590%", opacity: [1, 1, 0] }}
-                    transition={{ delay: 1.45, duration: 0.35, ease: [0.18, 0, 0.82, 1] }}
-                  />
-
-                  {/* Red fringe beam */}
-                  <motion.div
-                    className="absolute top-[-6%] bottom-[-6%] pointer-events-none"
-                    style={{
-                      width: "16%",
-                      mixBlendMode: "screen" as const,
-                      background: "linear-gradient(90deg, transparent 0%, rgba(236,72,153,0.45) 45%, rgba(239,68,68,0.55) 65%, transparent 100%)",
-                    }}
-                    initial={{ x: "-18%", opacity: 1 }}
-                    animate={{ x: "640%", opacity: 0 }}
-                    transition={{ delay: 1.47, duration: 0.33, ease: [0.18, 0, 0.82, 1] }}
-                  />
-
-                  {/* Starburst pulse */}
-                  <motion.div
-                    className="absolute pointer-events-none"
-                    style={{ top: "50%", left: "50%", width: 0, height: 0, transform: "translate(-50%,-50%)" }}
-                    animate={{
-                      boxShadow: [
-                        "0 0 0px 0px rgba(217,70,239,0.8), 0 0 0px 0px rgba(6,182,212,0.6)",
-                        "0 0 80px 80px rgba(217,70,239,0.6), 0 0 120px 60px rgba(6,182,212,0.4)",
-                        "0 0 0px 0px rgba(217,70,239,0), 0 0 0px 0px rgba(6,182,212,0)",
-                      ],
-                    }}
-                    transition={{ delay: 1.78, duration: 0.65, ease: "easeOut" }}
-                  />
-
-                  {/* Blast ring 1 */}
-                  <motion.div
-                    className="absolute pointer-events-none rounded-full"
-                    style={{
-                      top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-                      border: `2px solid ${C.violet}`,
-                      boxShadow: "0 0 20px 4px rgba(139,92,246,0.6)",
-                    }}
-                    initial={{ width: 0, height: 0, opacity: 0.95 }}
-                    animate={{ width: 680, height: 200, opacity: 0 }}
-                    transition={{ delay: 1.58, duration: 0.9, ease: "easeOut" }}
-                  />
-
-                  {/* Blast ring 2 */}
-                  <motion.div
-                    className="absolute pointer-events-none rounded-full"
-                    style={{
-                      top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-                      border: `1px solid ${C.cyan}`,
-                      boxShadow: "0 0 14px 2px rgba(6,182,212,0.5)",
-                    }}
-                    initial={{ width: 0, height: 0, opacity: 0.8 }}
-                    animate={{ width: 400, height: 130, opacity: 0 }}
-                    transition={{ delay: 1.62, duration: 0.65, ease: "easeOut" }}
-                  />
-
-                  {/* Post-beam radial glow */}
-                  <motion.div
-                    className="absolute pointer-events-none"
-                    style={{
-                      inset: -50,
-                      filter: "blur(14px)",
-                      background: "radial-gradient(ellipse 88% 68% at 50% 50%, rgba(124,58,237,0.55) 0%, rgba(217,70,239,0.28) 38%, rgba(6,182,212,0.18) 62%, transparent 75%)",
-                    }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 1, 0.55, 0] }}
-                    transition={{ delay: 1.56, duration: 1.05, times: [0, 0.14, 0.5, 1] }}
-                  />
-                </div>
+                <div style={{
+                  position: "absolute",
+                  borderRadius: "50%",
+                  ...(ot.side === "top" ? { top: -4, left: "50%", transform: "translateX(-50%)" } : { bottom: -4, left: "50%", transform: "translateX(-50%)" }),
+                  width: ot.dotSize, height: ot.dotSize,
+                  background: ot.dotBg,
+                  boxShadow: `0 0 ${ot.dotSize * 2}px ${ot.dotBg}, 0 0 ${ot.dotSize * 4}px ${ot.dotBg}`,
+                }} />
               </div>
-            </motion.div>
+            ))}
 
-            {/* Bottom accent line */}
-            <motion.div
-              style={{
-                height: 1.5, width: 520, originX: 0.5,
-                background: `linear-gradient(90deg, transparent, ${C.indigo} 28%, ${C.blue} 50%, ${C.cyan} 72%, transparent)`,
-                boxShadow: `0 0 12px 2px rgba(99,102,241,0.45)`,
-              }}
-              initial={{ scaleX: 0, opacity: 0 }}
-              animate={{ scaleX: 1, opacity: 1 }}
-              transition={{ delay: 0.52, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            />
+            {/* NEXUS text */}
+            <div className="relative" style={{ display: "inline-block" }}>
+              <div
+                id="ni-nexusText"
+                style={{
+                  fontFamily: "'Orbitron', monospace", fontWeight: 900,
+                  fontSize: "clamp(68px, 11vw, 128px)", letterSpacing: "0.14em", lineHeight: 1,
+                  opacity: logoVisible ? 1 : 0,
+                  transform: logoVisible ? "scale(1) translateY(0)" : "scale(.82) translateY(10px)",
+                  transition: "opacity .9s cubic-bezier(.4,0,.2,1), transform .9s cubic-bezier(.4,0,.2,1)",
+                  userSelect: "none", whiteSpace: "nowrap",
+                }}
+              >
+                {"NEXUS".split("").map((ch, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      display: "inline-block",
+                      background: "linear-gradient(140deg, #fff 0%, #c4b5fd 20%, #A855F7 40%, #06B6D4 65%, #EC4899 100%)",
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                      filter: "drop-shadow(0 0 28px rgba(124,58,237,.95)) drop-shadow(0 0 60px rgba(6,182,212,.5))",
+                      animation: `ni-charFloat 4s ${(i * 0.1).toFixed(1)}s ease-in-out infinite`,
+                    }}
+                  >
+                    {ch}
+                  </span>
+                ))}
+              </div>
 
-            {/* Tagline */}
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {TAGLINE.split("").map((char, i) => (
-                <motion.span
-                  key={`tl-${i}`}
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: "0.38em",
-                    textTransform: "uppercase",
-                    color: "rgba(148,163,184,0.78)",
-                    fontWeight: 300,
-                    display: "inline-block",
-                    fontFamily: "var(--font-dm-sans),'DM Sans',sans-serif",
-                  }}
-                  initial={{ opacity: 0, y: 7 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.92 + i * 0.031, duration: 0.24, ease: "easeOut" }}
-                >
-                  {char === " " ? "\u00A0\u00A0" : char}
-                </motion.span>
-              ))}
+              {/* Glitch pseudo-elements replicated as real divs */}
+              {logoVisible && (
+                <>
+                  <div aria-hidden="true" style={{
+                    position: "absolute", top: 0, left: 0, pointerEvents: "none",
+                    fontFamily: "'Orbitron', monospace", fontWeight: 900,
+                    fontSize: "clamp(68px, 11vw, 128px)", letterSpacing: "0.14em", lineHeight: 1,
+                    color: "#06B6D4", whiteSpace: "nowrap",
+                    WebkitTextFillColor: "#06B6D4",
+                    clipPath: "polygon(0 25%, 100% 25%, 100% 45%, 0 45%)",
+                    animation: "ni-glitchA 7s infinite",
+                  }}>NEXUS</div>
+                  <div aria-hidden="true" style={{
+                    position: "absolute", top: 0, left: 0, pointerEvents: "none",
+                    fontFamily: "'Orbitron', monospace", fontWeight: 900,
+                    fontSize: "clamp(68px, 11vw, 128px)", letterSpacing: "0.14em", lineHeight: 1,
+                    color: "#EC4899", whiteSpace: "nowrap",
+                    WebkitTextFillColor: "#EC4899",
+                    clipPath: "polygon(0 60%, 100% 60%, 100% 78%, 0 78%)",
+                    animation: "ni-glitchB 7s infinite",
+                  }}>NEXUS</div>
+                </>
+              )}
+
+              {/* Scan line */}
+              {logoVisible && (
+                <div style={{
+                  position: "absolute", width: "110%", height: 2, left: "-5%", top: 0,
+                  background: "linear-gradient(90deg, transparent 0%, rgba(6,182,212,.2) 10%, #06B6D4 50%, rgba(6,182,212,.2) 90%, transparent 100%)",
+                  boxShadow: "0 0 20px #06B6D4, 0 0 40px rgba(6,182,212,.4)",
+                  animation: "ni-scan 3.5s ease-in-out 5s infinite",
+                }} />
+              )}
             </div>
-
-            {/* Badge row */}
-            <motion.div
-              style={{ display: "flex", alignItems: "center" }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 2.22, duration: 0.55 }}
-            >
-              {(["v4.0", "Enterprise", "AI-Powered"] as const).map((label, i) => (
-                <motion.span
-                  key={label}
-                  style={{
-                    fontSize: 9,
-                    letterSpacing: "0.32em",
-                    textTransform: "uppercase",
-                    color: i === 1 ? "rgba(167,139,250,0.75)" : "rgba(100,116,139,0.5)",
-                    fontFamily: "var(--font-dm-sans),monospace",
-                    fontWeight: 400,
-                    paddingLeft: i > 0 ? 18 : 0,
-                    marginLeft:  i > 0 ? 18 : 0,
-                    borderLeft:  i > 0 ? "1px solid rgba(100,116,139,0.22)" : "none",
-                  }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 2.28 + i * 0.1, duration: 0.4 }}
-                >
-                  {label}
-                </motion.span>
-              ))}
-            </motion.div>
           </div>
 
-          {/* ── Progress bar ── */}
-          <div
-            className="absolute overflow-hidden rounded-full"
-            style={{ bottom: 38, width: 196, height: 2, background: "rgba(255,255,255,0.06)" }}
-          >
-            <motion.div
-              className="h-full rounded-full"
+          {/* Accent underline */}
+          <div style={{
+            height: 2, margin: "0.5rem auto 0",
+            width: accentFull ? "80%" : "0%",
+            transition: "width 1.4s cubic-bezier(.4,0,.2,1)",
+            background: "linear-gradient(90deg, transparent, #7C3AED, #06B6D4, #EC4899, transparent)",
+            boxShadow: "0 0 12px #06B6D4, 0 0 24px rgba(6,182,212,.3)",
+          }} />
+
+          {/* Tagline */}
+          <div style={{
+            fontFamily: "'Rajdhani', sans-serif", fontWeight: 300,
+            fontSize: "clamp(11px, 1.6vw, 16px)", letterSpacing: "0.55em",
+            textTransform: "uppercase", color: "rgba(248,250,252,.45)",
+            marginTop: 14,
+            opacity: taglineVisible ? 1 : 0,
+            transform: taglineVisible ? "translateY(0)" : "translateY(8px)",
+            transition: "opacity 1.2s ease, transform 1.2s ease",
+          }}>
+            Project Intelligence Platform
+          </div>
+
+          {/* Metrics */}
+          <div style={{
+            display: "flex", gap: 32, marginTop: 20,
+            opacity: metricsVisible ? 1 : 0,
+            transform: metricsVisible ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 1.2s ease, transform 1.2s ease",
+          }}>
+            {[
+              { val: "1,345",     lbl: "Tests"         },
+              { val: "30+",       lbl: "Technologies"  },
+              { val: "Multi",     lbl: "Tenant"        },
+              { val: "Real-time", lbl: "Collaboration" },
+            ].map(({ val, lbl }) => (
+              <div key={lbl} style={{ textAlign: "center" }}>
+                <div style={{
+                  fontFamily: "'Orbitron', monospace",
+                  fontSize: "clamp(14px, 2.2vw, 22px)", fontWeight: 700,
+                  background: "linear-gradient(135deg, #06B6D4, #A855F7)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                }}>{val}</div>
+                <div style={{
+                  fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 400,
+                  letterSpacing: "0.3em", textTransform: "uppercase",
+                  color: "rgba(248,250,252,.3)", marginTop: 2,
+                }}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tech badges ── */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 8 }}>
+        {STACK.map((t, i) => {
+          const pos = BADGE_POS[i % BADGE_POS.length];
+          return (
+            <div
+              key={t.n}
               style={{
-                background: `linear-gradient(90deg, ${C.purple} 0%, ${C.magenta} 35%, ${C.cyan} 65%, ${C.blue} 100%)`,
-                boxShadow: "0 0 8px rgba(124,58,237,0.7)",
+                position: "absolute",
+                left: pos.l, top: pos.t,
+                fontFamily: "'Rajdhani', monospace", fontSize: 10.5, fontWeight: 600,
+                letterSpacing: "0.1em", padding: "4px 11px", borderRadius: 4,
+                whiteSpace: "nowrap", color: t.c, background: t.bg,
+                border: `1px solid ${t.bd}`,
+                boxShadow: `0 0 14px ${t.c}1a, inset 0 0 8px ${t.c}08`,
+                backdropFilter: "blur(10px)",
+                opacity: badgesVisible ? 1 : 0,
+                transform: badgesVisible ? "translateY(0)" : "translateY(8px)",
+                transition: `opacity .6s ${i * 70}ms ease, transform .6s ${i * 70}ms ease`,
               }}
-              initial={{ width: "0%" }}
-              animate={{ width: "100%" }}
-              transition={{ delay: 0.36, duration: (SHOW_MS - 360) / 1000, ease: "linear" }}
-            />
-          </div>
-
-          {/* ── HUD coordinates ── */}
-          {([
-            { pos: { bottom: 32, left: 32  } as React.CSSProperties, text: "00.000 N" },
-            { pos: { bottom: 32, right: 32 } as React.CSSProperties, text: "00.000 E" },
-          ]).map(({ pos, text }) => (
-            <motion.span
-              key={text}
-              className="absolute pointer-events-none"
-              style={{ fontSize: 8, letterSpacing: "0.25em", color: "rgba(100,116,139,0.35)", fontFamily: "monospace", ...pos }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
             >
-              {text}
-            </motion.span>
-          ))}
+              <span style={{ opacity: 0.45, fontSize: 8 }}>&#9658; </span>{t.n}
+            </div>
+          );
+        })}
+      </div>
 
-          {/* ── SYS.INIT label ── */}
-          <motion.span
-            className="absolute top-[26px] pointer-events-none"
-            style={{ fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(100,116,139,0.35)", fontFamily: "monospace" }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-          >
-            SYS.INIT
-          </motion.span>
+      {/* ── Creator ── */}
+      <div className="fixed" style={{
+        bottom: 44, left: "50%", transform: "translateX(-50%)",
+        zIndex: 20, textAlign: "center",
+        opacity: creatorVisible ? 1 : 0,
+        transition: "opacity 1.5s ease",
+      }}>
+        <div style={{
+          fontFamily: "'Inter', sans-serif", fontWeight: 300, fontSize: 10,
+          letterSpacing: "0.4em", textTransform: "uppercase",
+          color: "rgba(248,250,252,.3)", marginBottom: 5,
+        }}>
+          Crafted by
+        </div>
+        <div style={{
+          fontFamily: "'Rajdhani', sans-serif", fontWeight: 700,
+          fontSize: "clamp(17px, 2.8vw, 26px)", letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          background: "linear-gradient(90deg, #F59E0B 0%, #FFF8DC 40%, #FFC859 70%, #F59E0B 100%)",
+          backgroundSize: "200%",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          filter: "drop-shadow(0 0 18px rgba(245,158,11,.65))",
+          animation: "ni-goldShimmer 2.8s ease-in-out infinite",
+        }}>
+          Viraj Pankaj Jain
+        </div>
+        <div style={{
+          height: 1, margin: "8px auto 0",
+          width: creatorBarFull ? "100%" : "0%",
+          transition: "width 1.6s cubic-bezier(.4,0,.2,1)",
+          background: "linear-gradient(90deg, transparent, #F59E0B, transparent)",
+          boxShadow: "0 0 10px #F59E0B",
+        }} />
+      </div>
 
-          {/* ── CRT scan-lines ── */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.025) 3px, rgba(0,0,0,0.025) 4px)" }}
-          />
+      {/* ── Progress bar ── */}
+      <div className="fixed bottom-0 left-0" style={{
+        height: 2, zIndex: 100,
+        width: `${progress}%`,
+        transition: "width .1s linear",
+        background: "linear-gradient(90deg, #7C3AED, #06B6D4, #EC4899)",
+        boxShadow: "0 0 8px #06B6D4",
+      }} />
 
-          {/* ── Vignette ── */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse 88% 78% at 50% 50%, transparent 38%, rgba(7,7,15,0.72) 100%)" }}
-          />
-        </motion.div>
-      )}
-    </AnimatePresence>
+      {/* ── Animation keyframes injected via style tag ── */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500&display=swap');
+        @keyframes ni-streamFall {
+          from   { transform: translateY(-120px); opacity: 0; }
+          10%    { opacity: .9; }
+          85%    { opacity: .3; }
+          to     { transform: translateY(110vh);  opacity: 0; }
+        }
+        @keyframes ni-ringPulse {
+          0%,100% { opacity: .35; transform: scale(1);    }
+          50%     { opacity: 1;   transform: scale(1.04); }
+        }
+        @keyframes ni-spinFwd { to { transform: rotate(360deg);  } }
+        @keyframes ni-spinRev { to { transform: rotate(-360deg); } }
+        @keyframes ni-charFloat {
+          0%,100% { transform: translateY(0);   }
+          50%     { transform: translateY(-7px); }
+        }
+        @keyframes ni-glitchA {
+          0%,93%,100% { opacity: 0;    transform: translateX(0);   }
+          94%         { opacity: .85;  transform: translateX(-5px); }
+          95%         { opacity: 0;    transform: translateX(5px);  }
+          96%         { opacity: .55;  transform: translateX(-3px); }
+          97%         { opacity: 0; }
+        }
+        @keyframes ni-glitchB {
+          0%,91%,100% { opacity: 0;   transform: translateX(0);   }
+          92%         { opacity: .7;  transform: translateX(5px);  }
+          93%         { opacity: 0;   transform: translateX(-4px); }
+          94%         { opacity: .4;  transform: translateX(3px);  }
+          95%         { opacity: 0; }
+        }
+        @keyframes ni-scan {
+          0%   { top: -5%;   opacity: 0; }
+          8%   { opacity: 1; }
+          92%  { opacity: .8; }
+          100% { top: 110%;  opacity: 0; }
+        }
+        @keyframes ni-dotBounce {
+          0%,100% { transform: translateY(0);   opacity: .4; }
+          50%     { transform: translateY(-9px); opacity: 1;  }
+        }
+        @keyframes ni-fadeIn { to { opacity: 1; } }
+        @keyframes ni-goldShimmer {
+          0%,100% { background-position: 0%;   }
+          50%     { background-position: 100%; }
+        }
+      `}</style>
+    </div>
   );
 }
