@@ -14,6 +14,7 @@ import { CommandPaletteProvider } from "@/components/providers/command-palette-p
 import { Toaster } from "@/components/ui/toaster";
 import { AriaLiveRegion } from "@/components/accessibility/aria-live-region";
 import { NavigationErrorGuard } from "@/components/navigation-error-guard";
+import { NexusIntro } from "@/components/nexus-intro";
 import "./globals.css";
 // editor.css is imported directly in rich-text-editor.tsx — no longer global
 
@@ -168,6 +169,8 @@ export default function RootLayout({
           >
             Skip to main content
           </a>
+          {/* Brand splash animation — shown once per session, respects prefers-reduced-motion */}
+          <NexusIntro />
           <PerformanceWrapper>
             <ThemeProvider>
               {/*
