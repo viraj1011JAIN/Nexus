@@ -82,11 +82,11 @@ export const metadata: Metadata = {
       "Real-time Kanban boards, sprints, analytics, and multi-tenant team collaboration. The self-hostable Jira/Trello alternative built with Next.js 15 + AI.",
     images: [
       {
-        url: `${APP_URL}/og-image.png`,
+        url: `${APP_URL}/og-image.jpg`,
         width: 1200,
         height: 630,
         alt: "NEXUS — Enterprise Project Management dashboard",
-        type: "image/png",
+        type: "image/jpeg",
       },
     ],
   },
@@ -97,7 +97,12 @@ export const metadata: Metadata = {
     title: "NEXUS — Enterprise Project Management",
     description:
       "Production-grade multi-tenant project management. Real-time boards, sprints, analytics and AI — built for teams.",
-    images: [`${APP_URL}/og-image.png`],
+    images: [`${APP_URL}/og-image.jpg`],
+  },
+  verification: {
+    // Replace this placeholder with the string from Google Search Console
+    // (Settings → Ownership verification → HTML tag method)
+    google: "REPLACE_WITH_GOOGLE_SITE_VERIFICATION_STRING",
   },
   appleWebApp: {
     capable: true,

@@ -444,44 +444,55 @@ CREATE INDEX idx_lists_board_order ON lists(board_id, order);
 CREATE INDEX idx_cards_title_search ON cards USING GIN(to_tsvector('english', title));
 ```
 
-### Row-Level Security (RLS) Policies
+### Tenant Isolation: Data Access Layer (DAL)
 
-```sql
--- Supabase RLS for multi-tenancy security
+> **Note:** NEXUS does NOT use Supabase `auth.uid()` RLS policies. Supabase is used only for Realtime (WebSocket). Tenant isolation is enforced at the **application layer** via `createDAL()` — a type-safe Data Access Layer that scopes every query to the current org.
 
--- Users can only see data from their organizations
-CREATE POLICY "Users can view own organization data"
-ON boards FOR SELECT
-USING (
-  organization_id IN (
-    SELECT organization_id FROM organization_users 
-    WHERE user_id = auth.uid()
-  )
-);
+**How it works:**
 
--- Admins can modify boards
-CREATE POLICY "Admins can modify boards"
-ON boards FOR UPDATE
-USING (
-  organization_id IN (
-    SELECT organization_id FROM organization_users 
-    WHERE user_id = auth.uid() 
-    AND role IN ('OWNER', 'ADMIN')
-  )
-);
+```typescript
+// lib/dal.ts — actual production implementation
+// 1. createDAL() sets a PostgreSQL session variable via SET:
+await db.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, false)`;
+await db.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, false)`;
 
--- Members can create cards
-CREATE POLICY "Members can create cards"
-ON cards FOR INSERT
-WITH CHECK (
-  list_id IN (
-    SELECT l.id FROM lists l
-    JOIN boards b ON b.id = l.board_id
-    JOIN organization_users ou ON ou.organization_id = b.organization_id
-    WHERE ou.user_id = auth.uid()
-    AND ou.role IN ('OWNER', 'ADMIN', 'MEMBER')
-  )
-);
+// 2. Returns a TenantDAL instance locked to this orgId
+// 3. Every query method injects orgId automatically:
+//    dal.boards.findMany()   → WHERE orgId = <from-JWT>
+//    dal.boards.findUnique() → asserts board.orgId === this.orgId
+//    dal.cards.findUnique()  → traverses Card→List→Board→orgId chain
+//    dal.labels.findMany()   → WHERE orgId = <from-JWT>
+
+// 4. Ownership chain verification (defense in depth):
+//    Board   → direct orgId check
+//    List    → List → Board → orgId
+//    Card    → Card → List → Board → orgId
+//    Comment → Comment → Card → List → Board → orgId
+
+// 5. Cross-tenant access returns NOT_FOUND, never FORBIDDEN
+//    (NOT_FOUND reveals nothing; FORBIDDEN confirms the resource exists)
+```
+
+**Usage in server actions:**
+
+```typescript
+// Every action creates a DAL scoped to the JWT-authenticated org
+const ctx = await getTenantContext();   // orgId from Clerk JWT
+const dal = await createDAL(ctx);       // locked to ctx.orgId
+
+const boards = await dal.boards.findMany();     // auto-scoped
+const card   = await dal.cards.findUnique(id);  // ownership verified
+await dal.cards.update(id, { title: "..." });   // ownership verified
+await dal.cards.reorder(items, boardId);         // every ID validated
+```
+
+**Board-level isolation (dual-gate):**
+```typescript
+// Gate 1: Organization membership (getTenantContext)
+// Gate 2: Board membership (DAL verifies BoardMember row)
+//   dal.boards.findUnique() → verifyBoardMembership(boardId)
+//   dal.boards.findMany()   → WHERE members: { some: { userId } }
+// Gate 3: Permission check (requireBoardPermission — 28 granular permissions)
 ```
 
 ---
@@ -489,6 +500,8 @@ WITH CHECK (
 ## 🎨 Feature Specifications
 
 ### 🚨 CRITICAL FEATURE: Guest Demo Mode (Build This First!)
+
+> **Blueprint vs Reality:** The code snippets below are from the **original planning phase**. The actual implementation evolved — demo mode is enforced via `isDemoContext(ctx)` in every server action (not via middleware), and org switching uses Clerk's `<OrganizationSwitcher>` component (not a custom `OrgSwitcher`). See `actions/` for actual server action patterns.
 
 **Why This Is #1 Priority:**
 Recruiters are lazy. If they have to sign up with Google, 70% will close the tab. You need a **one-click demo** that shows your work instantly.
@@ -665,23 +678,25 @@ seedDemoOrganization();
 - Shows your best features instantly
 - They can explore without commitment
 
-**Security Note:**
-- Make demo org read-only in production
-- Use middleware to prevent deletions:
+**Security Note (Actual Implementation):**
+- Demo org is read-only — enforced at the **server action level**, not middleware
+- Every mutation action calls `isDemoContext(ctx)` from `lib/tenant-context.ts`
+- `protectDemoMode(orgId)` from `lib/action-protection.ts` returns a safe error message
+- `DEMO_ORG_ID` is a constant exported from `lib/action-protection.ts`
 
 ```typescript
-// middleware.ts
-if (orgId === "demo-org-id" && request.method !== "GET") {
-  return NextResponse.json(
-    { error: "Demo mode is read-only" },
-    { status: 403 }
-  );
+// Actual pattern in every server action:
+const ctx = await getTenantContext();
+if (isDemoContext(ctx)) {
+  return { error: "Demo mode is read-only. Sign up to create your own workspace." };
 }
 ```
 
 ---
 
 ### Feature 1: Multi-Tenancy Architecture
+
+> **Blueprint vs Reality:** The code below is from the **original planning phase**. The actual implementation uses `getTenantContext()` (from `lib/tenant-context.ts`) which extracts orgId from Clerk's signed JWT — never from function parameters. Organization switching uses Clerk's built-in `<OrganizationSwitcher>` component, not the custom `OrgSwitcher` shown below.
 
 **Description:** Complete organization-based multi-tenancy with workspace switching
 
@@ -1398,72 +1413,46 @@ export function AddCardForm({ listId }: { listId: string }) {
 
 ### Feature 4: Real-Time Collaboration
 
-**Description:** Live updates across all connected clients
+**Description:** Live updates across all connected clients via Supabase Realtime
 
-**Implementation:**
+> **Note:** The actual implementation is in `hooks/use-realtime-board.ts` (not `lib/supabase/realtime.ts`). Channel names include orgId for tenant isolation.
+
+**Actual implementation pattern:**
 
 ```typescript
-// lib/supabase/realtime.ts
+// hooks/use-realtime-board.ts (actual production code — simplified)
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
 
-export function useRealtimeBoard(boardId: string) {
-  const supabase = createClient();
-  const [lists, setLists] = useState<ListWithCards[]>([]);
-  
+export function useRealtimeBoard(boardId: string, orgId: string) {
+  // Channel pattern: org:{orgId}:board:{boardId} (tenant-scoped)
+  // UUID guard: validates orgId/boardId before interpolating into filter
   useEffect(() => {
-    // Subscribe to lists changes
-    const listsChannel = supabase
-      .channel(`board:${boardId}:lists`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'lists',
-          filter: `board_id=eq.${boardId}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setLists(prev => [...prev, payload.new as List]);
-          } else if (payload.eventType === 'UPDATE') {
-            setLists(prev => 
-              prev.map(list => 
-                list.id === payload.new.id ? payload.new as List : list
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setLists(prev => prev.filter(list => list.id !== payload.old.id));
-          }
-        }
-      )
+    const supabase = createClient();
+    const channelName = `org:${orgId}:board:${boardId}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'cards',
+        filter: `board_id=eq.${boardId}`,  // UUID-validated before interpolation
+      }, (payload) => {
+        // markLocalCardUpdate() prevents echo for own writes
+        // Processes INSERT, UPDATE, DELETE events
+        // Updates local state optimistically
+      })
       .subscribe();
-    
-    // Subscribe to cards changes
-    const cardsChannel = supabase
-      .channel(`board:${boardId}:cards`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cards',
-        },
-        (payload) => {
-          // Handle card updates
-          handleCardChange(payload);
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(listsChannel);
-      supabase.removeChannel(cardsChannel);
-    };
-  }, [boardId]);
-  
-  return lists;
+
+    return () => { supabase.removeChannel(channel); };
+  }, [boardId, orgId]);  // orgId in deps — re-subscribe on org switch
 }
+
+// Related hooks:
+// use-presence.ts — shows who's viewing the board (online indicators)
+// use-realtime-analytics.ts — live dashboard updates
+// lib/realtime-channels.ts — channel name generation
+// lib/yjs-supabase-provider.ts — Y.js CRDT for collaborative rich-text editing
 ```
 
 ---
@@ -1547,43 +1536,59 @@ export function CommandPalette() {
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                    AUTHENTICATION FLOW                        │
+│               (proxy.ts — Clerk clerkMiddleware)             │
 └──────────────────────────────────────────────────────────────┘
 
 User visits /dashboard
         │
         ▼
-┌─────────────────┐
-│  Middleware     │◄────── Runs on Edge
-│  (auth check)   │
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    │         │
-    ▼         ▼
-Authenticated  Unauthenticated
-    │              │
-    │              ▼
-    │         Redirect to /sign-in
-    │              │
-    │              ▼
-    │         ┌─────────────────┐
-    │         │  Clerk Login    │
-    │         │  ├─ Google      │
-    │         │  ├─ GitHub      │
-    │         │  └─ Email/Pass  │
-    │         └────────┬────────┘
-    │                  │
-    │                  ▼
-    │         ┌─────────────────┐
-    │         │  Clerk Webhook  │──────► Create user in DB
-    │         └────────┬────────┘
-    │                  │
-    └──────────────────┘
+┌─────────────────────────┐
+│  proxy.ts (Edge)        │◄────── Runs on Vercel Edge Network
+│  clerkMiddleware()      │        (was middleware.ts in Next ≤15)
+│  ├─ Layer 0: auth()     │        Resolves JWT on every route
+│  ├─ Layer 1: Public?    │        Fast-path for /, /sign-in, etc.
+│  ├─ Layer 2: userId?    │        No session → redirect or 401
+│  ├─ Layer 3a: orgId?    │        No org → redirect /select-org
+│  ├─ Layer 3b: PENDING?  │        PENDING → /pending-approval
+│  ├─ Layer 4: Headers    │        Inject x-tenant-id, x-user-id
+│  └─ Layer 5: Security   │        CSP, X-Frame-Options, HSTS
+└────────────┬────────────┘
+             │
+    ┌────────┴────────┐
+    │                 │
+    ▼                 ▼
+Authenticated    Unauthenticated
+    │                 │
+    │            ┌────┴─────────────┐
+    │            │  Page nav:       │
+    │            │  → redirectToSignIn()
+    │            │  RSC/Action:     │
+    │            │  → redirect /sign-in
+    │            │  API route:      │
+    │            │  → 401 JSON      │
+    │            └────┬─────────────┘
+    │                 ▼
+    │            ┌─────────────────┐
+    │            │  Clerk Login    │
+    │            │  ├─ Google      │
+    │            │  ├─ GitHub      │
+    │            │  └─ Email/Pass  │
+    │            └────────┬────────┘
+    │                     │
+    │                     ▼
+    │            ┌─────────────────────────────┐
+    │            │  User healing path          │
+    │            │  getTenantContext() →        │
+    │            │  clerkClient().users.getUser │
+    │            │  → db.user.create (try/catch │
+    │            │    on unique constraint)     │
+    │            └────────┬────────────────────┘
+    │                     │
+    └─────────────────────┘
              │
              ▼
     ┌─────────────────┐
-    │  Check if user  │
-    │ has organization│
+    │  orgId in JWT?  │
     └────────┬────────┘
              │
         ┌────┴────┐
@@ -1595,107 +1600,131 @@ Authenticated  Unauthenticated
         │    Redirect to /select-org
         │         │
         │         ▼
-        │    Create Organization
+        │    Create/Select Organization
         │         │
-        └─────────┘
-             │
-             ▼
-    ┌─────────────────┐
-    │   Dashboard     │
-    └─────────────────┘
+        ├─────────┘
+        │
+        ▼
+    ┌─────────────────────────┐
+    │  Membership status?     │
+    │  ├─ ACTIVE → Dashboard  │
+    │  ├─ PENDING → /pending- │
+    │  │   approval            │
+    │  └─ SUSPENDED → FORBIDDEN│
+    └─────────────────────────┘
 ```
 
-### Middleware Implementation
+### Edge Proxy Implementation
+
+> **Note:** Next.js 16 uses `proxy.ts` (was `middleware.ts` in Next.js ≤15). Uses Clerk v6 `clerkMiddleware()` + `createRouteMatcher()` (NOT the deprecated `authMiddleware`).
 
 ```typescript
-// middleware.ts
-import { authMiddleware } from "@clerk/nextjs";
+// proxy.ts (actual production code — simplified for readability)
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export default authMiddleware({
-  publicRoutes: ["/", "/api/webhook(.*)"],
-  
-  async afterAuth(auth, req) {
-    // Handle unauthenticated users
-    if (!auth.userId && !auth.isPublicRoute) {
-      const signInUrl = new URL("/sign-in", req.url);
-      signInUrl.searchParams.set("redirect_url", req.url);
-      return NextResponse.redirect(signInUrl);
+const isPublicRoute = createRouteMatcher([
+  "/", "/about", "/sign-in(.*)", "/sign-up(.*)",
+  "/privacy", "/terms", "/shared/(.*)",
+  "/api/health", "/api/health/(.*)",
+  "/api/webhook/(.*)", "/api/v1/(.*)",  // v1 API uses API key auth, not Clerk
+]);
+
+// Security headers — CSP, X-Frame-Options, CORP, Referrer-Policy, Permissions-Policy
+// Pre-computed at module load (not per-request) for performance
+const SECURITY_HEADER_ENTRIES = [ /* ... */ ] as const;
+
+export default clerkMiddleware(async (auth, req) => {
+  const authObj = await auth();  // Resolves JWT on EVERY route (including public)
+
+  // Layer 1: Public routes — fast-path with security headers
+  if (isPublicRoute(req)) {
+    // Redirect authenticated users from "/" to "/dashboard"
+    if (req.nextUrl.pathname === "/" && authObj.userId) {
+      return redirect("/dashboard");
     }
-    
-    // Handle authenticated users without organization
-    if (
-      auth.userId &&
-      !auth.orgId &&
-      req.nextUrl.pathname !== "/select-org"
-    ) {
-      const orgSelection = new URL("/select-org", req.url);
-      return NextResponse.redirect(orgSelection);
+    return applySecurityHeaders(NextResponse.next());
+  }
+
+  // Layer 2: Authentication — no session → redirect or 401
+  if (!authObj.userId) {
+    if (req.headers.get("next-action") || req.headers.get("rsc")) {
+      return redirect("/sign-in");     // RSC/Server Action → redirect
     }
-    
-    // Enforce RBAC
-    if (auth.userId && auth.orgId) {
-      const role = await getUserRole(auth.userId, auth.orgId);
-      
-      // Protect admin routes
-      if (req.nextUrl.pathname.startsWith("/admin") && role !== "OWNER" && role !== "ADMIN") {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
+    if (req.nextUrl.pathname.startsWith("/api/")) {
+      return json({ error: "Unauthorized" }, 401);  // API → 401 JSON
     }
-    
-    return NextResponse.next();
-  },
+    return authObj.redirectToSignIn({ returnBackUrl: req.url });
+  }
+
+  // Layer 3a: Organisation gate — no orgId → /select-org
+  if (!authObj.orgId && !req.nextUrl.pathname.startsWith("/select-org")) {
+    return redirect("/select-org");
+  }
+
+  // Layer 3b: PENDING membership gate → /pending-approval
+  if (authObj.orgId && metadata?.orgMembershipStatus === "PENDING") {
+    return redirect("/pending-approval");
+  }
+
+  // Layer 4: Inject verified tenant headers (from signed JWT, not client)
+  requestHeaders.set("x-tenant-id", orgId);
+  requestHeaders.set("x-user-id", userId);
+  requestHeaders.set("x-org-role", orgRole);
+
+  // Layer 5: Security headers
+  return applySecurityHeaders(NextResponse.next({ request: { headers } }));
 });
 
 export const config = {
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
 };
 ```
 
-### Role-Based Access Control
+### Role-Based Access Control (Dual-Gate RBAC)
 
+> **Note:** NEXUS uses a **dual-gate** RBAC system — NOT a simple role-permission map. The file `lib/rbac.ts` does not exist. RBAC is split across `lib/tenant-context.ts` (Gate 1: Org) and `lib/board-permissions.ts` (Gate 2: Board).
+
+**Gate 1: Organization-level** (`tenant-context.ts`):
 ```typescript
-// lib/rbac.ts
+// Org roles: OWNER > ADMIN > MEMBER > GUEST (hierarchy)
+// Membership statuses: ACTIVE, PENDING, SUSPENDED
+// requireRole("ADMIN", ctx) — blocks MEMBER/GUEST
+// requireActiveStatus(ctx) — blocks PENDING members
+```
 
-export const PERMISSIONS = {
-  BOARD_CREATE: ["OWNER", "ADMIN"],
-  BOARD_DELETE: ["OWNER", "ADMIN"],
-  BOARD_UPDATE: ["OWNER", "ADMIN", "MEMBER"],
-  CARD_CREATE: ["OWNER", "ADMIN", "MEMBER"],
-  CARD_DELETE: ["OWNER", "ADMIN", "MEMBER"],
-  CARD_UPDATE: ["OWNER", "ADMIN", "MEMBER"],
-  MEMBER_INVITE: ["OWNER", "ADMIN"],
-  MEMBER_REMOVE: ["OWNER"],
-  ROLE_CHANGE: ["OWNER"],
-  BILLING_MANAGE: ["OWNER"],
-} as const;
+**Gate 2: Board-level** (`board-permissions.ts`):
+```typescript
+// Board roles: OWNER, ADMIN, MEMBER, VIEWER
+// 28 granular permissions via PermissionScheme:
+//   BOARD_VIEW, BOARD_EDIT_SETTINGS, BOARD_DELETE, BOARD_MANAGE_MEMBERS,
+//   CARD_CREATE, CARD_EDIT, CARD_DELETE, CARD_MOVE, CARD_ASSIGN,
+//   LIST_CREATE, LIST_EDIT, LIST_DELETE, LIST_REORDER,
+//   COMMENT_CREATE, COMMENT_EDIT_OWN, COMMENT_DELETE_OWN,
+//   LABEL_MANAGE, CHECKLIST_MANAGE, ATTACHMENT_MANAGE,
+//   SPRINT_MANAGE, AUTOMATION_MANAGE, WEBHOOK_MANAGE, ...
 
-export function hasPermission(
-  userRole: Role,
-  permission: keyof typeof PERMISSIONS
-): boolean {
-  return PERMISSIONS[permission].includes(userRole);
-}
+// requireBoardPermission(boardId, "CARD_CREATE", ctx)
+//   1. Verifies user is a BoardMember of this board
+//   2. Loads the board's PermissionScheme (or default scheme)
+//   3. Checks if the user's BoardRole has the requested permission
+//   4. Throws TenantError("FORBIDDEN") if denied
+```
 
-// Usage in Server Actions
-export async function deleteBoard(boardId: string) {
-  const { userId, orgId } = auth();
-  
-  if (!userId || !orgId) {
-    return { error: "Unauthorized" };
-  }
-  
-  const userRole = await getUserRole(userId, orgId);
-  
-  if (!hasPermission(userRole, "BOARD_DELETE")) {
-    return { error: "Insufficient permissions" };
-  }
-  
-  // Proceed with deletion
-  await db.board.delete({ where: { id: boardId } });
-  
-  return { success: true };
-}
+**Usage in server actions (actual pattern):**
+```typescript
+// Every mutation follows this pattern:
+const ctx = await getTenantContext();        // Gate 1: orgId from JWT
+await requireRole("MEMBER", ctx);            // Minimum org role
+await requireBoardPermission(boardId, "CARD_CREATE", ctx); // Gate 2
+checkRateLimit(ctx.userId, "create-card", 60);  // Rate limit
+if (isDemoContext(ctx)) return { error: "Demo mode is read-only" };
+
+const dal = await createDAL(ctx);            // Tenant-scoped DB access
+const card = await dal.cards.create(listId, boardId, data);
 ```
 
 ---
@@ -1705,136 +1734,84 @@ export async function deleteBoard(boardId: string) {
 ### Server Actions Architecture
 
 **Why Server Actions over API Routes:**
-1. Type-safe by default
-2. No need for separate API layer
-3. Automatic request deduplication
-4. Built-in error handling
-5. Progressive enhancement support
+1. Type-safe by default — validated with Zod schemas
+2. Automatic tenant isolation via `getTenantContext()` + `createDAL()`
+3. Rate limiting via `checkRateLimit(userId, actionName, limit)`
+4. TenantError → safe client messages via `createSafeAction()` wrapper
+5. Audit logging with forensic diffs via `createAuditLog()`
+6. Event bus triggers automations + webhooks via `emitCardEvent()`
 
-### Action Structure Pattern
+**NEXUS also has a RESTful API** (`/api/v1/`) for external integrations, authenticated via API keys (not Clerk sessions).
+
+### Action Structure Pattern (Actual)
+
+> **Note:** Actions are flat files in `actions/` (not nested `actions/boards/create-board/` subdirectories as originally planned). Each action file contains one or more exported server functions wrapped by `createSafeAction`.
 
 ```typescript
-// actions/boards/create-board.ts
+// actions/create-board.ts (actual production pattern)
 "use server";
 
-import { auth } from "@clerk/nextjs";
-import { revalidatePath } from "next/cache";
-import { z } from "zod";
-import { db } from "@/lib/db";
+import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
+import { createDAL } from "@/lib/dal";
+import { checkRateLimit } from "@/lib/action-protection";
 import { createSafeAction } from "@/lib/create-safe-action";
-import { CreateBoard } from "./schema";
 import { createAuditLog } from "@/lib/create-audit-log";
+import { CreateBoardSchema } from "./schema";
+import { revalidatePath } from "next/cache";
 
-const handler = async (data: z.infer<typeof CreateBoard>) => {
-  const { userId, orgId } = auth();
-  
-  if (!userId || !orgId) {
-    return {
-      error: "Unauthorized",
-    };
-  }
-  
-  const { title, imageId, imageThumbUrl, imageFullUrl, imageUserName, imageLinkHTML } = data;
-  
-  let board;
-  
-  try {
-    // Check organization limits
-    const isPro = await checkProSubscription(orgId);
-    
-    if (!isPro) {
-      const boardCount = await db.board.count({
-        where: { organizationId: orgId },
-      });
-      
-      if (boardCount >= 5) {
-        return {
-          error: "Free plan limit reached. Upgrade to Pro for unlimited boards.",
-        };
-      }
-    }
-    
-    board = await db.board.create({
-      data: {
-        title,
-        organizationId: orgId,
-        imageId,
-        imageThumbUrl,
-        imageFullUrl,
-        imageUserName,
-        imageLinkHTML,
-      },
-    });
-    
-    await createAuditLog({
-      entityTitle: board.title,
-      entityId: board.id,
-      entityType: "BOARD",
-      action: "CREATE",
-    });
-    
-  } catch (error) {
-    return {
-      error: "Failed to create board.",
-    };
-  }
-  
-  revalidatePath(`/organization/${orgId}`);
+const handler = async (data: z.infer<typeof CreateBoardSchema>) => {
+  const ctx = await getTenantContext();         // orgId from Clerk JWT
+  await requireRole("MEMBER", ctx);              // Minimum role check
+  checkRateLimit(ctx.userId, "create-board", 30); // 30 req / 60s
+  if (isDemoContext(ctx)) return { error: "Demo mode is read-only" };
+
+  const dal = await createDAL(ctx);              // Tenant-scoped DB
+  // ... board creation logic with dal.boards.create()
+
+  await createAuditLog({
+    entityTitle: board.title,
+    entityId: board.id,
+    entityType: "BOARD",
+    action: "CREATE",
+    previousValues: undefined,                   // No previous state (CREATE)
+    newValues: { title: board.title },           // Forensic diff
+  });
+
+  revalidatePath(`/dashboard`);
   return { data: board };
 };
 
-export const createBoard = createSafeAction(CreateBoard, handler);
+export const createBoard = createSafeAction(CreateBoardSchema, handler);
 ```
 
-### Schema Validation
+### Schema Validation (Zod 4)
 
 ```typescript
-// actions/boards/schema.ts
+// actions/schema.ts (shared schemas — single file, not per-action)
 import { z } from "zod";
 
-export const CreateBoard = z.object({
-  title: z.string({
-    required_error: "Title is required",
-    invalid_type_error: "Title must be a string",
-  }).min(3, {
-    message: "Title must be at least 3 characters",
-  }).max(30, {
-    message: "Title must be less than 30 characters",
-  }),
-  imageId: z.string({
-    required_error: "Image is required",
-  }),
-  imageThumbUrl: z.string({
-    required_error: "Image thumb URL is required",
-  }),
-  imageFullUrl: z.string({
-    required_error: "Image full URL is required",
-  }),
-  imageUserName: z.string({
-    required_error: "Image user name is required",
-  }),
-  imageLinkHTML: z.string({
-    required_error: "Image link HTML is required",
-  }),
+export const CreateBoardSchema = z.object({
+  title: z.string().min(3).max(30),
+  imageId: z.string(),
+  imageThumbUrl: z.string(),
+  imageFullUrl: z.string(),
+  imageUserName: z.string(),
+  imageLinkHTML: z.string(),
 });
-
-export type CreateBoardInput = z.infer<typeof CreateBoard>;
 ```
 
-### Safe Action Wrapper
+### Safe Action Wrapper (Actual)
 
 ```typescript
-// lib/create-safe-action.ts
+// lib/create-safe-action.ts (actual production code)
 import { z } from "zod";
+import { TenantError } from "@/lib/tenant-context";
 
-export type FieldErrors<T> = {
-  [K in keyof T]?: string[];
-};
-
-export type ActionState<TInput, TOutput> = {
-  fieldErrors?: FieldErrors<TInput>;
-  error?: string | null;
-  data?: TOutput;
+// Generic messages — NEVER expose internal IDs, entity names, or org details
+const TENANT_ERROR_MESSAGES: Record<string, string> = {
+  UNAUTHENTICATED: "You must be signed in to perform this action.",
+  FORBIDDEN: "You do not have permission to perform this action.",
+  NOT_FOUND: "The requested resource was not found.",
 };
 
 export const createSafeAction = <TInput, TOutput>(
@@ -1843,14 +1820,22 @@ export const createSafeAction = <TInput, TOutput>(
 ) => {
   return async (data: TInput): Promise<ActionState<TInput, TOutput>> => {
     const validationResult = schema.safeParse(data);
-    
+
     if (!validationResult.success) {
       return {
-        fieldErrors: validationResult.error.flatten().fieldErrors as FieldErrors<TInput>,
+        fieldErrors: validationResult.error.flatten().fieldErrors,
       };
     }
-    
-    return handler(validationResult.data);
+
+    try {
+      return await handler(validationResult.data);
+    } catch (err) {
+      // Map TenantErrors to safe, generic client messages
+      if (err instanceof TenantError) {
+        return { error: TENANT_ERROR_MESSAGES[err.code] ?? "Something went wrong." };
+      }
+      throw err; // Re-throw unexpected errors — Next.js error boundary handles them
+    }
   };
 };
 ```
@@ -2456,32 +2441,55 @@ try {
 }
 ```
 
-### Analytics (PostHog)
+### Audit Sink (Axiom)
+
+Every `createAuditLog()` call dual-writes: one row to PostgreSQL (queryable) and one append-only event to Axiom (forensic / tamper-evident). The Axiom key is **Ingest-Only** so even a compromised server cannot read or delete past entries.
 
 ```typescript
-// lib/posthog.ts
-import posthog from 'posthog-js';
+// lib/audit-sink.ts  (actual production code)
+import 'server-only';
 
-if (typeof window !== 'undefined') {
-  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-    loaded: (posthog) => {
-      if (process.env.NODE_ENV === 'development') posthog.opt_out_capturing();
+const AXIOM_DATASET = process.env.AXIOM_DATASET!;
+const AXIOM_TOKEN   = process.env.AXIOM_INGEST_TOKEN!;   // Ingest-Only API token
+const AXIOM_URL     = `https://api.axiom.co/v1/datasets/${AXIOM_DATASET}/ingest`;
+
+export async function sinkToAxiom(event: {
+  action: string;
+  entityType: string;
+  entityId: string;
+  entityTitle: string;
+  orgId: string;
+  userId: string;
+  userName: string;
+  previousValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+}) {
+  await fetch(AXIOM_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${AXIOM_TOKEN}`,
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify([{ ...event, _time: new Date().toISOString() }]),
   });
 }
+```
 
-// Track events
-export function trackEvent(event: string, properties?: Record<string, any>) {
-  posthog.capture(event, properties);
-}
+### Analytics (Board & User)
 
-// Usage
-trackEvent('board_created', {
-  board_id: board.id,
-  organization_id: orgId,
-  has_image: !!board.imageId,
-});
+NEXUS uses **database-driven analytics** — no third-party analytics SDK. Board-level and user-level stats are computed via Prisma aggregations and cached in dedicated models.
+
+```typescript
+// Actual models used for analytics (from schema.prisma):
+// BoardAnalytics — totalCards, completedCards, overdueCards, weeklyTrends (Json)
+// UserAnalytics  — cardsCreated, cardsCompleted, commentsCount
+// ActivitySnapshot — dailyActiveUsers, boardsCreated (org-scoped)
+
+// actions/analytics/get-board-analytics.ts
+// actions/analytics/get-advanced-analytics.ts
+// hooks/use-realtime-analytics.ts
 ```
 
 ---
@@ -2517,112 +2525,91 @@ chore(deps): upgrade Next.js to 15.0.1
 perf(images): implement lazy loading for thumbnails
 ```
 
-### Pre-commit Hooks
+### Quality Gates (Pre-Deploy)
 
-```json
-// .husky/pre-commit
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+> **Note:** NEXUS does not use Husky or git hooks. Quality checks run via CI (GitHub Actions) and Vercel's build pipeline. Local development relies on IDE-integrated linting (ESLint) and manual type-checks.
 
-# Run linter
-npm run lint
-
-# Run type check
-npm run type-check
-
-# Run tests
-npm run test
-
-# Build check
-npm run build
+```bash
+# Manual quality checks (run before pushing)
+npm run lint          # ESLint (Next.js config)
+npx tsc --noEmit      # TypeScript strict mode — zero errors required
+npm test              # Jest unit + integration tests
+npx playwright test   # E2E tests (requires running server)
+npm run build         # Full production build (type-check + ESLint built-in)
 ```
 
 ---
 
 ## 🚢 Deployment Strategy
 
-### CI/CD Pipeline (GitHub Actions)
+### CI/CD Pipeline (Vercel + GitHub Actions)
 
+> **Note:** Deployment is handled by **Vercel's native Git integration** (auto-deploys on push to `main`, preview deploys on PRs). GitHub Actions are used only for quality checks — **not** for deployment.
+
+**Actual Workflows (`.github/workflows/`):**
+
+**1. Bundle Size Check** (`bundle-size.yml`) — runs on PRs to `main`/`develop`:
 ```yaml
-# .github/workflows/ci.yml
-name: CI/CD Pipeline
-
+# Builds the PR, measures .next/static/chunks/ total size,
+# and comments a bundle size report on the PR.
+# Budget: 2 MB limit. Flags ❌ Over budget if exceeded.
+name: Bundle Size Check
 on:
-  push:
-    branches: [main, develop]
   pull_request:
     branches: [main, develop]
-
 jobs:
-  lint:
+  bundle-size:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
+          cache: npm
+          cache-dependency-path: nexus/package-lock.json
       - run: npm ci
-      - run: npm run lint
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm ci
-      - run: npm run test:ci
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm ci
-      - run: npx playwright install
-      - run: npm run test:e2e
-      - uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: playwright-screenshots
-          path: test-results/
-
-  build:
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm ci
+        working-directory: nexus
       - run: npm run build
-      - name: Check bundle size
-        run: npm run analyze
+        working-directory: nexus
+      # Analyzes .next/static/chunks/ and comments bundle size on PR
+```
 
-  deploy-preview:
+**2. Lighthouse CI** (`lighthouse-ci.yml`) — runs on PRs and pushes to `main`:
+```yaml
+# Builds production app, starts next server, runs Lighthouse audit,
+# and comments Performance/Accessibility/Best Practices/SEO scores on PR.
+name: Lighthouse CI
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+jobs:
+  lighthouse:
     runs-on: ubuntu-latest
-    needs: [build, e2e]
-    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: amondnet/vercel-action@v25
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci && npm run build
+        working-directory: nexus
+      - run: npx next start &
+        working-directory: nexus
+      - uses: treosh/lighthouse-ci-action@v11
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          urls: http://localhost:3000/
+          budgetPath: nexus/.lighthouse-budget.json
+      # Comments Lighthouse scores table on PR
+```
 
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: [build, e2e]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v3
-      - uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID}}
-          vercel-args: '--prod'
+**3. Vercel Deployment** (native, no workflow file):
+```
+Push to main    → Auto-deploy to production (vercel.com)
+Push to PR      → Auto-deploy preview URL (unique per PR)
+Cron endpoints  → Configured in vercel.json (lexorank-rebalance, daily-reports)
 ```
 
 ### Environment Variables
@@ -2656,8 +2643,8 @@ NODE_ENV="development"
 
 # Monitoring
 NEXT_PUBLIC_SENTRY_DSN="..."
-NEXT_PUBLIC_POSTHOG_KEY="..."
-NEXT_PUBLIC_POSTHOG_HOST="https://app.posthog.com"
+AXIOM_DATASET="..."
+AXIOM_INGEST_TOKEN="..."
 ```
 
 ---
@@ -2935,7 +2922,7 @@ Day 1-2: Production Deploy
 
 Day 3-4: Monitoring
 ├── Setup Sentry error tracking
-├── Configure PostHog analytics
+├── Configure Axiom audit sink
 ├── Create Vercel analytics dashboard
 └── Setup uptime monitoring
 
@@ -3266,33 +3253,42 @@ Fix it before applying.
 
 ### Rate Limiting
 
+> **Note:** NEXUS uses an **in-memory sliding-window** rate limiter (`lib/action-protection.ts`), NOT Upstash Redis. The function signature is designed for a drop-in Redis swap if multi-instance rate limiting is needed.
+
 ```typescript
-// lib/rate-limit.ts
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+// lib/action-protection.ts (actual production code)
+const WINDOW_MS = 60_000;  // Hardcoded 60-second window
+const store = new Map<string, number[]>();  // In-memory store (resets on cold-start)
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
-
-// 10 requests per 10 seconds
-export const ratelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(10, "10 s"),
-});
-
-// Usage in API route
-export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
-  const { success } = await ratelimit.limit(ip);
-  
-  if (!success) {
-    return new Response("Too many requests", { status: 429 });
+// 3-param signature: checkRateLimit(userId, action, limit)
+// windowMs is NOT configurable — always 60 seconds
+export function checkRateLimit(
+  userId: string,
+  action: string,
+  limit = 30
+): RateLimitResult {
+  const key = `${userId}:${action}`;
+  const timestamps = (store.get(key) ?? []).filter(t => t > Date.now() - WINDOW_MS);
+  if (timestamps.length >= limit) {
+    return { allowed: false, remaining: 0, resetInMs: ..., retryAfterSeconds: ... };
   }
-  
-  // Continue with request
+  timestamps.push(Date.now());
+  store.set(key, timestamps);
+  return { allowed: true, remaining: limit - timestamps.length, ... };
 }
+
+// Per-action limits (RATE_LIMITS constant):
+//   create-board: 10     delete-board: 10
+//   create-list: 20      delete-list: 20
+//   create-card: 60      delete-card: 40
+//   update-card: 120     update-card-order: 120 (high-frequency drag-and-drop)
+//   update-list-order: 30
+//   create-comment: 60   update-comment: 60   delete-comment: 40
+//   add-reaction: 120    remove-reaction: 120
+//   create-label: 10     assign-label: 120    assign-user: 120
+//   default: 30
+
+// Background cleanup every 5 minutes removes expired keys to cap memory
 ```
 
 ---
@@ -3302,19 +3298,20 @@ export async function POST(req: Request) {
 ### The Honest Truth
 
 **What you're building:**
-A portfolio project that might get 100 users max.
+A portfolio project that demonstrates production-grade engineering at scale.
 
-**What you DON'T need:**
-- Database partitioning
-- Materialized views
-- Read replicas
-- Sharding
-- Redis caching layer
+**What NEXUS actually implements (beyond basic CRUD):**
+- **Database sharding**: `lib/shard-router.ts` — FNV-1a consistent hashing routes orgId to database shard
+- **Connection pooling**: PgBouncer (port 6543) via Supabase
+- **Cross-request caching**: `unstable_cache()` for tenant context (60s/15s TTLs)
+- **In-memory rate limiting**: sliding-window with background cleanup (swap to Redis for multi-instance)
+- **LexoRank rebalancing**: weekly cron job prevents ordering fragmentation
+- **Proper indexes**: composite indexes on high-frequency query paths
 
-**What you DO need:**
-- Proper indexes (already in Prisma schema)
-- Connection pooling (Prisma handles this)
-- Basic query optimization
+**What this proves to recruiters:**
+- You understand horizontal scaling patterns (sharding, connection pooling)
+- You think about data access patterns (caching TTLs, index design)
+- You plan for production (rate limiting, rebalancing crons, health checks)
 
 ---
 
@@ -3586,137 +3583,290 @@ async function BoardList({ orgId }: Props) {
 
 ## 📄 File Structure
 
+> **Actual production file structure** — verified against the codebase.
+
 ```
 nexus/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml
-├── .husky/
-│   ├── pre-commit
-│   └── pre-push
+│       ├── bundle-size.yml          # PR bundle size check (2 MB budget)
+│       └── lighthouse-ci.yml        # Lighthouse performance audit
 ├── app/
-│   ├── (auth)/
-│   │   ├── sign-in/
-│   │   │   └── [[...sign-in]]/
-│   │   │       └── page.tsx
-│   │   └── sign-up/
-│   │       └── [[...sign-up]]/
-│   │           └── page.tsx
-│   ├── (marketing)/
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── (platform)/
-│   │   ├── layout.tsx
-│   │   ├── select-org/
-│   │   │   └── page.tsx
-│   │   └── organization/
-│   │       └── [orgId]/
-│   │           ├── layout.tsx
-│   │           ├── page.tsx
-│   │           ├── settings/
-│   │           │   ├── page.tsx
-│   │           │   └── billing/
-│   │           │       └── page.tsx
-│   │           └── board/
-│   │               └── [boardId]/
-│   │                   ├── page.tsx
-│   │                   └── @modal/
-│   │                       └── (.)card/
-│   │                           └── [cardId]/
-│   │                               └── page.tsx
-│   ├── api/
-│   │   └── webhook/
-│   │       ├── clerk/
-│   │       │   └── route.ts
-│   │       └── stripe/
-│   │           └── route.ts
-│   ├── layout.tsx
-│   ├── globals.css
-│   └── error.tsx
-├── actions/
-│   ├── organizations/
-│   │   ├── create-organization.ts
-│   │   └── schema.ts
-│   ├── boards/
-│   │   ├── create-board/
-│   │   │   ├── index.ts
-│   │   │   └── schema.ts
-│   │   ├── update-board/
-│   │   ├── delete-board/
-│   │   └── update-list-order/
-│   ├── lists/
-│   │   ├── create-list/
-│   │   ├── update-list/
-│   │   └── delete-list/
-│   └── cards/
-│       ├── create-card/
-│       ├── update-card/
-│       ├── delete-card/
-│       └── copy-card/
-├── components/
-│   ├── ui/                    # shadcn/ui components
-│   │   ├── button.tsx
-│   │   ├── input.tsx
-│   │   ├── dialog.tsx
-│   │   └── ...
-│   ├── shared/
-│   │   ├── logo.tsx
-│   │   ├── user-avatar.tsx
-│   │   └── form-errors.tsx
-│   ├── marketing/
-│   │   ├── navbar.tsx
-│   │   ├── hero.tsx
-│   │   └── footer.tsx
-│   ├── board/
-│   │   ├── board-navbar.tsx
-│   │   ├── board-title.tsx
-│   │   ├── list-container.tsx
-│   │   ├── list-item.tsx
-│   │   ├── card-item.tsx
-│   │   └── card-form.tsx
-│   └── modals/
-│       └── card-modal/
-│           ├── index.tsx
-│           ├── header.tsx
-│           ├── description.tsx
-│           └── activity.tsx
-├── hooks/
-│   ├── use-mobile-sidebar.ts
-│   ├── use-optimistic-action.ts
-│   ├── use-debounce.ts
-│   └── use-realtime-board.ts
-├── lib/
-│   ├── db.ts                  # Prisma client
+│   ├── layout.tsx                   # Root layout (ClerkProvider, Sentry, theme)
+│   ├── page.tsx                     # Landing page
+│   ├── globals.css                  # Global styles + Tailwind 4
+│   ├── editor.css                   # TipTap editor styles
+│   ├── error.tsx                    # Error boundary
+│   ├── global-error.tsx             # Global error boundary
+│   ├── not-found.tsx                # 404 page
+│   ├── sitemap.ts                   # Dynamic sitemap
+│   ├── robots.ts                    # Robots.txt
+│   │
+│   ├── (auth)/                      # Auth route group
+│   │   ├── sign-in/[[...sign-in]]/  # Clerk sign-in
+│   │   └── sign-up/[[...sign-up]]/  # Clerk sign-up
+│   │
+│   ├── dashboard/                   # Main dashboard
+│   ├── board/[boardId]/             # Board view
+│   │   ├── settings/                # Board settings
+│   │   └── workload/                # Workload view
+│   ├── organization/[orgId]/        # Org management
+│   ├── billing/                     # Stripe billing
+│   ├── activity/                    # Activity feed
+│   ├── search/                      # Global search
+│   ├── roadmap/                     # Roadmap view
+│   ├── select-org/                  # Org selector
+│   ├── onboarding/                  # First-time setup
+│   ├── pending-approval/            # Pending membership
+│   ├── request-board-access/        # Board access request
+│   ├── shared/[token]/              # Public board shares
+│   │
+│   ├── settings/                    # Platform settings
+│   │   ├── api-keys/                # API key management
+│   │   ├── automations/             # Automation rules
+│   │   ├── integrations/            # GitHub, Slack
+│   │   ├── webhooks/                # Webhook config
+│   │   └── gdpr/                    # GDPR data controls
+│   │
+│   ├── about/                       # Public pages
+│   ├── terms/
+│   ├── privacy/
+│   │
+│   └── api/                         # API routes
+│       ├── v1/                      # RESTful API (external)
+│       │   ├── boards/              # GET, POST
+│       │   │   └── [boardId]/       # GET, PUT, DELETE
+│       │   └── cards/               # GET, POST
+│       │       └── [cardId]/        # GET, PUT, DELETE
+│       ├── boards/                  # Internal board API
+│       │   └── requestable/         # Requestable boards
+│       ├── cards/search/            # Full-text card search
+│       ├── members/                 # Org members list
+│       ├── audit-logs/              # Audit log queries
+│       ├── attachment/              # File uploads
+│       ├── membership-requests/     # Membership CRUD
+│       │   └── mine/                # User's own requests
+│       ├── stripe/                  # Billing
+│       │   ├── checkout/            # Stripe Checkout
+│       │   └── portal/             # Customer Portal
+│       ├── webhook/
+│       │   └── stripe/              # Stripe webhook (HMAC verified)
+│       ├── integrations/
+│       │   ├── github/              # GitHub integration
+│       │   └── slack/               # Slack integration
+│       ├── realtime-auth/           # Supabase Realtime token
+│       ├── push/                    # Push notifications
+│       │   ├── send/
+│       │   └── subscribe/
+│       ├── ai/                      # OpenAI proxy
+│       ├── tenor/                   # GIF search
+│       │   ├── featured/
+│       │   └── search/
+│       ├── unsplash/                # Cover images
+│       ├── upload/                  # File upload
+│       ├── export/[boardId]/        # Board export
+│       ├── import/                  # Board import
+│       ├── gdpr/                    # GDPR endpoints
+│       │   ├── export/
+│       │   └── delete-request/
+│       ├── admin/seed-templates/    # Template seeding
+│       ├── cron/                    # Scheduled jobs
+│       │   ├── daily-reports/       # Email digests
+│       │   └── lexorank-rebalance/  # LexoRank maintenance
+│       └── health/                  # Health checks
+│           └── shards/              # Shard health
+│
+├── actions/                         # Server Actions (42 files)
+│   ├── create-board.ts              # Board CRUD
+│   ├── update-board.ts
+│   ├── delete-board.ts
+│   ├── create-list.ts               # List CRUD
+│   ├── update-list.ts
+│   ├── delete-list.ts
+│   ├── update-list-order.ts         # LexoRank reorder
+│   ├── create-card.ts               # Card CRUD
+│   ├── update-card.ts
+│   ├── delete-card.ts
+│   ├── get-card.ts
+│   ├── update-card-order.ts         # LexoRank reorder (120 req/60s limit)
+│   ├── bulk-card-actions.ts         # Bulk operations
+│   ├── label-actions.ts             # Labels (org-scoped)
+│   ├── assignee-actions.ts          # Card assignment
+│   ├── attachment-actions.ts        # File attachments
+│   ├── checklist-actions.ts         # Checklists + items
+│   ├── ai-checklist-actions.ts      # AI-generated checklists
+│   ├── dependency-actions.ts        # Card dependencies
+│   ├── custom-field-actions.ts      # Custom fields
+│   ├── sprint-actions.ts            # Agile sprints
+│   ├── time-tracking-actions.ts     # Time logs
+│   ├── board-member-actions.ts      # Board membership
+│   ├── board-share-actions.ts       # Public board shares
+│   ├── permission-scheme-actions.ts # RBAC schemes (28 permissions)
+│   ├── automation-actions.ts        # Automation rules
+│   ├── ai-actions.ts                # AI card suggestions
+│   ├── api-key-actions.ts           # API key management
+│   ├── membership-request-actions.ts# Org/board access requests
+│   ├── notification-actions.ts      # Notification CRUD
+│   ├── roadmap-actions.ts           # Epics + initiatives
+│   ├── saved-view-actions.ts        # Saved board views
+│   ├── template-actions.ts          # Board templates
+│   ├── webhook-actions.ts           # Webhook CRUD
+│   ├── import-export-actions.ts     # Board import/export
+│   ├── user-preferences.ts          # User settings
+│   ├── billing-step-up.ts           # Stripe step-up auth
+│   ├── get-audit-logs.ts            # Audit log queries
+│   ├── phase3-actions.ts            # Legacy admin actions
+│   ├── schema.ts                    # Shared Zod schemas
+│   └── analytics/
+│       ├── get-board-analytics.ts   # Board-level stats
+│       └── get-advanced-analytics.ts# Org-wide analytics
+│
+├── components/                      # React Components (109 files)
+│   ├── ui/                          # shadcn/ui primitives
+│   ├── board/                       # Board view components
+│   ├── modals/                      # Modal dialogs
+│   │   └── card-modal/              # Card detail modal
+│   ├── editor/                      # TipTap rich text editor
+│   ├── landing/                     # Landing page sections
+│   ├── layout/                      # App layout components
+│   ├── settings/                    # Settings pages
+│   ├── analytics/                   # Charts + dashboards
+│   ├── activity/                    # Activity feed
+│   ├── demo/                        # Demo mode components
+│   ├── providers/                   # Context providers
+│   ├── accessibility/               # A11y utilities
+│   └── performance/                 # Performance components
+│
+├── hooks/                           # Custom React Hooks (13 files)
+│   ├── use-realtime-board.ts        # Supabase Realtime board sync
+│   ├── use-realtime-analytics.ts    # Live analytics updates
+│   ├── use-presence.ts              # User presence indicators
+│   ├── use-card-modal.ts            # Card modal state (Zustand)
+│   ├── use-card-lock.ts             # Optimistic locking
+│   ├── use-optimistic-card.ts       # Optimistic UI updates
+│   ├── use-debounce.ts              # Debounced callbacks
+│   ├── use-keyboard-shortcuts.ts    # Keyboard shortcuts
+│   ├── use-ai-cooldown.ts           # AI rate limit cooldown
+│   ├── use-push-notifications.ts    # Web push notifications
+│   ├── use-demo-mode.ts             # Demo mode state
+│   ├── use-demo-data.ts             # Demo board data
+│   └── use-demo-session.ts          # Demo session management
+│
+├── lib/                             # Core Libraries (35+ files)
+│   ├── db.ts                        # Prisma client + setCurrentOrgId()
+│   ├── dal.ts                       # Data Access Layer (tenant-scoped)
+│   ├── tenant-context.ts            # Clerk JWT → orgId (React cache())
+│   ├── create-safe-action.ts        # Server action wrapper (Zod + TenantError)
+│   ├── action-protection.ts         # Rate limiting + DEMO_ORG_ID
+│   ├── board-permissions.ts         # 28 granular board permissions
+│   ├── cross-board-access.ts        # Cross-board card references
+│   ├── api-key-auth.ts              # API key authentication
+│   ├── api-key-constants.ts         # API key scopes
+│   ├── create-audit-log.ts          # Audit logging (+ Sentry capture)
+│   ├── audit-sink.ts                # Axiom dual-write
+│   ├── event-bus.ts                 # Card event bus (automations + webhooks)
+│   ├── automation-engine.ts         # Automation rule engine
+│   ├── webhook-delivery.ts          # Webhook HTTP delivery
+│   ├── webhook-constants.ts         # Webhook event types
+│   ├── lexorank.ts                  # LexoRank ordering (64-char guard)
+│   ├── rate-limit.ts                # Upstash Redis rate limiter
+│   ├── stripe.ts                    # Stripe SDK v20 client
+│   ├── step-up-action.ts            # Billing step-up flows
+│   ├── request-context.ts           # Request-scoped context
+│   ├── logger.ts                    # Structured logging
+│   ├── sentry-helpers.ts            # Sentry error utilities
+│   ├── shard-router.ts              # FNV-1a database sharding
+│   ├── prefetch.ts                  # Data prefetching
+│   ├── realtime-channels.ts         # Supabase channel names
+│   ├── yjs-supabase-provider.ts     # Y.js CRDT collaborative editing
 │   ├── supabase/
-│   │   ├── client.ts
-│   │   └── realtime.ts
-│   ├── stripe.ts
-│   ├── unsplash.ts
-│   ├── create-audit-log.ts
-│   ├── create-safe-action.ts
-│   ├── rbac.ts
-│   └── utils.ts
+│   │   └── client.ts                # Supabase client (Realtime only)
+│   ├── services/
+│   │   ├── ai-service.ts            # OpenAI integration
+│   │   └── pdf-service.ts           # PDF export
+│   ├── email.ts                     # Resend email client
+│   ├── env.ts                       # Environment validation
+│   ├── utils.ts                     # General utilities
+│   ├── colors.ts                    # Color system
+│   ├── design-tokens.ts             # Design tokens
+│   ├── spacing.ts                   # Spacing scale
+│   ├── priority-values.ts           # Priority enum values
+│   ├── format-utils.ts              # Formatting helpers
+│   ├── legal.ts                     # Legal text
+│   ├── settings-defaults.ts         # Default settings
+│   ├── bulk-selection-context.tsx    # Bulk selection state
+│   └── performance/
+│       └── index.ts                 # Performance utilities
+│
+├── emails/                          # Email Templates (Resend)
+│   ├── _base.ts                     # Base template
+│   ├── invite.ts                    # Org invitations
+│   ├── assigned.ts                  # Card assignment
+│   ├── mention.ts                   # @mention notifications
+│   ├── due-soon.ts                  # Due date reminders
+│   └── digest.ts                    # Daily digest
+│
 ├── prisma/
-│   ├── schema.prisma
-│   └── migrations/
-├── public/
-│   ├── logo.svg
-│   └── fonts/
-├── __tests__/
-│   ├── unit/
+│   ├── schema.prisma                # 41 models, 13 enums
+│   ├── seed.ts                      # Database seeding
+│   └── migrations/                  # Migration history
+│
+├── __tests__/                       # Test Suite (50+ files)
+│   ├── unit/                        # Jest unit tests
+│   │   ├── action-protection.test.ts
+│   │   ├── ai-actions.test.ts
+│   │   ├── automation-actions.test.ts
+│   │   ├── board-share-actions.test.ts
+│   │   ├── attachment-actions.test.ts
+│   │   ├── cards/card-operations.test.ts
+│   │   ├── audit/audit-forensic-integrity.test.ts
+│   │   ├── auth/                    # Auth flow tests
+│   │   ├── billing/                 # Stripe billing tests
+│   │   ├── api-keys/                # API key tests
+│   │   ├── automations/             # Automation engine tests
+│   │   └── ai-quota/                # AI quota tests
 │   ├── integration/
-│   └── e2e/
-├── .env.example
-├── .eslintrc.json
+│   │   └── server-actions.test.ts
+│   └── a11y/                        # Accessibility tests
+│
+├── e2e/                             # Playwright E2E Tests
+│   ├── auth.setup.ts                # Auth fixture (User A)
+│   ├── auth-user-b.setup.ts         # Auth fixture (User B)
+│   ├── golden-path.spec.ts          # Happy path flow
+│   ├── boards.spec.ts               # Board CRUD
+│   ├── cards.spec.ts                # Card operations
+│   ├── tenant-isolation.spec.ts     # Multi-tenant security
+│   ├── chaos.spec.ts                # Chaos engineering
+│   └── user-journeys.spec.ts        # User journey flows
+│
+├── __mocks__/                       # Test mocks
+├── public/                          # Static assets
+│   ├── manifest.json                # PWA manifest
+│   ├── sw.js                        # Service Worker
+│   ├── icon-192.png                 # App icons
+│   └── icon-512.png
+│
+├── proxy.ts                         # Edge middleware (Clerk + security headers)
+├── next.config.ts                   # Next.js 16 config
+├── tailwind.config.ts               # Tailwind CSS 4 config
+├── postcss.config.mjs               # PostCSS config
+├── tsconfig.json                    # TypeScript strict config
+├── tsconfig.test.json               # Test TypeScript config
+├── jest.config.ts                   # Jest 30.2+ config
+├── jest.setup.ts                    # Jest setup
+├── playwright.config.ts             # Playwright config
+├── .eslintrc.json                   # ESLint config
+├── eslint.config.mjs                # ESLint flat config
+├── components.json                  # shadcn/ui config
+├── vercel.json                      # Vercel deployment config
+├── .lighthouse-budget.json          # Lighthouse budgets
+├── sentry.client.config.ts          # Sentry browser config
+├── sentry.server.config.ts          # Sentry server config
+├── sentry.edge.config.ts            # Sentry edge config
+├── instrumentation.ts               # OpenTelemetry instrumentation
+├── .env.example                     # Environment template
 ├── .gitignore
-├── .prettierrc
-├── middleware.ts
-├── next.config.js
-├── package.json
-├── playwright.config.ts
-├── tailwind.config.ts
-├── tsconfig.json
-└── vitest.config.ts
+└── package.json
 ```
 
 ---
@@ -3968,7 +4118,7 @@ Production Readiness:
 ☐ DNS records configured
 ☐ SSL certificate active
 ☐ Error tracking (Sentry) live
-☐ Analytics (PostHog) recording
+☐ Audit sink (Axiom) receiving events
 
 Code Quality:
 ☐ ESLint passes with no errors
