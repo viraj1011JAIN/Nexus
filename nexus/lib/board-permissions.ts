@@ -239,17 +239,8 @@ export async function requireBoardPermission(
   boardId: string,
   permission: BoardPermission
 ): Promise<BoardMemberInfo> {
-  // Resolve the user's internal DB ID from Clerk's userId
-  const user = await db.user.findUnique({
-    where: { clerkUserId: ctx.userId },
-    select: { id: true },
-  });
-
-  if (!user) {
-    throw new TenantError("NOT_FOUND", "Board not found");
-  }
-
-  const membership = await getBoardMembership(boardId, user.id, ctx.orgId);
+  // ctx.internalUserId is already resolved by getTenantContext() — no extra DB call needed
+  const membership = await getBoardMembership(boardId, ctx.internalUserId, ctx.orgId);
 
   if (!membership) {
     // User is not a board member — return NOT_FOUND (don't reveal board exists)
@@ -276,14 +267,7 @@ export async function hasBoardPermission(
   permission: BoardPermission
 ): Promise<boolean> {
   try {
-    const user = await db.user.findUnique({
-      where: { clerkUserId: ctx.userId },
-      select: { id: true },
-    });
-
-    if (!user) return false;
-
-    const membership = await getBoardMembership(boardId, user.id, ctx.orgId);
+    const membership = await getBoardMembership(boardId, ctx.internalUserId, ctx.orgId);
     if (!membership) return false;
 
     return membership.permissions.has(permission);
@@ -301,14 +285,7 @@ export async function getBoardRole(
   boardId: string
 ): Promise<BoardRole | null> {
   try {
-    const user = await db.user.findUnique({
-      where: { clerkUserId: ctx.userId },
-      select: { id: true },
-    });
-
-    if (!user) return null;
-
-    const membership = await getBoardMembership(boardId, user.id, ctx.orgId);
+    const membership = await getBoardMembership(boardId, ctx.internalUserId, ctx.orgId);
     return membership?.role ?? null;
   } catch {
     return null;
@@ -324,14 +301,7 @@ export async function getBoardPermissions(
   boardId: string
 ): Promise<Set<BoardPermission>> {
   try {
-    const user = await db.user.findUnique({
-      where: { clerkUserId: ctx.userId },
-      select: { id: true },
-    });
-
-    if (!user) return new Set();
-
-    const membership = await getBoardMembership(boardId, user.id, ctx.orgId);
+    const membership = await getBoardMembership(boardId, ctx.internalUserId, ctx.orgId);
     return membership?.permissions ?? new Set();
   } catch {
     return new Set();
