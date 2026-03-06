@@ -1,43 +1,9 @@
 ﻿"use client";
 
-/**
- * NexusIntro v2 — Maximum-fidelity cinematic brand splash
- *
- * Animation sequence (total ~3.9 s):
- *   0.00 s  Dark screen (#07070f) — mesh gradient breathes in
- *   0.15 s  Holographic scan line sweeps top to bottom
- *   0.22 s  Corner bracket decorators + glow dots materialize
- *   0.28 s  Top & bottom accent lines draw from centre
- *   0.45 s  Letters N>E>X>U>S each 3D-flip in (rotateY, 0.14 s apart)
- *   1.12 s  Full logo arrives, whole block tilts in 3D (rotateX 6deg, rotateY -4deg)
- *   1.28 s  Glitch x2: hue-rotate + horizontal shake
- *   1.33 s  Red targeting crosshair briefly illuminates
- *   1.45 s  BEAM FIRES - triple-layer chromatic sweep (blue fringe, white, red fringe)
- *   1.58 s  Blast ring expands from centre
- *   1.60 s  60 particles explode outward in brand colours
- *   1.68 s  Letters ignite: double drop-shadow glow
- *   1.78 s  Starburst pulse at the X letter (centre)
- *   1.92 s  Tagline chars stagger in letter-by-letter
- *   2.22 s  Badge row: v4.0, Enterprise, AI-Powered
- *   2.60 s  Steady state - breathing glow
- *   3.10 s  Exit: scale(1.06) + blur(8px) + opacity to 0 (0.65 s)
- *
- * Audio (Web Audio API, synthesized - no external files):
- *   0.40 s  Deep bass drone fades in
- *   0.45 s  Per-letter impact ticks (5x triangle-osc sweep)
- *   1.28 s  Glitch static burst (band-passed white noise)
- *   1.45 s  Beam whoosh (noise + sawtooth pitch sweep)
- *   1.58 s  Impact ring - 3 harmonics 880/1320/1760 Hz
- *
- * Safeguards:
- *   sessionStorage key  - shows once per browser session
- *   useReducedMotion    - skips the animation for accessibility
- *   Server renders null - zero hydration mismatch
- */
-
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 
+// ─── Brand palette ────────────────────────────────────────────────────────────
 const C = {
   bg:      "#07070f",
   purple:  "#7c3aed",
@@ -54,9 +20,9 @@ const PARTICLE_PALETTE = [
   "#a78bfa", "#c084fc", "#e879f9", "#60a5fa", "#67e8f9", "#f472b6", "#818cf8",
 ];
 
-const LETTERS     = ["N", "E", "X", "U", "S"] as const;
-const SESSION_KEY = "nexus_intro_v2";
-const SHOW_MS     = 3200;
+const LETTERS      = ["N", "E", "X", "U", "S"] as const;
+const SESSION_KEY  = "nexus_intro_v2";
+const SHOW_MS      = 3200;
 
 const LETTER_GRADIENTS = [
   "linear-gradient(155deg,#fff 0%,#ddd6fe 18%,#a78bfa 44%,#7c3aed 70%,#4c1d95 100%)",
@@ -66,23 +32,23 @@ const LETTER_GRADIENTS = [
   "linear-gradient(155deg,#fff 0%,#ddd6fe 18%,#a78bfa 44%,#8b5cf6 70%,#5b21b6 100%)",
 ] as const;
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Particle {
-  id:       number;
-  x:        number;
-  y:        number;
-  size:     number;
-  color:    string;
-  delay:    number;
+  id: number;
+  x: number; y: number;
+  size: number;
+  color: string;
+  delay: number;
   duration: number;
-  tx:       number;
-  ty:       number;
-  opacity:  number;
+  tx: number; ty: number;
+  opacity: number;
 }
 
+// ─── Web Audio synthesis ──────────────────────────────────────────────────────
 function playSounds(): void {
   try {
-    type WinAudio = Window & { webkitAudioContext?: typeof AudioContext };
-    const AC = (window as WinAudio).webkitAudioContext ?? AudioContext;
+    type WA = Window & { webkitAudioContext?: typeof AudioContext };
+    const AC = (window as WA).webkitAudioContext ?? AudioContext;
     if (!AC) return;
     const ctx = new AC();
     ctx.resume().catch(() => {});
@@ -91,6 +57,7 @@ function playSounds(): void {
     master.connect(ctx.destination);
     const now = ctx.currentTime;
 
+    // Bass drone
     const bass = ctx.createOscillator();
     const bassG = ctx.createGain();
     bass.type = "sine";
@@ -103,11 +70,12 @@ function playSounds(): void {
     bass.connect(bassG); bassG.connect(master);
     bass.start(now); bass.stop(now + 3.2);
 
+    // Letter impact ticks
     for (let i = 0; i < 5; i++) {
-      const t  = now + 0.45 + i * 0.14;
-      const o  = ctx.createOscillator();
-      const g  = ctx.createGain();
-      o.type   = "triangle";
+      const t = now + 0.45 + i * 0.14;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "triangle";
       o.frequency.setValueAtTime(420 - i * 22, t);
       o.frequency.exponentialRampToValueAtTime(88, t + 0.18);
       g.gain.setValueAtTime(0.22, t);
@@ -116,56 +84,65 @@ function playSounds(): void {
       o.start(t); o.stop(t + 0.22);
     }
 
-    const tG   = now + 1.28;
-    const nbuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.08), ctx.sampleRate);
-    const nd   = nbuf.getChannelData(0);
+    // Glitch burst — highpass white noise
+    const tG = now + 1.28;
+    const nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.08), ctx.sampleRate);
+    const nd = nb.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    const gn  = ctx.createBufferSource(); gn.buffer = nbuf;
+    const gn = ctx.createBufferSource(); gn.buffer = nb;
     const gnF = ctx.createBiquadFilter(); gnF.type = "highpass"; gnF.frequency.setValueAtTime(2400, tG);
     const gnG = ctx.createGain();
-    gnG.gain.setValueAtTime(0.28, tG); gnG.gain.exponentialRampToValueAtTime(0.001, tG + 0.08);
+    gnG.gain.setValueAtTime(0.28, tG);
+    gnG.gain.exponentialRampToValueAtTime(0.001, tG + 0.08);
     gn.connect(gnF); gnF.connect(gnG); gnG.connect(master);
     gn.start(tG); gn.stop(tG + 0.1);
 
-    const tB   = now + 1.45;
-    const wbuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.55), ctx.sampleRate);
-    const wd   = wbuf.getChannelData(0);
+    // Beam whoosh — bandpass noise + sawtooth sweep
+    const tB = now + 1.45;
+    const wb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.55), ctx.sampleRate);
+    const wd = wb.getChannelData(0);
     for (let i = 0; i < wd.length; i++) wd[i] = Math.random() * 2 - 1;
-    const bn  = ctx.createBufferSource(); bn.buffer = wbuf;
-    const bF  = ctx.createBiquadFilter(); bF.type = "bandpass";
+    const bn = ctx.createBufferSource(); bn.buffer = wb;
+    const bF = ctx.createBiquadFilter(); bF.type = "bandpass";
     bF.frequency.setValueAtTime(500, tB);
     bF.frequency.exponentialRampToValueAtTime(4200, tB + 0.13);
     bF.frequency.exponentialRampToValueAtTime(250,  tB + 0.46);
     bF.Q.setValueAtTime(1.2, tB);
-    const bG  = ctx.createGain();
-    bG.gain.setValueAtTime(0, tB - 0.01); bG.gain.linearRampToValueAtTime(0.9, tB + 0.06);
+    const bG = ctx.createGain();
+    bG.gain.setValueAtTime(0, tB - 0.01);
+    bG.gain.linearRampToValueAtTime(0.9, tB + 0.06);
     bG.gain.exponentialRampToValueAtTime(0.001, tB + 0.5);
     bn.connect(bF); bF.connect(bG); bG.connect(master);
     bn.start(tB); bn.stop(tB + 0.55);
 
-    const sw  = ctx.createOscillator(); sw.type = "sawtooth";
+    const sw = ctx.createOscillator(); sw.type = "sawtooth";
     const swG = ctx.createGain();
     sw.frequency.setValueAtTime(95, tB);
     sw.frequency.exponentialRampToValueAtTime(3400, tB + 0.12);
     sw.frequency.exponentialRampToValueAtTime(55,   tB + 0.42);
-    swG.gain.setValueAtTime(0, tB - 0.01); swG.gain.linearRampToValueAtTime(0.35, tB + 0.04);
+    swG.gain.setValueAtTime(0, tB - 0.01);
+    swG.gain.linearRampToValueAtTime(0.35, tB + 0.04);
     swG.gain.exponentialRampToValueAtTime(0.001, tB + 0.44);
     sw.connect(swG); swG.connect(master);
     sw.start(tB); sw.stop(tB + 0.48);
 
+    // Impact ring harmonics
     const tR = now + 1.58;
-    ([880, 1320, 1760] as const).forEach((f, i) => {
+    ([880, 1320, 1760] as const).forEach((freq, i) => {
       const o = ctx.createOscillator(); o.type = "sine";
       const g = ctx.createGain();
-      o.frequency.setValueAtTime(f, tR + i * 0.02);
+      o.frequency.setValueAtTime(freq, tR + i * 0.02);
       g.gain.setValueAtTime(0.14 - i * 0.03, tR + i * 0.02);
       g.gain.exponentialRampToValueAtTime(0.001, tR + 1.35);
       o.connect(g); g.connect(master);
       o.start(tR + i * 0.02); o.stop(tR + 1.4);
     });
-  } catch { /* Audio blocked - silent fail */ }
+  } catch {
+    // Web Audio not available — silent fail
+  }
 }
 
+// ─── Particle factory ─────────────────────────────────────────────────────────
 function buildParticles(n: number): Particle[] {
   return Array.from({ length: n }, (_, i) => {
     const angle = Math.random() * Math.PI * 2;
@@ -185,7 +162,12 @@ function buildParticles(n: number): Particle[] {
   });
 }
 
-const CORNERS: Array<{ pos: React.CSSProperties; borders: React.CSSProperties; delay: number }> = [
+// ─── Corner bracket config ────────────────────────────────────────────────────
+const CORNERS: Array<{
+  pos: React.CSSProperties;
+  borders: React.CSSProperties;
+  delay: number;
+}> = [
   { pos: { top: 24, left: 24 },     borders: { borderTop: "1.5px solid", borderLeft: "1.5px solid" },    delay: 0.22 },
   { pos: { top: 24, right: 24 },    borders: { borderTop: "1.5px solid", borderRight: "1.5px solid" },   delay: 0.27 },
   { pos: { bottom: 24, left: 24 },  borders: { borderBottom: "1.5px solid", borderLeft: "1.5px solid" }, delay: 0.32 },
@@ -194,6 +176,7 @@ const CORNERS: Array<{ pos: React.CSSProperties; borders: React.CSSProperties; d
 
 const TAGLINE = "Project Management, Elevated";
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export function NexusIntro() {
   const [visible,   setVisible]   = useState(false);
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -208,8 +191,7 @@ export function NexusIntro() {
     if (sessionStorage.getItem(SESSION_KEY)) return;
     sessionStorage.setItem(SESSION_KEY, "1");
 
-    // Defer initial state updates to a callback — satisfies react-hooks/set-state-in-effect
-    // (prevents "cascading renders" warning) with zero observable delay for an animation.
+    // setTimeout 0 satisfies react-hooks/set-state-in-effect
     setTimeout(() => {
       setParticles(buildParticles(60));
       setVisible(true);
@@ -220,16 +202,14 @@ export function NexusIntro() {
       playSounds();
     }
 
-    const g1on  = setTimeout(() => setGlitch(true),  1280);
-    const g1off = setTimeout(() => setGlitch(false), 1355);
-    const g2on  = setTimeout(() => setGlitch(true),  1385);
-    const g2off = setTimeout(() => setGlitch(false), 1445);
+    const g1on  = setTimeout(() => setGlitch(true),   1280);
+    const g1off = setTimeout(() => setGlitch(false),  1355);
+    const g2on  = setTimeout(() => setGlitch(true),   1385);
+    const g2off = setTimeout(() => setGlitch(false),  1445);
     const glow  = setTimeout(() => setShowGlow(true), 1680);
     const exit  = setTimeout(() => setVisible(false), SHOW_MS);
 
-    return () => {
-      [g1on, g1off, g2on, g2off, glow, exit].forEach(clearTimeout);
-    };
+    return () => [g1on, g1off, g2on, g2off, glow, exit].forEach(clearTimeout);
   }, [shouldReduce]);
 
   return (
@@ -244,8 +224,7 @@ export function NexusIntro() {
           exit={{ opacity: 0, scale: 1.06, filter: "blur(8px)" }}
           transition={{ duration: 0.65, ease: [0.4, 0, 0.6, 1] }}
         >
-
-          {/* Mesh gradient atmosphere */}
+          {/* ── Mesh gradient background ── */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
             initial={{ opacity: 0 }}
@@ -261,23 +240,27 @@ export function NexusIntro() {
             }}
           />
 
-          {/* Breathing depth orbs */}
-          {[
-            { s: { top: "4%",    left: "8%",   width: 720, height: 720 }, color: "rgba(124,58,237,0.13)", d: 4.8, delay: 0 },
-            { s: { bottom: "2%", right: "6%",  width: 600, height: 600 }, color: "rgba(217,70,239,0.10)", d: 5.5, delay: 1.2 },
-            { s: { top: "28%",   right: "12%", width: 420, height: 420 }, color: "rgba(6,182,212,0.09)",  d: 3.6, delay: 0.7 },
-            { s: { bottom: "22%",left: "14%",  width: 340, height: 340 }, color: "rgba(59,130,246,0.10)", d: 4.2, delay: 2.1 },
-          ].map(({ s, color, d, delay }, i) => (
+          {/* ── Breathing depth orbs ── */}
+          {([
+            { s: { top: "4%",    left: "8%",   width: 720, height: 720 } as React.CSSProperties, color: "rgba(124,58,237,0.13)", d: 4.8, delay: 0   },
+            { s: { bottom: "2%", right: "6%",  width: 600, height: 600 } as React.CSSProperties, color: "rgba(217,70,239,0.10)", d: 5.5, delay: 1.2 },
+            { s: { top: "28%",   right: "12%", width: 420, height: 420 } as React.CSSProperties, color: "rgba(6,182,212,0.09)",  d: 3.6, delay: 0.7 },
+            { s: { bottom: "22%",left: "14%",  width: 340, height: 340 } as React.CSSProperties, color: "rgba(59,130,246,0.10)", d: 4.2, delay: 2.1 },
+          ]).map(({ s, color, d, delay }, i) => (
             <motion.div
               key={`orb-${i}`}
               className="absolute pointer-events-none rounded-full"
-              style={{ ...s, background: `radial-gradient(circle, ${color} 0%, transparent 70%)`, filter: "blur(50px)" }}
+              style={{
+                ...s,
+                background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
+                filter: "blur(50px)",
+              }}
               animate={{ scale: [1, 1.3, 1], opacity: [0.55, 1, 0.55] }}
               transition={{ duration: d, repeat: Infinity, ease: "easeInOut", delay }}
             />
           ))}
 
-          {/* Holographic grid */}
+          {/* ── Holographic grid ── */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
             initial={{ opacity: 0 }}
@@ -292,46 +275,44 @@ export function NexusIntro() {
             }}
           />
 
-          {/* Scan-line sweep top to bottom */}
+          {/* ── Scan-line sweep ── */}
           <motion.div
             className="absolute left-0 right-0 pointer-events-none"
             style={{
               height: 2,
               background: `linear-gradient(90deg, transparent 0%, ${C.cyan} 20%, ${C.magenta} 50%, ${C.purple} 80%, transparent 100%)`,
-              boxShadow: "0 0 18px 4px rgba(6,182,212,0.5), 0 0 40px 10px rgba(217,70,239,0.2)",
+              boxShadow: `0 0 18px 4px rgba(6,182,212,0.5), 0 0 40px 10px rgba(217,70,239,0.2)`,
             }}
             initial={{ top: "0%", opacity: 0 }}
             animate={{ top: "102%", opacity: [0, 0.9, 0.9, 0] }}
             transition={{ delay: 0.15, duration: 1.9, ease: "linear" }}
           />
 
-          {/* Particles */}
+          {/* ── 60 particles ── */}
           {particles.map((p) => (
             <motion.div
               key={p.id}
               className="absolute pointer-events-none rounded-full"
               style={{
-                left:      `${p.x}%`,
-                top:       `${p.y}%`,
-                width:     p.size,
-                height:    p.size,
+                left: `${p.x}%`, top: `${p.y}%`,
+                width: p.size, height: p.size,
                 background: p.color,
                 boxShadow: `0 0 ${p.size * 3}px ${p.size}px ${p.color}66`,
               }}
               initial={{ opacity: 0, x: 0, y: 0 }}
               animate={{
                 opacity: [0, p.opacity, p.opacity * 0.6, 0],
-                x: [`0vw`, `${p.tx}vw`],
-                y: [`0vh`, `${p.ty}vh`],
+                x: ["0vw", `${p.tx}vw`],
+                y: ["0vh", `${p.ty}vh`],
               }}
               transition={{ delay: p.delay, duration: p.duration, ease: "easeOut" }}
             />
           ))}
 
-          {/* Corner decorators */}
+          {/* ── Corner brackets ── */}
           {CORNERS.map((c, i) => (
             <motion.div
-              key={`corner-${i}`}
+              key={`cn-${i}`}
               className="absolute pointer-events-none"
               style={{ width: 34, height: 34, ...c.pos, ...c.borders, borderColor: "rgba(139,92,246,0.6)" }}
               initial={{ opacity: 0, scale: 0.3 }}
@@ -340,10 +321,15 @@ export function NexusIntro() {
             />
           ))}
 
-          {/* Corner glow dots */}
-          {([{ top: 22, left: 22 }, { top: 22, right: 22 }, { bottom: 22, left: 22 }, { bottom: 22, right: 22 }] as React.CSSProperties[]).map((pos, i) => (
+          {/* ── Corner glow dots ── */}
+          {([
+            { top: 22,    left: 22  } as React.CSSProperties,
+            { top: 22,    right: 22 } as React.CSSProperties,
+            { bottom: 22, left: 22  } as React.CSSProperties,
+            { bottom: 22, right: 22 } as React.CSSProperties,
+          ]).map((pos, i) => (
             <motion.div
-              key={`cdot-${i}`}
+              key={`cd-${i}`}
               className="absolute pointer-events-none rounded-full"
               style={{
                 width: 5, height: 5,
@@ -357,7 +343,7 @@ export function NexusIntro() {
             />
           ))}
 
-          {/* Main stage */}
+          {/* ── Main stage ── */}
           <div className="relative flex flex-col items-center" style={{ gap: 22 }}>
 
             {/* Top accent line */}
@@ -365,30 +351,32 @@ export function NexusIntro() {
               style={{
                 height: 1.5, width: 520, originX: 0.5,
                 background: `linear-gradient(90deg, transparent, ${C.purple} 28%, ${C.magenta} 50%, ${C.cyan} 72%, transparent)`,
-                boxShadow: "0 0 14px 2px rgba(124,58,237,0.55)",
+                boxShadow: `0 0 14px 2px rgba(124,58,237,0.55)`,
               }}
               initial={{ scaleX: 0, opacity: 0 }}
               animate={{ scaleX: 1, opacity: 1 }}
               transition={{ delay: 0.28, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             />
 
-            {/* 3D tilt wrapper */}
+            {/* 3D block tilt */}
             <motion.div
               style={{ perspective: "900px" }}
-              animate={{ rotateX: [0, 0, 6, 3, 0], rotateY: [0, 0, -4, -2, 0] }}
+              animate={{ rotateX: [0, 0, 6,  3,  0], rotateY: [0, 0, -4, -2, 0] }}
               transition={{ times: [0, 0.3, 0.56, 0.72, 1], duration: 2.8, delay: 0.38 }}
             >
-              {/* Glitch filter container */}
+              {/* Glitch wrapper */}
               <div
                 style={{
-                  filter:     glitch ? "hue-rotate(148deg) saturate(5) brightness(2.4) contrast(1.3)" : "none",
-                  transform:  glitch ? "translate3d(-3px, 0, 0)" : "none",
+                  filter:    glitch ? "hue-rotate(148deg) saturate(5) brightness(2.4) contrast(1.3)" : "none",
+                  transform: glitch ? "translate3d(-3px,0,0)" : "none",
                   transition: glitch ? "none" : "filter 0.04s, transform 0.04s",
-                  transformStyle: "preserve-3d",
+                  transformStyle: "preserve-3d" as const,
                 }}
               >
-                {/* Letters row */}
+                {/* Letters + beam layers */}
                 <div className="relative flex items-center" style={{ gap: 5 }}>
+
+                  {/* Letters */}
                   {LETTERS.map((letter, i) => (
                     <div key={`lw-${i}`} style={{ display: "inline-block", perspective: "340px" }}>
                       <motion.span
@@ -396,17 +384,17 @@ export function NexusIntro() {
                         animate={{ opacity: 1, rotateY: 0,   y: 0,  filter: "blur(0px)"  }}
                         transition={{ delay: 0.45 + i * 0.14, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                         style={{
-                          display:              "inline-block",
-                          transformStyle:       "preserve-3d",
-                          fontFamily:           "var(--font-playfair),'Playfair Display',serif",
-                          fontSize:             "clamp(62px, 10.5vw, 128px)",
-                          fontWeight:           700,
-                          letterSpacing:        "0.16em",
-                          lineHeight:           1,
-                          background:           LETTER_GRADIENTS[i],
+                          display: "inline-block",
+                          transformStyle: "preserve-3d" as const,
+                          fontFamily: "var(--font-playfair),'Playfair Display',serif",
+                          fontSize: "clamp(62px, 10.5vw, 128px)",
+                          fontWeight: 700,
+                          letterSpacing: "0.16em",
+                          lineHeight: 1,
+                          background: LETTER_GRADIENTS[i],
                           WebkitBackgroundClip: "text",
-                          WebkitTextFillColor:  "transparent",
-                          backgroundClip:       "text",
+                          WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
                           filter: showGlow
                             ? "drop-shadow(0 0 28px rgba(139,92,246,1)) drop-shadow(0 0 12px rgba(217,70,239,0.7))"
                             : "none",
@@ -418,7 +406,7 @@ export function NexusIntro() {
                     </div>
                   ))}
 
-                  {/* Red targeting crosshair */}
+                  {/* Red crosshair flash */}
                   <motion.div
                     className="absolute left-0 right-0 pointer-events-none"
                     style={{
@@ -431,20 +419,20 @@ export function NexusIntro() {
                     transition={{ delay: 1.33, duration: 0.14 }}
                   />
 
-                  {/* Beam - blue fringe */}
+                  {/* Blue fringe beam */}
                   <motion.div
                     className="absolute top-[-6%] bottom-[-6%] pointer-events-none"
                     style={{
                       width: "24%",
+                      mixBlendMode: "screen" as const,
                       background: "linear-gradient(90deg, transparent 0%, rgba(6,182,212,0.5) 40%, rgba(96,165,250,0.75) 60%, transparent 100%)",
-                      mixBlendMode: "screen",
                     }}
                     initial={{ x: "-32%", opacity: 1 }}
                     animate={{ x: "560%", opacity: 0 }}
                     transition={{ delay: 1.43, duration: 0.38, ease: [0.18, 0, 0.82, 1] }}
                   />
 
-                  {/* Beam - white main */}
+                  {/* White main beam */}
                   <motion.div
                     className="absolute top-[-12%] bottom-[-12%] pointer-events-none"
                     style={{
@@ -457,20 +445,20 @@ export function NexusIntro() {
                     transition={{ delay: 1.45, duration: 0.35, ease: [0.18, 0, 0.82, 1] }}
                   />
 
-                  {/* Beam - red fringe */}
+                  {/* Red fringe beam */}
                   <motion.div
                     className="absolute top-[-6%] bottom-[-6%] pointer-events-none"
                     style={{
                       width: "16%",
+                      mixBlendMode: "screen" as const,
                       background: "linear-gradient(90deg, transparent 0%, rgba(236,72,153,0.45) 45%, rgba(239,68,68,0.55) 65%, transparent 100%)",
-                      mixBlendMode: "screen",
                     }}
                     initial={{ x: "-18%", opacity: 1 }}
                     animate={{ x: "640%", opacity: 0 }}
                     transition={{ delay: 1.47, duration: 0.33, ease: [0.18, 0, 0.82, 1] }}
                   />
 
-                  {/* Starburst at X centre */}
+                  {/* Starburst pulse */}
                   <motion.div
                     className="absolute pointer-events-none"
                     style={{ top: "50%", left: "50%", width: 0, height: 0, transform: "translate(-50%,-50%)" }}
@@ -484,7 +472,7 @@ export function NexusIntro() {
                     transition={{ delay: 1.78, duration: 0.65, ease: "easeOut" }}
                   />
 
-                  {/* Blast ring primary */}
+                  {/* Blast ring 1 */}
                   <motion.div
                     className="absolute pointer-events-none rounded-full"
                     style={{
@@ -497,7 +485,7 @@ export function NexusIntro() {
                     transition={{ delay: 1.58, duration: 0.9, ease: "easeOut" }}
                   />
 
-                  {/* Blast ring secondary */}
+                  {/* Blast ring 2 */}
                   <motion.div
                     className="absolute pointer-events-none rounded-full"
                     style={{
@@ -515,8 +503,8 @@ export function NexusIntro() {
                     className="absolute pointer-events-none"
                     style={{
                       inset: -50,
-                      background: "radial-gradient(ellipse 88% 68% at 50% 50%, rgba(124,58,237,0.55) 0%, rgba(217,70,239,0.28) 38%, rgba(6,182,212,0.18) 62%, transparent 75%)",
                       filter: "blur(14px)",
+                      background: "radial-gradient(ellipse 88% 68% at 50% 50%, rgba(124,58,237,0.55) 0%, rgba(217,70,239,0.28) 38%, rgba(6,182,212,0.18) 62%, transparent 75%)",
                     }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: [0, 1, 0.55, 0] }}
@@ -531,23 +519,26 @@ export function NexusIntro() {
               style={{
                 height: 1.5, width: 520, originX: 0.5,
                 background: `linear-gradient(90deg, transparent, ${C.indigo} 28%, ${C.blue} 50%, ${C.cyan} 72%, transparent)`,
-                boxShadow: "0 0 12px 2px rgba(99,102,241,0.45)",
+                boxShadow: `0 0 12px 2px rgba(99,102,241,0.45)`,
               }}
               initial={{ scaleX: 0, opacity: 0 }}
               animate={{ scaleX: 1, opacity: 1 }}
               transition={{ delay: 0.52, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             />
 
-            {/* Tagline - character stagger */}
+            {/* Tagline */}
             <div style={{ display: "flex", alignItems: "center" }}>
               {TAGLINE.split("").map((char, i) => (
                 <motion.span
-                  key={`t-${i}`}
+                  key={`tl-${i}`}
                   style={{
-                    fontSize: 11, letterSpacing: "0.38em", textTransform: "uppercase",
-                    color: "rgba(148,163,184,0.78)", fontWeight: 300,
-                    fontFamily: "var(--font-dm-sans),'DM Sans',sans-serif",
+                    fontSize: 11,
+                    letterSpacing: "0.38em",
+                    textTransform: "uppercase",
+                    color: "rgba(148,163,184,0.78)",
+                    fontWeight: 300,
                     display: "inline-block",
+                    fontFamily: "var(--font-dm-sans),'DM Sans',sans-serif",
                   }}
                   initial={{ opacity: 0, y: 7 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -569,10 +560,14 @@ export function NexusIntro() {
                 <motion.span
                   key={label}
                   style={{
-                    fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase",
+                    fontSize: 9,
+                    letterSpacing: "0.32em",
+                    textTransform: "uppercase",
                     color: i === 1 ? "rgba(167,139,250,0.75)" : "rgba(100,116,139,0.5)",
-                    fontFamily: "var(--font-dm-sans),monospace", fontWeight: 400,
-                    paddingLeft: i > 0 ? 18 : 0, marginLeft: i > 0 ? 18 : 0,
+                    fontFamily: "var(--font-dm-sans),monospace",
+                    fontWeight: 400,
+                    paddingLeft: i > 0 ? 18 : 0,
+                    marginLeft:  i > 0 ? 18 : 0,
                     borderLeft:  i > 0 ? "1px solid rgba(100,116,139,0.22)" : "none",
                   }}
                   initial={{ opacity: 0 }}
@@ -585,7 +580,7 @@ export function NexusIntro() {
             </motion.div>
           </div>
 
-          {/* Progress bar */}
+          {/* ── Progress bar ── */}
           <div
             className="absolute overflow-hidden rounded-full"
             style={{ bottom: 38, width: 196, height: 2, background: "rgba(255,255,255,0.06)" }}
@@ -594,7 +589,7 @@ export function NexusIntro() {
               className="h-full rounded-full"
               style={{
                 background: `linear-gradient(90deg, ${C.purple} 0%, ${C.magenta} 35%, ${C.cyan} 65%, ${C.blue} 100%)`,
-                boxShadow:  "0 0 8px rgba(124,58,237,0.7)",
+                boxShadow: "0 0 8px rgba(124,58,237,0.7)",
               }}
               initial={{ width: "0%" }}
               animate={{ width: "100%" }}
@@ -602,18 +597,15 @@ export function NexusIntro() {
             />
           </div>
 
-          {/* HUD coordinates */}
+          {/* ── HUD coordinates ── */}
           {([
-            { pos: { bottom: 32, left: 32 },  text: "00.000 N" },
-            { pos: { bottom: 32, right: 32 }, text: "00.000 E" },
-          ] as const).map(({ pos, text }) => (
+            { pos: { bottom: 32, left: 32  } as React.CSSProperties, text: "00.000 N" },
+            { pos: { bottom: 32, right: 32 } as React.CSSProperties, text: "00.000 E" },
+          ]).map(({ pos, text }) => (
             <motion.span
               key={text}
               className="absolute pointer-events-none"
-              style={{
-                fontSize: 8, letterSpacing: "0.25em",
-                color: "rgba(100,116,139,0.35)", fontFamily: "monospace", ...pos,
-              }}
+              style={{ fontSize: 8, letterSpacing: "0.25em", color: "rgba(100,116,139,0.35)", fontFamily: "monospace", ...pos }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
@@ -622,13 +614,10 @@ export function NexusIntro() {
             </motion.span>
           ))}
 
-          {/* System status */}
+          {/* ── SYS.INIT label ── */}
           <motion.span
             className="absolute top-[26px] pointer-events-none"
-            style={{
-              fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase",
-              color: "rgba(100,116,139,0.35)", fontFamily: "monospace",
-            }}
+            style={{ fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(100,116,139,0.35)", fontFamily: "monospace" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.5 }}
@@ -636,36 +625,19 @@ export function NexusIntro() {
             SYS.INIT
           </motion.span>
 
-          {/* Film-grain noise */}
+          {/* ── CRT scan-lines ── */}
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E\")",
-              backgroundSize: "180px 180px",
-              opacity: 0.35,
-              mixBlendMode: "overlay",
-            }}
+            style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.025) 3px, rgba(0,0,0,0.025) 4px)" }}
           />
 
-          {/* CRT scan-lines */}
+          {/* ── Vignette ── */}
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.025) 3px, rgba(0,0,0,0.025) 4px)",
-            }}
-          />
-
-          {/* Vignette */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "radial-gradient(ellipse 88% 78% at 50% 50%, transparent 38%, rgba(7,7,15,0.72) 100%)",
-            }}
+            style={{ background: "radial-gradient(ellipse 88% 78% at 50% 50%, transparent 38%, rgba(7,7,15,0.72) 100%)" }}
           />
         </motion.div>
       )}
     </AnimatePresence>
   );
 }
-
-
