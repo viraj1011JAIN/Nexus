@@ -1,0 +1,32 @@
+<!--
+  NEXUS — horizontal logotype (light-background variant)
+  Canvas: 248 × 56 px  |  Icon: 56 × 56  |  Wordmark: Playfair Display 700
+  Safe on: white, #F4F1ED warm off-white, light grey backgrounds
+-->
+<svg width="248" height="56" viewBox="0 0 248 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ── Icon mark ─────────────────────────────────────────────── -->
+  <rect width="56" height="56" rx="14" fill="#030712"/>
+  <rect x="0.75" y="0.75" width="54.5" height="54.5" rx="13.25"
+        stroke="url(#border_light)" stroke-width="1.5"/>
+  <path d="M17.5 38.5V17.5L38.5 38.5V17.5"
+        stroke="url(#n_light)" stroke-width="4.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- ── Wordmark (dark ink for light backgrounds) ─────────────── -->
+  <text x="72" y="38"
+        font-family="'Playfair Display', Georgia, 'Times New Roman', serif"
+        font-size="26" font-weight="700" letter-spacing="4"
+        fill="#09090B">NEXUS</text>
+
+  <defs>
+    <linearGradient id="n_light" x1="17.5" y1="17.5" x2="38.5" y2="38.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="border_light" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#8B5CF6" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,12 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="8" fill="#030712"/>
+
+  <path d="M10 22V10L22 22V10" stroke="url(#nexus_gradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <defs>
+    <linearGradient id="nexus_gradient" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+</svg>

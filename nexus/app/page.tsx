@@ -20,15 +20,7 @@ export const metadata: Metadata = {
     title: "NEXUS — Enterprise Project Management",
     description:
       "Real-time Kanban boards, sprints, analytics, and multi-tenant team collaboration. The self-hostable Jira/Trello alternative built with Next.js 15 + AI.",
-    images: [
-      {
-        url: `${APP_URL}/og-image.jpg`,
-        width: 1200,
-        height: 630,
-        alt: "NEXUS — Enterprise Project Management dashboard",
-        type: "image/jpeg",
-      },
-    ],
+    // images intentionally omitted — auto-resolved from app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
@@ -37,7 +29,7 @@ export const metadata: Metadata = {
     title: "NEXUS — Enterprise Project Management",
     description:
       "Production-grade multi-tenant project management. Real-time boards, sprints, analytics and AI — built for teams.",
-    images: [`${APP_URL}/og-image.jpg`],
+    // images intentionally omitted — auto-resolved from app/opengraph-image.tsx
   },
 };
 

@@ -1,7 +1,7 @@
 "use server";
 import "server-only";
 
-import { getTenantContext } from "@/lib/tenant-context";
+import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { DEFAULT_PREFERENCES, type UserPreferences } from "@/lib/settings-defaults";
 
@@ -10,7 +10,8 @@ import { DEFAULT_PREFERENCES, type UserPreferences } from "@/lib/settings-defaul
  * Returns defaults if no record exists yet (first visit).
  */
 export async function getPreferences(): Promise<UserPreferences> {
-  const { userId } = await getTenantContext();
+  const { userId } = await auth();
+  if (!userId) return DEFAULT_PREFERENCES;
 
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
@@ -45,7 +46,8 @@ export async function savePreferences(
   prefs: UserPreferences
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { userId } = await getTenantContext();
+    const { userId } = await auth();
+    if (!userId) return { success: false, error: "Not authenticated" };
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },

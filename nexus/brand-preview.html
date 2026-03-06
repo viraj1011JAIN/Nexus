@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS Brand Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:        #e2e8f0;
+      --muted:      #64748b;
+      --faint:      #1e293b;
+      --page-bg:    #0D0C14;
+      --card-dark:  #111827;
+      --card-light: #f8fafc;
+      --border:     #1e293b;
+      --sky:        #0EA5E9;
+      --violet:     #8B5CF6;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--page-bg);
+      color: var(--ink);
+      padding: 52px 60px;
+      min-height: 100vh;
+    }
+
+    /* ── Page header ───────────────────────────────────────────── */
+    .page-header { margin-bottom: 56px; }
+    .page-header h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 30px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+    .page-header p {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* ── Section ───────────────────────────────────────────────── */
+    .section { margin-bottom: 52px; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #475569;
+      margin-bottom: 18px;
+    }
+
+    /* ── Panels ────────────────────────────────────────────────── */
+    .panel {
+      border-radius: 18px;
+      padding: 36px 40px;
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      border: 1px solid;
+    }
+    .panel.dark  { background: var(--card-dark);  border-color: var(--faint); }
+    .panel.light { background: var(--card-light);  border-color: #e2e8f0; }
+    .panel.split { padding: 0; overflow: hidden; flex-wrap: nowrap; }
+    .panel.split .half {
+      flex: 1;
+      padding: 36px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .panel.split .half.dark  { background: var(--card-dark); }
+    .panel.split .half.light { background: var(--card-light); }
+
+    /* ── Favicon grid ──────────────────────────────────────────── */
+    .fav-grid { display: flex; align-items: flex-end; gap: 28px; }
+    .fav-item  { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .fav-size  { font-size: 11px; font-weight: 600; color: var(--ink); }
+    .fav-ctx   { font-size: 10px; color: var(--muted); }
+
+    /* ── Browser tab mockup ────────────────────────────────────── */
+    .tab-chrome {
+      background: #1a1730;
+      border-radius: 12px;
+      overflow: hidden;
+      width: 420px;
+      border: 1px solid #2d2749;
+    }
+    .tab-bar {
+      background: #130f2a;
+      display: flex;
+      padding: 8px 10px 0;
+      gap: 4px;
+    }
+    .tab-active {
+      background: #1a1730;
+      border-radius: 8px 8px 0 0;
+      padding: 0 14px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid #2d2749;
+      border-bottom: none;
+    }
+    .tab-inactive {
+      background: transparent;
+      border-radius: 8px 8px 0 0;
+      padding: 0 16px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      opacity: 0.4;
+    }
+    .tab-title  { font-size: 12px; color: #c7d2fe; font-weight: 500; white-space: nowrap; overflow: hidden; max-width: 180px; text-overflow: ellipsis; }
+    .tab-ntitle { font-size: 12px; color: #475569; }
+    .address-bar {
+      background: #1a1730;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .address-pill {
+      background: #2d2749;
+      border-radius: 8px;
+      height: 32px;
+      flex: 1;
+      max-width: 340px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 6px;
+    }
+    .address-pill span { font-size: 12px; color: #a5b4fc; }
+
+    /* ── Swatches ──────────────────────────────────────────────── */
+    .swatches { display: flex; gap: 14px; flex-wrap: wrap; }
+    .swatch    { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .swatch-box { width: 56px; height: 56px; border-radius: 12px; }
+    .swatch-name { font-size: 10px; color: var(--ink);   font-weight: 600; }
+    .swatch-hex  { font-size: 10px; color: var(--muted); font-family: 'Courier New', monospace; }
+
+    /* ── Divider ───────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #334155, transparent);
+      margin: 48px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <h1>NEXUS — Brand Assets Preview</h1>
+    <p>favicon · logo · icon mark · colour palette — generated March 2026</p>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       1. FAVICON AT EVERY SIZE
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <p class="section-label">01 &nbsp;Favicon — all render sizes</p>
+    <div class="panel dark">
+      <div class="fav-grid">
+
+        <div class="fav-item">
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#030712"/>
+            <path d="M10 22V10L22 22V10" stroke="url(#g16)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g16" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+          </svg>
+          <span class="fav-size">16 px</span>
+          <span class="fav-ctx">Browser tab</span>
+        </div>
+
+        <div class="fav-item">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#030712"/>
+            <path d="M10 22V10L22 22V10" stroke="url(#g32)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g32" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+          </svg>
+          <span class="fav-size">32 px</span>
+          <span class="fav-ctx">Bookmark bar</span>
+        </div>
+
+        <div class="fav-item">
+          <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#030712"/>
+            <path d="M10 22V10L22 22V10" stroke="url(#g64)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g64" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+          </svg>
+          <span class="fav-size">64 px</span>
+          <span class="fav-ctx">Retina tab</span>
+        </div>
+
+        <div class="fav-item">
+          <svg width="128" height="128" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#030712"/>
+            <path d="M10 22V10L22 22V10" stroke="url(#g128)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g128" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+          </svg>
+          <span class="fav-size">128 px</span>
+          <span class="fav-ctx">App shortcut</span>
+        </div>
+
+        <div class="fav-item">
+          <svg width="192" height="192" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#030712"/>
+            <path d="M10 22V10L22 22V10" stroke="url(#g192)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g192" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+          </svg>
+          <span class="fav-size">192 px</span>
+          <span class="fav-ctx">PWA icon</span>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       2. BROWSER TAB MOCKUP
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <p class="section-label">02 &nbsp;Browser tab simulation</p>
+    <div class="panel dark">
+      <div class="tab-chrome">
+        <div class="tab-bar">
+          <div class="tab-active">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#030712"/>
+              <path d="M10 22V10L22 22V10" stroke="url(#gtab)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs><linearGradient id="gtab" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+            </svg>
+            <span class="tab-title">NEXUS — Enterprise Project…</span>
+          </div>
+          <div class="tab-inactive">
+            <span class="tab-ntitle">New Tab</span>
+          </div>
+        </div>
+        <div class="address-bar">
+          <div class="address-pill">
+            <span>🔒</span>
+            <span>nexus.vercel.app</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       3. FULL LOGO — DARK BACKGROUND
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <p class="section-label">03 &nbsp;Full logotype — dark background</p>
+    <div class="panel dark">
+      <!-- Inline logo so Playfair Display is loaded from the page -->
+      <svg width="248" height="56" viewBox="0 0 248 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="56" height="56" rx="14" fill="#030712"/>
+        <rect x="0.75" y="0.75" width="54.5" height="54.5" rx="13.25" stroke="url(#ld_border)" stroke-width="1.5"/>
+        <path d="M17.5 38.5V17.5L38.5 38.5V17.5" stroke="url(#ld_n)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="72" y="38"
+              font-family="'Playfair Display', Georgia, serif"
+              font-size="26" font-weight="700" letter-spacing="4"
+              fill="#FFFFFF">NEXUS</text>
+        <defs>
+          <linearGradient id="ld_n" x1="17.5" y1="17.5" x2="38.5" y2="38.5" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/>
+          </linearGradient>
+          <linearGradient id="ld_border" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#0EA5E9" stop-opacity="0.45"/><stop offset="1" stop-color="#8B5CF6" stop-opacity="0.45"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       4. FULL LOGO — LIGHT BACKGROUND
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <p class="section-label">04 &nbsp;Full logotype — light background</p>
+    <div class="panel light">
+      <svg width="248" height="56" viewBox="0 0 248 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="56" height="56" rx="14" fill="#030712"/>
+        <rect x="0.75" y="0.75" width="54.5" height="54.5" rx="13.25" stroke="url(#ll_border)" stroke-width="1.5"/>
+        <path d="M17.5 38.5V17.5L38.5 38.5V17.5" stroke="url(#ll_n)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="72" y="38"
+              font-family="'Playfair Display', Georgia, serif"
+              font-size="26" font-weight="700" letter-spacing="4"
+              fill="#09090B">NEXUS</text>
+        <defs>
+          <linearGradient id="ll_n" x1="17.5" y1="17.5" x2="38.5" y2="38.5" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/>
+          </linearGradient>
+          <linearGradient id="ll_border" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#0EA5E9" stop-opacity="0.45"/><stop offset="1" stop-color="#8B5CF6" stop-opacity="0.45"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       5. ICON MARK SIZES
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <p class="section-label">05 &nbsp;Icon mark — standalone sizes</p>
+    <div class="panel dark">
+
+      <div class="fav-item">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#030712"/>
+          <path d="M10 22V10L22 22V10" stroke="url(#im40)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="im40" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+        </svg>
+        <span class="fav-ctx">40 px — nav</span>
+      </div>
+
+      <div class="fav-item">
+        <svg width="56" height="56" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#030712"/>
+          <path d="M10 22V10L22 22V10" stroke="url(#im56)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="im56" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+        </svg>
+        <span class="fav-ctx">56 px — card</span>
+      </div>
+
+      <div class="fav-item">
+        <svg width="96" height="96" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#030712"/>
+          <path d="M10 22V10L22 22V10" stroke="url(#im96)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="im96" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+        </svg>
+        <span class="fav-ctx">96 px — marketing</span>
+      </div>
+
+      <div class="fav-item">
+        <svg width="160" height="160" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#030712"/>
+          <path d="M10 22V10L22 22V10" stroke="url(#im160)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="im160" x1="10" y1="10" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#0EA5E9"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+        </svg>
+        <span class="fav-ctx">160 px — hero / OG</span>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       6. COLOUR PALETTE
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <p class="section-label">06 &nbsp;Brand colour palette</p>
+    <div class="panel dark">
+      <div class="swatches">
+
+        <div class="swatch">
+          <div class="swatch-box" style="background:#0EA5E9"></div>
+          <span class="swatch-name">Sky 500</span>
+          <span class="swatch-hex">#0EA5E9</span>
+        </div>
+
+        <div class="swatch">
+          <div class="swatch-box" style="background:linear-gradient(135deg,#0EA5E9,#8B5CF6)"></div>
+          <span class="swatch-name">Gradient</span>
+          <span class="swatch-hex">Sky→Violet</span>
+        </div>
+
+        <div class="swatch">
+          <div class="swatch-box" style="background:#8B5CF6"></div>
+          <span class="swatch-name">Violet 500</span>
+          <span class="swatch-hex">#8B5CF6</span>
+        </div>
+
+        <div class="swatch">
+          <div class="swatch-box" style="background:#030712;border:1px solid #1e293b"></div>
+          <span class="swatch-name">Icon bg</span>
+          <span class="swatch-hex">#030712</span>
+        </div>
+
+        <div class="swatch">
+          <div class="swatch-box" style="background:#0D0C14;border:1px solid #1e293b"></div>
+          <span class="swatch-name">App bg</span>
+          <span class="swatch-hex">#0D0C14</span>
+        </div>
+
+        <div class="swatch">
+          <div class="swatch-box" style="background:#F4F1ED;border:1px solid #e2e8f0"></div>
+          <span class="swatch-name">Light bg</span>
+          <span class="swatch-hex">#F4F1ED</span>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

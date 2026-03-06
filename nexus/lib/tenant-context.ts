@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 import { cache } from "react";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { DEMO_ORG_ID } from "@/lib/action-protection";
+import { logger } from "@/lib/logger";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,13 @@ export type TenantContext = {
   };
   /** Internal DB user ID (User.id UUID) — resolved from Clerk userId */
   internalUserId: string;
+  /**
+   * Signed JWT from the `nexus_data` Clerk template.
+   * Contains org_id, org_role, org_slug, and user_plan claims.
+   * Use this token when calling downstream services (Supabase RLS, external
+   * APIs) that need verified tenant claims without a separate DB round-trip.
+   */
+  nexusDataToken: string | null;
 };
 
 export type TenantErrorCode = "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND";
@@ -110,7 +118,8 @@ export function invalidateTenantCache(): void {
  * @throws {TenantError} FORBIDDEN — user not in OrganizationUser table or isActive=false
  */
 export const getTenantContext = cache(async (): Promise<TenantContext> => {
-  const { userId, orgId, orgRole } = await auth();
+  const session = await auth();
+  const { userId, orgId, orgRole } = session;
 
   if (!userId || !orgId) {
     throw new TenantError(
@@ -119,6 +128,12 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     );
   }
 
+  // Fetch the nexus_data JWT template — includes org_id, org_role, org_slug,
+  // and user_plan claims for use in downstream DAL / Supabase RLS calls.
+  // getToken() is non-blocking and cached by Clerk per request; null means
+  // the template doesn't exist yet (e.g. local dev before template creation).
+  const nexusDataToken = await session.getToken({ template: "nexus_data" }).catch(() => null);
+
   // Step 1: Resolve the User row — cached across requests (60 s TTL).
   // getCachedUserId returns null on a first-ever sign-in; the healing path
   // below provisions the row and busts the cache so the next request is fast.
@@ -126,34 +141,79 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
 
   if (!internalUserId) {
     // ── User row healing path ─────────────────────────────────────────────
-    // First sign-in / missed webhook: create the User row, then bust the cache.
-    try {
-      const clerkUser = await (await clerkClient()).users.getUser(userId);
-      const email =
-        clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
-          ?.emailAddress ??
-        clerkUser.emailAddresses[0]?.emailAddress ??
-        `${userId}@provisioned.local`;
-      const name =
-        [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
-        clerkUser.username ||
-        "Unknown User";
+    // First sign-in / missed webhook: provision the User row.
+    //
+    // Two-stage design:
+    //   1. Direct DB check — cache may be stale if a concurrent request just
+    //      created the row. Avoids an unnecessary Clerk API round-trip.
+    //   2. If the row genuinely doesn't exist, fetch Clerk profile for rich
+    //      data. If Clerk is temporarily unreachable (e.g. instance warming),
+    //      fall back to provisional data so the request can still proceed.
+    //      The row will be enriched on the next successful Clerk response.
+    const existingRow = await db.user.findUnique({
+      where: { clerkUserId: userId },
+      select: { id: true },
+    });
 
-      const newUser = await db.user.create({
-        data: { clerkUserId: userId, email, name, imageUrl: clerkUser.imageUrl ?? null },
-        select: { id: true },
-      });
-      internalUserId = newUser.id;
-    } catch {
-      // Race: concurrent request created the row between our cache miss and create.
-      const row = await db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true } });
-      if (!row) {
-        throw new TenantError(
-          "UNAUTHENTICATED",
-          "Failed to provision user account — please try again"
-        );
+    if (existingRow) {
+      internalUserId = existingRow.id;
+    } else {
+      // Row doesn't exist — build profile data, falling back gracefully if
+      // the Clerk management API is temporarily unavailable.
+      let email = `${userId}@provisioned.local`;
+      let name = "User";
+      let imageUrl: string | null = null;
+
+      try {
+        const clerkUser = await (await clerkClient()).users.getUser(userId);
+        email =
+          clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
+            ?.emailAddress ??
+          clerkUser.emailAddresses[0]?.emailAddress ??
+          email;
+        name =
+          [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
+          clerkUser.username ||
+          name;
+        imageUrl = clerkUser.imageUrl ?? null;
+      } catch {
+        // Clerk management API unavailable (e.g. edge provisioning delay).
+        // Proceed with provisional fallback — the row will be updated once
+        // Clerk is reachable and the user's profile is enriched.
+        logger.warn("clerkClient.getUser unavailable during user provisioning — using fallback data", { userId });
       }
-      internalUserId = row.id;
+
+      try {
+        const newUser = await db.user.upsert({
+          where: { email },
+          create: { clerkUserId: userId, email, name, imageUrl },
+          update: {
+            // Re-claim this row if the user switched Clerk instances
+            // (same email, new clerkUserId) or if profile data has changed.
+            clerkUserId: userId,
+            name,
+            ...(imageUrl !== null ? { imageUrl } : {}),
+          },
+          select: { id: true },
+        });
+        internalUserId = newUser.id;
+      } catch {
+        // Concurrent request may have created/updated the row between our
+        // check and upsert. Search by either key to cover both cases:
+        //   - clerkUserId match: another request provisioned this exact user
+        //   - email match: another request reclaimed the row via email upsert
+        const raceRow = await db.user.findFirst({
+          where: { OR: [{ clerkUserId: userId }, { email }] },
+          select: { id: true },
+        });
+        if (!raceRow) {
+          throw new TenantError(
+            "UNAUTHENTICATED",
+            "Failed to provision user account — please try again"
+          );
+        }
+        internalUserId = raceRow.id;
+      }
     }
     revalidateTag("tenant-user", "default");
   }
@@ -281,7 +341,24 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
       status: memberStatus,
     },
     internalUserId: internalUserId!,
+    nexusDataToken,
   };
+});
+
+/**
+ * Lightweight helper for DAL files that only need the verified nexus_data
+ * JWT — skips the DB membership checks in getTenantContext.
+ *
+ * Only use this for read-only calls to external services (Supabase edge
+ * functions, third-party APIs) where you need the signed claims but do not
+ * need the full tenant context or membership enforcement.
+ *
+ * For all server actions and mutations, use getTenantContext() instead.
+ */
+export const getVerifiedToken = cache(async (): Promise<string | null> => {
+  const session = await auth();
+  if (!session.userId) return null;
+  return session.getToken({ template: "nexus_data" }).catch(() => null);
 });
 
 /**

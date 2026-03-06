@@ -66,8 +66,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      // SVG is resolution-independent and preferred by all modern browsers
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      // PNG fallbacks for older browsers / OS-level bookmarks
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
     ],
     apple: "/apple-touch-icon.png",
     shortcut: "/favicon.ico",
@@ -80,15 +83,7 @@ export const metadata: Metadata = {
     title: "NEXUS — Enterprise Project Management",
     description:
       "Real-time Kanban boards, sprints, analytics, and multi-tenant team collaboration. The self-hostable Jira/Trello alternative built with Next.js 15 + AI.",
-    images: [
-      {
-        url: `${APP_URL}/og-image.jpg`,
-        width: 1200,
-        height: 630,
-        alt: "NEXUS — Enterprise Project Management dashboard",
-        type: "image/jpeg",
-      },
-    ],
+    // images intentionally omitted — auto-resolved from app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
@@ -97,7 +92,7 @@ export const metadata: Metadata = {
     title: "NEXUS — Enterprise Project Management",
     description:
       "Production-grade multi-tenant project management. Real-time boards, sprints, analytics and AI — built for teams.",
-    images: [`${APP_URL}/og-image.jpg`],
+    // images intentionally omitted — auto-resolved from app/opengraph-image.tsx
   },
   verification: {
     // Replace this placeholder with the string from Google Search Console
@@ -134,6 +129,10 @@ export default function RootLayout({
            *
            * The hints below target third-party origins that next/font does NOT handle.
            */}
+
+          {/* Clerk Frontend API — hosts clerk.browser.js (the main Clerk JS bundle) */}
+          <link rel="preconnect" href="https://clerk.accounts.dev" />
+          <link rel="dns-prefetch" href="https://clerk.accounts.dev" />
 
           {/* Clerk CDN — user avatars appear in every authenticated page header */}
           <link rel="preconnect" href="https://img.clerk.com" />

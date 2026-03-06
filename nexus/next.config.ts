@@ -42,7 +42,10 @@ const nextConfig: NextConfig = {
       { key: "X-DNS-Prefetch-Control",             value: "on" },
       { key: "Permissions-Policy",                 value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
       { key: "X-Permitted-Cross-Domain-Policies",  value: "none" },
-      { key: "Cross-Origin-Opener-Policy",         value: "same-origin" },
+      // Clerk requires same-origin-allow-popups so its OAuth popup flows
+      // (Google, GitHub, etc.) can communicate back to the opener window.
+      // Using plain same-origin kills the popup handshake → ClerkRuntimeError.
+      { key: "Cross-Origin-Opener-Policy",         value: "same-origin-allow-popups" },
       { key: "Cross-Origin-Resource-Policy",       value: "same-origin" },
       // HSTS: enforce HTTPS for 2 years, include all subdomains, allow preloading
       ...(process.env.NODE_ENV === "production" ? [
