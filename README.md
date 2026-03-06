@@ -567,17 +567,29 @@ Nexus uses **PostgreSQL** hosted on **Supabase**. All database access goes throu
 erDiagram
     Organization ||--o{ Board : "has many"
     Organization ||--o{ OrganizationUser : "has members"
-    Organization ||--o{ Label : "defines"
+    Organization ||--o{ AuditLog : "records activity"
+    Organization ||--o{ Label : "defines (via orgId FK)"
     Organization ||--o{ Automation : "configures"
     Organization ||--o{ Webhook : "registers"
     Organization ||--o{ ApiKey : "issues"
     Organization ||--o{ PermissionScheme : "creates"
+    Organization ||--o{ Notification : "delivers"
+    Organization ||--o{ Epic : "plans"
+    Organization ||--o{ Initiative : "tracks"
+    Organization ||--o{ BoardTemplate : "provides"
+    Organization ||--o{ CustomField : "defines"
+    Organization ||--o{ MembershipRequest : "receives"
+    Organization ||--o{ BoardShare : "manages"
 
     Board ||--o{ List : "has columns"
     Board ||--o{ BoardMember : "has members"
     Board ||--o{ Sprint : "has sprints"
     Board ||--o{ BoardShare : "has share links"
-    Board ||--o{ Epic : "has epics"
+    Board ||--o{ Epic : "scopes"
+    Board ||--o{ Automation : "triggers"
+    Board ||--o{ MembershipRequest : "receives"
+    Board ||--|| BoardAnalytics : "has metrics"
+    Board }o--o| PermissionScheme : "governed by"
 
     List ||--o{ Card : "contains"
 
@@ -586,10 +598,30 @@ erDiagram
     Card ||--o{ Checklist : "has checklists"
     Card ||--o{ TimeLog : "tracks time"
     Card ||--o{ CardLabelAssignment : "tagged with"
+    Card ||--o{ CustomFieldValue : "stores field data"
+    Card ||--o{ CardDependency : "blocks / blocked by"
+    Card }o--o| User : "assigned to"
+    Card }o--o| Sprint : "belongs to"
+    Card }o--o| Epic : "linked to"
+
+    Label ||--o{ CardLabelAssignment : "applied via"
+
+    Comment ||--o{ CommentReaction : "has reactions"
+    Comment }o--o| Comment : "threaded replies"
+
+    Checklist ||--o{ ChecklistItem : "has items"
+
+    Initiative ||--o{ Epic : "groups"
 
     User ||--o{ OrganizationUser : "member of"
-    User ||--o{ BoardMember : "member of"
+    User ||--o{ TimeLog : "logs time"
+    User ||--o{ ApiKey : "owns"
+    User ||--o{ Notification : "receives"
     User ||--|| UserPreference : "has settings"
+
+    BoardMember }o--o| PermissionScheme : "overridden by"
+
+    PermissionScheme ||--o{ PermissionSchemeEntry : "defines grants"
 ```
 
 ---
@@ -1218,17 +1250,18 @@ Strict-Transport-Security: max-age=63072000; includeSubDomains; preload  # HTTPS
 ```mermaid
 flowchart TD
     A["Feature branch push"] --> B["Vercel Preview Build"]
-    B --> B1["npm ci → tsc → eslint → next build"]
-    B1 --> B2["✅ Preview URL posted to PR"]
+    B --> B1["npm ci → next build<br/>(TypeScript type-check + ESLint built into Next.js build)"]
+    B1 --> B2["Preview URL posted to PR"]
     B2 --> C["Code review + manual smoke test"]
     C -->|"Approved + merged to main"| D["Vercel Production Build"]
-    D --> D1["Same pipeline → Zero-downtime blue/green deploy"]
+    D --> D1["Same pipeline → Zero-downtime deploy"]
     D1 --> E["Manual: npx prisma migrate deploy"]
-    E --> F["🚀 Production Live"]
+    E --> F["Production Live"]
     F --> G1["Sentry: error + performance monitoring"]
-    F --> G2["Vercel Cron: /api/cron/daily-reports @ 09:00 UTC"]
-    F --> G3["Supabase Realtime: WebSocket connections active"]
-    F --> G4["Stripe Webhooks: /api/webhook/stripe"]
+    F --> G2["Vercel Cron: /api/cron/daily-reports"]
+    F --> G3["Vercel Cron: /api/cron/lexorank-rebalance"]
+    F --> G4["Supabase Realtime: WebSocket connections"]
+    F --> G5["Stripe Webhooks: /api/webhook/stripe"]
 ```
 
 **Why migrations are manual:** Automatic migration on deploy can cause irreversible data loss if the migration contains a destructive change and the new code is rolled back. The manual step forces explicit sign-off.
@@ -1248,6 +1281,7 @@ sequenceDiagram
     participant ZOD as Zod Schema
     participant Handler as Action Handler
     participant TC as getTenantContext()
+    participant RL as checkRateLimit()
     participant DAL as createDAL()
     participant RBAC as requireBoardPermission()
     participant DB as PostgreSQL (Prisma + RLS)
@@ -1256,23 +1290,30 @@ sequenceDiagram
     Client->>CSA: User triggers action
     CSA->>ZOD: Validate input shape
     alt Validation fails
-        ZOD-->>Client: fieldErrors (no DB call)
+        ZOD-->>Client: { fieldErrors } (no DB call made)
     end
     CSA->>Handler: Call handler with validated data
-    Handler->>TC: getTenantContext() — reads Clerk JWT
-    TC-->>Handler: { userId, orgId, role } OR TenantError → safe client message
-    Handler->>DAL: createDAL(ctx) — sets app.current_org_id for RLS
-    Handler->>RBAC: Check permission (e.g. CARD_CREATE)
-    alt Permission denied
-        RBAC-->>Client: 403 Forbidden
+    Handler->>TC: getTenantContext() — reads Clerk JWT via auth()
+    TC-->>Handler: TenantContext { userId, orgId, internalUserId, membership }
+    Note over TC: On TenantError → createSafeAction catches and returns<br/>{ error: "safe generic message" } (never leaks internals)
+    Handler->>RL: checkRateLimit(userId, actionName, limit)
+    Note over RL: Window is 60s (hardcoded). Limits per action:<br/>create-card: 60, update-card-order: 120, default: 30
+    alt Rate limit exceeded
+        RL-->>Client: { error: "Too many requests" }
+    end
+    Handler->>DAL: createDAL(ctx) — SET app.current_org_id for RLS
+    Handler->>RBAC: requireBoardPermission(ctx, boardId, CARD_CREATE)
+    alt Permission denied or not a board member
+        RBAC-->>Client: { error: "Permission denied" } (via TenantError)
     end
     Handler->>DB: Execute mutation (orgId WHERE clause + RLS double-guard)
     DB-->>Handler: Saved record
-    Handler->>Handler: createAuditLog()
-    Handler->>Handler: after(() => emitCardEvent())
+    Handler->>Handler: createAuditLog({ previousValues, newValues })
     Handler-->>Client: { data: result }
     Note over Handler,EB: after() runs post-response — never delays the user
-    Handler->>EB: runAutomations() + fireWebhooks() [HMAC-signed]
+    Handler->>EB: after(() => emitCardEvent())
+    EB->>EB: Promise.allSettled([runAutomations(), fireWebhooks()])
+    Note over EB: Webhooks are HMAC-SHA256 signed with per-webhook secret
 ```
 
 ---
@@ -1289,22 +1330,27 @@ sequenceDiagram
     participant PG as PostgreSQL + RLS
 
     Browser->>NextJS: Any request (page / action / API)
-    NextJS->>TC: getTenantContext() — takes no parameters
+    NextJS->>TC: getTenantContext() — takes no parameters, wrapped in React cache()
     TC->>Clerk: auth() — read signed session cookie
-    Clerk-->>TC: { userId, orgId } from JWT claims
-    Note over TC: orgId is NEVER read from query params or body
-    TC->>PG: SELECT User WHERE clerkUserId = userId
+    Clerk-->>TC: { userId, orgId, orgRole } from JWT claims
+    Note over TC: orgId is NEVER read from query params or body —<br/>always from the signed Clerk JWT
+    TC->>PG: getCachedUserId(clerkUserId) — 60s cross-request cache
     alt User not found (first sign-in)
-        TC->>PG: INSERT User (healing path — inside $transaction())
+        TC->>Clerk: clerkClient().users.getUser(userId) — fetch profile
+        TC->>PG: INSERT User (healing path — try/catch on unique constraint)
     end
-    TC->>PG: SELECT OrganizationUser WHERE userId + orgId
+    TC->>PG: getCachedMembership(internalUserId, orgId) — 15s cross-request cache
+    alt No membership row (first org access)
+        TC->>PG: db.$transaction() — atomic check-then-create OrganizationUser
+        Note over TC,PG: Transaction prevents TOCTOU race:<br/>admin could set isActive=false between check and create
+    end
     alt isActive = false OR status = SUSPENDED
-        TC-->>Browser: TenantError → 403 Forbidden
+        TC-->>Browser: TenantError("FORBIDDEN") → safe generic message
     end
-    TC-->>NextJS: TenantContext { userId, orgId, role }
+    TC-->>NextJS: TenantContext { userId, orgId, internalUserId, membership: { role, status } }
     NextJS->>DAL: createDAL(ctx)
     DAL->>PG: SET app.current_org_id = orgId (enables RLS)
-    Note over PG: All subsequent queries filtered at DB engine level
+    Note over PG: All subsequent queries filtered at DB engine level —<br/>even if app-layer RBAC is bypassed, data from other orgs is invisible
     PG-->>NextJS: Data for this org only — never another tenant's data
 ```
 
@@ -1317,7 +1363,7 @@ sequenceDiagram
     participant U as User (Browser)
     participant DND as @dnd-kit
     participant OptUI as Optimistic UI
-    participant SA as Server Action
+    participant SA as update-card-order Action
     participant DB as PostgreSQL
     participant RT as Supabase Realtime
     participant Other as Other Users
@@ -1326,16 +1372,21 @@ sequenceDiagram
     DND->>OptUI: Show DragOverlay ghost (0ms)
     U->>DND: Drops card in new position
     DND->>OptUI: Update local state immediately (optimistic)
+    OptUI->>OptUI: markLocalCardUpdate(cardId) — suppress remote events for 2s
     DND->>SA: update-card-order(cardId, newLexoRankOrder)
-    SA->>SA: Validate input + reject if order > 64 chars (DoS guard)
-    SA->>SA: getTenantContext() + requireRole("MEMBER")
-    SA->>DB: UPDATE card SET order = newOrder WHERE id = cardId
+    SA->>SA: Zod validation + reject if order > 64 chars (DoS guard)
+    SA->>SA: getTenantContext() → orgId from Clerk JWT
+    SA->>SA: checkRateLimit(userId, "update-card-order", 120 req / 60s)
+    SA->>SA: requireRole("MEMBER") + isDemoContext() guard
+    SA->>DB: dal.cards.reorder() — validates card IDs belong to board
     DB-->>SA: Success
-    SA->>SA: after(() => emitCardEvent + runAutomations + fireWebhooks)
+    SA->>SA: after(() => emitCardEvent()) — only for cross-list moves
+    Note over SA: Same-list reorders skip event emission
     DB->>RT: postgres_changes fires on card row update
     RT->>Other: Broadcast card move event
-    Other->>Other: UI updates in real time (drag race guard filters own drags)
-    Note over U,OptUI: If SA fails → optimistic update rolls back
+    Other->>Other: UI updates in real time
+    Note over Other: Drag race guard: Map of cardId → suppressUntil timestamp<br/>drops remote events for cards dragged locally within 2s window
+    Note over U,OptUI: If SA fails → optimistic update rolls back automatically
 ```
 
 ---

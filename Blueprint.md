@@ -71,107 +71,118 @@ When a recruiter opens your app, they should think "this person can start contri
 ┌─────────────────────────────────────────────────────────────────┐
 │                        CLIENT LAYER                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   Browser    │  │    Mobile    │  │   Desktop    │          │
-│  │   (Web App)  │  │     PWA      │  │     App      │          │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
-│         │                 │                  │                   │
-│         └─────────────────┴──────────────────┘                   │
-│                           │                                      │
-└───────────────────────────┼──────────────────────────────────────┘
-                            │
-┌───────────────────────────┼──────────────────────────────────────┐
-│                    EDGE NETWORK LAYER                            │
-├───────────────────────────┼──────────────────────────────────────┤
-│  ┌────────────────────────▼───────────────────────────┐         │
-│  │         Vercel Edge Network (CDN)                   │         │
-│  │  ├─ Global Edge Caching                             │         │
-│  │  ├─ DDoS Protection                                 │         │
-│  │  ├─ SSL/TLS Termination                             │         │
-│  │  └─ Request Routing                                 │         │
-│  └────────────────────────┬───────────────────────────┘         │
-└───────────────────────────┼──────────────────────────────────────┘
-                            │
-┌───────────────────────────┼──────────────────────────────────────┐
-│                  APPLICATION LAYER                               │
-├───────────────────────────┼──────────────────────────────────────┤
-│  ┌────────────────────────▼───────────────────────────┐         │
-│  │         Next.js 15 (App Router)                     │         │
-│  │  ┌──────────────────────────────────────────────┐  │         │
-│  │  │  Server Components (RSC)                     │  │         │
-│  │  │  ├─ Data Fetching Layer                      │  │         │
-│  │  │  ├─ Server Actions (Mutations)               │  │         │
-│  │  │  └─ API Routes                               │  │         │
-│  │  └──────────────────────────────────────────────┘  │         │
-│  │  ┌──────────────────────────────────────────────┐  │         │
-│  │  │  Client Components                           │  │         │
-│  │  │  ├─ Interactive UI (React 19)                │  │         │
-│  │  │  ├─ State Management (Zustand)               │  │         │
-│  │  │  ├─ Optimistic Updates                       │  │         │
-│  │  │  └─ Real-time Subscriptions                  │  │         │
-│  │  └──────────────────────────────────────────────┘  │         │
-│  │  ┌──────────────────────────────────────────────┐  │         │
-│  │  │  Middleware Layer                            │  │         │
-│  │  │  ├─ Authentication (Clerk)                   │  │         │
-│  │  │  ├─ Authorization (RBAC)                     │  │         │
-│  │  │  ├─ Rate Limiting                            │  │         │
-│  │  │  └─ Request Validation                       │  │         │
-│  │  └──────────────────────────────────────────────┘  │         │
-│  └────────────────────────┬───────────────────────────┘         │
-└───────────────────────────┼──────────────────────────────────────┘
-                            │
-┌───────────────────────────┼──────────────────────────────────────┐
-│                    SERVICE LAYER                                 │
-├───────────────────────────┼──────────────────────────────────────┤
-│         ┌─────────────────┴──────────┬────────────────────┐     │
-│         │                            │                     │     │
-│  ┌──────▼──────┐  ┌─────────────────▼──┐  ┌──────────────▼───┐ │
-│  │   Clerk     │  │    Supabase        │  │     Stripe       │ │
-│  │   (Auth)    │  │  ┌──────────────┐  │  │   (Payments)     │ │
-│  │             │  │  │  PostgreSQL  │  │  │                  │ │
-│  │ ├─ OAuth   │  │  │   Database   │  │  │ ├─ Subscriptions│ │
-│  │ ├─ Session │  │  └──────┬───────┘  │  │ ├─ Webhooks     │ │
-│  │ └─ Webhooks│  │  ┌──────▼───────┐  │  │ └─ Checkout     │ │
-│  └─────────────┘  │  │  Realtime    │  │  └──────────────────┘ │
-│                   │  │  Pub/Sub     │  │                        │
-│  ┌─────────────┐  │  └──────────────┘  │  ┌──────────────────┐ │
-│  │  Unsplash   │  │  ┌──────────────┐  │  │   Vercel Blob    │ │
-│  │   (Images)  │  │  │   Storage    │  │  │  (File Upload)   │ │
-│  │             │  │  │  (S3-style)  │  │  │                  │ │
-│  └─────────────┘  │  └──────────────┘  │  └──────────────────┘ │
-│                   └─────────────────────┘                        │
-└──────────────────────────────────────────────────────────────────┘
+│  ┌──────────────────────────────────────────────────────┐       │
+│  │   Browser (Web App)                                   │       │
+│  │   React 19 + React Compiler + Tailwind CSS 4          │       │
+│  │   ├─ Server Components (data-heavy pages, zero JS)    │       │
+│  │   ├─ Client Components (drag-drop, modals, realtime)  │       │
+│  │   └─ Service Worker v2 (4-strategy offline caching)   │       │
+│  └──────────────────────────┬───────────────────────────┘       │
+│                              │                                   │
+└──────────────────────────────┼───────────────────────────────────┘
+                               │
+┌──────────────────────────────┼───────────────────────────────────┐
+│                    EDGE NETWORK LAYER                             │
+├──────────────────────────────┼───────────────────────────────────┤
+│  ┌───────────────────────────▼──────────────────────────┐       │
+│  │         Vercel Edge Network (CDN)                     │       │
+│  │  ├─ Global Edge Caching + SSL/TLS Termination         │       │
+│  │  ├─ proxy.ts (Clerk clerkMiddleware + security headers)│      │
+│  │  └─ Static assets cached permanently                  │       │
+│  └───────────────────────────┬──────────────────────────┘       │
+└──────────────────────────────┼───────────────────────────────────┘
+                               │
+┌──────────────────────────────┼───────────────────────────────────┐
+│                  APPLICATION LAYER                                │
+├──────────────────────────────┼───────────────────────────────────┤
+│  ┌───────────────────────────▼──────────────────────────┐       │
+│  │         Next.js 16 (App Router)                       │       │
+│  │  ┌──────────────────────────────────────────────┐    │       │
+│  │  │  Server Components (RSC)                     │    │       │
+│  │  │  ├─ Data Fetching (React cache() dedup)      │    │       │
+│  │  │  ├─ Server Actions (createSafeAction + Zod)  │    │       │
+│  │  │  └─ API Routes (/api/v1, webhooks, cron)     │    │       │
+│  │  └──────────────────────────────────────────────┘    │       │
+│  │  ┌──────────────────────────────────────────────┐    │       │
+│  │  │  Client Components                           │    │       │
+│  │  │  ├─ @dnd-kit Drag & Drop + LexoRank ordering │    │       │
+│  │  │  ├─ Zustand 5 (modal state, demo mode)       │    │       │
+│  │  │  ├─ Optimistic Updates (useOptimistic)        │    │       │
+│  │  │  ├─ TipTap + Yjs CRDT collaborative editing  │    │       │
+│  │  │  └─ Supabase Realtime subscriptions           │    │       │
+│  │  └──────────────────────────────────────────────┘    │       │
+│  │  ┌──────────────────────────────────────────────┐    │       │
+│  │  │  Security Layer (in Server Actions + API)    │    │       │
+│  │  │  ├─ getTenantContext() — Clerk JWT → orgId   │    │       │
+│  │  │  ├─ createDAL() — SET app.current_org_id RLS │    │       │
+│  │  │  ├─ requireBoardPermission() — 28 permissions│    │       │
+│  │  │  ├─ checkRateLimit() — sliding window        │    │       │
+│  │  │  └─ createStepUpAction() — biometric/TOTP    │    │       │
+│  │  └──────────────────────────────────────────────┘    │       │
+│  └───────────────────────────┬──────────────────────────┘       │
+└──────────────────────────────┼───────────────────────────────────┘
+                               │
+┌──────────────────────────────┼───────────────────────────────────┐
+│                    SERVICE LAYER                                  │
+├──────────────────────────────┼───────────────────────────────────┤
+│       ┌──────────────────────┴────────┬──────────────────┐      │
+│       │                               │                   │      │
+│  ┌────▼────────┐  ┌──────────────────▼──┐  ┌────────────▼────┐ │
+│  │   Clerk     │  │    Supabase         │  │    Stripe       │ │
+│  │   (Auth)    │  │  ┌───────────────┐  │  │   (Payments)    │ │
+│  │             │  │  │  PostgreSQL   │  │  │                 │ │
+│  │ ├─ JWT+Org │  │  │   Database    │  │  │ ├─ Subscriptions│ │
+│  │ ├─ Session │  │  │   (Prisma 5)  │  │  │ ├─ Webhooks     │ │
+│  │ └─ Webhooks│  │  └───────┬───────┘  │  │ └─ Checkout     │ │
+│  └─────────────┘  │  ┌──────▼───────┐  │  └─────────────────┘ │
+│                   │  │  Realtime    │  │                       │
+│  ┌─────────────┐  │  │  (WebSocket  │  │  ┌─────────────────┐ │
+│  │  Unsplash   │  │  │   only —     │  │  │   Sentry        │ │
+│  │   (Images)  │  │  │   transport) │  │  │  (Monitoring)   │ │
+│  └─────────────┘  │  └──────────────┘  │  └─────────────────┘ │
+│                   │  ┌──────────────┐  │                       │
+│  ┌─────────────┐  │  │  Storage     │  │  ┌─────────────────┐ │
+│  │  OpenAI     │  │  │  (Attachments│  │  │   Resend        │ │
+│  │   (AI)      │  │  │   bucket)    │  │  │  (Email)        │ │
+│  └─────────────┘  │  └──────────────┘  │  └─────────────────┘ │
+│                   └─────────────────────┘                       │
+│  ┌─────────────┐                          ┌─────────────────┐  │
+│  │  Axiom      │                          │  Upstash Redis  │  │
+│  │ (Audit Sink)│                          │  (Rate Limiting)│  │
+│  └─────────────┘                          └─────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Architecture Principles (The Real Version)
 
 **What This Actually Is:**
-This is a **monolithic Next.js application deployed to Vercel's Edge Network**. That's it. It's not microservices. It's not distributed. And that's **exactly what you should build** for a project of this scale.
+This is a **monolithic Next.js 16 application deployed to Vercel's Edge Network**. That's it. It's not microservices. It's not distributed. And that's **exactly what you should build** for a project of this scale.
 
 **Why This Is Good:**
 1. **Simple to reason about**: One codebase, one deployment
 2. **Fast to ship**: No service orchestration complexity
-3. **Edge-optimized**: Middleware runs globally in <50ms
+3. **Edge-optimized**: `proxy.ts` (Clerk middleware) runs globally on the edge
 4. **Industry standard**: This is how Vercel, Linear, and Cal.com are built
 
 **The Three Layers:**
 
 **1. Edge Layer (Vercel's Network)**
 - Global CDN with 100+ locations
-- Middleware runs in v8 isolates (faster than containers)
+- `proxy.ts` runs Clerk `clerkMiddleware()` + injects security headers (HSTS, CORP, CSP)
 - Static assets cached permanently
-- Dynamic content cached with ISR
+- Service Worker v2 provides 4-strategy offline caching
 
-**2. Application Layer (Next.js Monolith)**
-- **Server Components**: Render on-demand, fetch data close to DB
-- **Client Components**: Only for interactive parts (forms, drag-and-drop)
-- **Server Actions**: API endpoints that are type-safe by default
-- **Middleware**: Auth checks, rate limiting, RBAC enforcement
+**2. Application Layer (Next.js 16 Monolith)**
+- **Server Components**: Data fetching with React `cache()` deduplication
+- **Client Components**: Drag-and-drop, real-time subscriptions, modals, rich-text editing
+- **Server Actions**: Wrapped by `createSafeAction` (Zod validation + TenantError handling)
+- **Security**: `getTenantContext()` (Clerk JWT → orgId), `createDAL()` (RLS), `requireBoardPermission()` (28 granular permissions), `checkRateLimit()` (sliding window)
 
 **3. Data Layer (PostgreSQL + Supabase)**
-- **Prisma ORM**: Type-safe queries, connection pooling
-- **Supabase Realtime**: WebSocket pub/sub for live updates
-- **Row-Level Security**: Multi-tenant data isolation at DB level
+- **Prisma ORM**: Type-safe queries, PgBouncer connection pooling (port 6543)
+- **Supabase Realtime**: WebSocket transport only — never writes to DB directly
+- **Row-Level Security**: `SET app.current_org_id` per connection; all queries filtered at DB engine level
+- **Shard Router**: FNV-1a consistent hashing routes each orgId to a database shard
 
 **Why Not Microservices?**
 You're one person building a portfolio. Microservices would require:
@@ -190,439 +201,228 @@ None of that helps you get hired. A well-built monolith does.
 
 | Technology | Version | Purpose | Justification |
 |-----------|---------|---------|---------------|
-| **Next.js** | 15.x | React Framework | • Server Components for optimal performance<br>• Built-in API routes<br>• File-based routing<br>• Automatic code splitting<br>• Image optimization |
-| **React** | 19.x | UI Library | • Concurrent features<br>• Server Components<br>• Streaming SSR<br>• useOptimistic hook for optimistic UI |
-| **TypeScript** | 5.x | Type System | • Type safety<br>• Better IDE support<br>• Reduced runtime errors<br>• Self-documenting code |
-| **Tailwind CSS** | 4.x | Styling | • Utility-first approach<br>• Excellent performance<br>• Consistent design system<br>• JIT compiler |
-| **shadcn/ui** | Latest | Component Library | • Accessible components<br>• Customizable<br>• Copy-paste philosophy<br>• Radix UI primitives |
-| **Framer Motion** | 11.x | Animations | • Smooth 60fps animations<br>• Gesture support<br>• Layout animations<br>• Spring physics |
-| **@dnd-kit** | 6.x | Drag & Drop | • Touch support<br>• Accessibility<br>• Modular architecture<br>• Tree-shakeable |
-| **TanStack Query** | 5.x | Data Fetching | • Cache management<br>• Optimistic updates<br>• Background sync<br>• Request deduplication |
-| **Zustand** | 4.x | State Management | • Minimal boilerplate<br>• No providers needed<br>• Excellent DevTools<br>• TypeScript support |
+| **Next.js** | 16.1.4 | React Framework | • Server Components for optimal performance<br>• Server Actions (type-safe mutations)<br>• App Router with file-based routing<br>• Turbopack for fast HMR |
+| **React** | 19.2.3 | UI Library | • React Compiler auto-memoization<br>• Server Components<br>• useOptimistic for optimistic UI |
+| **TypeScript** | 5.x | Type System | • Strict-mode type safety<br>• Zero errors across entire codebase |
+| **Tailwind CSS** | 4.x | Styling | • Utility-first approach<br>• Class-based dark mode<br>• Consistent design system |
+| **shadcn/ui** | Latest | Component Library | • Accessible Radix UI primitives<br>• Copy-paste philosophy<br>• Customizable design tokens |
+| **Framer Motion** | 12.29+ | Animations | • Page transitions<br>• Micro-interactions<br>• Layout animations |
+| **@dnd-kit** | 6.3+ | Drag & Drop | • Touch + mouse support<br>• Accessibility (ARIA)<br>• Modular architecture |
+| **Zustand** | 5.0+ | State Management | • Modal state, demo mode<br>• No providers needed<br>• Minimal boilerplate |
+| **TipTap** | 3.17+ | Rich Text Editor | • WYSIWYG editor<br>• Yjs CRDT collaborative editing<br>• @mentions, code blocks, task lists |
 
 ### Backend Stack
 
 | Technology | Version | Purpose | Justification |
 |-----------|---------|---------|---------------|
-| **Supabase** | Latest | Backend Platform | • PostgreSQL database<br>• Real-time subscriptions<br>• Auto-generated APIs<br>• Row-level security |
-| **Prisma** | 5.x | ORM | • Type-safe database queries<br>• Database migrations<br>• Excellent DX<br>• Connection pooling |
-| **Zod** | 3.x | Schema Validation | • Type inference<br>• Runtime validation<br>• Error messages<br>• Composability |
-| **NextAuth/Clerk** | Latest | Authentication | • OAuth providers<br>• Session management<br>• Organization support<br>• Multi-tenancy |
+| **PostgreSQL** | — | Primary Database | • Supabase-hosted<br>• Row-Level Security (RLS)<br>• PgBouncer connection pooling |
+| **Supabase** | 2.91+ | Realtime Only | • WebSocket transport (`postgres_changes`, `presence`, `broadcast`)<br>• Storage (file attachments)<br>• NOT used as primary DB — Prisma handles all reads/writes |
+| **Prisma** | 5.22+ | ORM | • Type-safe queries<br>• Database migrations<br>• Connection pooling via PgBouncer |
+| **Zod** | 4.3+ | Schema Validation | • Runtime validation in server actions<br>• Type inference<br>• API input validation |
+| **Clerk** | 6.36+ | Authentication | • Multi-org JWTs<br>• orgId JWT claim for tenant isolation<br>• Webhook-driven provisioning |
+| **Stripe** | v20 | Payments | • Subscriptions (FREE/PRO)<br>• Checkout + Customer Portal<br>• Webhook lifecycle with idempotency |
+| **OpenAI** | 4.104+ | AI Features | • Card suggestions, checklist generation<br>• Prompt injection protection |
 
 ### DevOps & Infrastructure
 
 | Technology | Version | Purpose | Justification |
 |-----------|---------|---------|---------------|
-| **Vercel** | - | Hosting Platform | • Zero-config deployment<br>• Edge functions<br>• Analytics<br>• Preview deployments |
-| **GitHub Actions** | - | CI/CD | • Automated testing<br>• Linting checks<br>• Type checking<br>• Deployment pipeline |
-| **Sentry** | Latest | Error Tracking | • Real-time error reporting<br>• Performance monitoring<br>• Release tracking<br>• Source maps |
-| **PostHog** | Latest | Analytics | • Product analytics<br>• Session replay<br>• Feature flags<br>• A/B testing |
+| **Vercel** | — | Hosting Platform | • Edge network, serverless functions<br>• Preview deployments per PR<br>• Cron jobs (/api/cron/) |
+| **Sentry** | 10.36+ | Error Tracking | • Real-time error reporting<br>• Performance monitoring<br>• Source maps |
+| **Axiom** | — | Audit Sink | • Append-only forensic log (Ingest-Only key)<br>• Dual-write from createAuditLog() |
+| **Upstash Redis** | — | Rate Limiting | • Sliding-window rate limiter<br>• In-memory fallback when unavailable |
+| **Resend** | 6.9+ | Email | • Transactional emails (invites, digests, due-date reminders) |
 
 ### Development Tools
 
 | Tool | Purpose |
 |------|---------|
-| **ESLint** | Code linting with Airbnb config |
-| **Prettier** | Code formatting |
-| **Husky** | Git hooks for pre-commit checks |
-| **Commitlint** | Conventional commit messages |
-| **Vitest** | Unit testing |
-| **Playwright** | E2E testing |
-| **Storybook** | Component development |
+| **ESLint** | Code linting (Next.js config) |
+| **Jest** | Unit + integration testing (30.2+) |
+| **Playwright** | E2E testing (1.58+) |
+| **Prisma Studio** | Database GUI for development |
 
 ---
 
 ## 🗄️ Database Architecture
 
-### Entity-Relationship Diagram
+> **Note:** The Prisma schema below reflects the **original planning draft**. The actual production schema has evolved significantly — see `nexus/prisma/schema.prisma` for the live implementation (41 models, 13 enums). Key changes from this blueprint: labels are now org-scoped many-to-many (not per-card), billing fields live directly on Organization (no separate Subscription model), full RBAC with BoardMember + PermissionScheme, and 15+ additional models for comments, checklists, sprints, epics, automations, webhooks, API keys, notifications, custom fields, time tracking, and more.
+
+### Entity-Relationship Diagram (Actual Production Schema)
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         DATABASE SCHEMA                              │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         DATABASE SCHEMA (41 Models)                          │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-┌──────────────────────┐
-│     Organization     │
-├──────────────────────┤
-│ id (PK)             │───┐
-│ name                │   │
-│ slug                │   │
-│ imageUrl            │   │
-│ stripeCustomerId    │   │
-│ stripeSubscriptionId│   │
-│ plan (FREE/PRO/ENT) │   │
-│ createdAt           │   │
-│ updatedAt           │   │
-└──────────────────────┘   │
-         ▲                 │
-         │                 │
-         │                 │
-    ┌────┴─────┐           │
-    │ 1      * │           │
-┌───┴──────────▼───┐       │
-│  OrganizationUser│       │
-├──────────────────┤       │
-│ id (PK)          │       │
-│ userId (FK)      │───┐   │
-│ organizationId(FK)│◄──┘   │
-│ role (OWNER/     │       │
-│  ADMIN/MEMBER/   │       │
-│  GUEST)          │       │
-│ createdAt        │       │
-└──────────────────┘       │
-    │ * 1                  │
-    │                      │
-    ▼                      │
-┌──────────────────┐       │
-│      User        │       │
-├──────────────────┤       │
-│ id (PK)          │       │
-│ clerkUserId      │       │
-│ email            │       │
-│ name             │       │
-│ imageUrl         │       │
-│ createdAt        │       │
-│ updatedAt        │       │
-└──────────────────┘       │
-                           │
-┌──────────────────┐       │
-│      Board       │       │
-├──────────────────┤       │
-│ id (PK)          │       │
-│ organizationId(FK)│◄──────┘
-│ title            │
-│ imageId          │
-│ imageThumbUrl    │
-│ imageFullUrl     │
-│ imageUserName    │
-│ imageLinkHTML    │
-│ createdAt        │
-│ updatedAt        │
-└──────────────────┘
-         │ 1
-         │
-         │ *
-         ▼
+┌──────────────────────┐       ┌──────────────────────┐
+│     Organization     │       │        User          │
+├──────────────────────┤       ├──────────────────────┤
+│ id (PK, UUID)        │       │ id (PK, UUID)        │
+│ name                 │       │ clerkUserId (unique)  │
+│ slug (unique)        │       │ email (unique)        │
+│ imageUrl?            │       │ name                 │
+│ region               │       │ imageUrl?            │
+│ deletedAt? (soft del)│       │ pushSubscription?    │
+│ subscriptionPlan     │◄──┐   └──────────┬───────────┘
+│ stripeCustomerId?    │   │              │
+│ stripeSubscriptionId?│   │    ┌─────────▼──────────┐
+│ aiCallsToday         │   │    │ OrganizationUser   │
+│ createdAt, updatedAt │   │    ├────────────────────┤
+└──────────┬───────────┘   │    │ id (PK)            │
+           │               │    │ role (OWNER/ADMIN/  │
+           │               │    │  MEMBER/GUEST)      │
+           │               │    │ status (PENDING/    │
+           │               │    │  ACTIVE/SUSPENDED)  │
+           │               │    │ isActive (legacy)   │
+           │               │    │ userId (FK→User)    │
+           │               │    │ organizationId (FK) │
+           │               │    └────────────────────┘
+           │
+    ┌──────┴───────────────────────────────────────────────┐
+    │      │           │           │           │           │
+    ▼      ▼           ▼           ▼           ▼           ▼
+┌───────┐┌──────┐┌──────────┐┌─────────┐┌─────────┐┌──────────┐
+│ Board ││Label ││Automation││ Webhook ││ ApiKey  ││ AuditLog │
+│       ││(org  ││          ││         ││         ││          │
+│       ││scope)││          ││         ││         ││previousV │
+│       ││      ││trigger   ││url      ││keyHash  ││newValues │
+│       ││      ││conditions││secret   ││scopes[] ││(forensic)│
+│       ││      ││actions   ││events[] ││         ││          │
+└───┬───┘└──┬───┘└──────────┘└─────────┘└─────────┘└──────────┘
+    │       │
+    │       └──────── CardLabelAssignment (many-to-many join)
+    │
+    ├─── BoardMember (userId, boardId, role, permissionSchemeId?)
+    │         └── PermissionScheme → PermissionSchemeEntry[]
+    ├─── Sprint (name, goal, status, startDate, endDate)
+    ├─── BoardShare (token, isActive, passwordHash?, expiresAt?)
+    ├─── Epic (title, status, boardId?, initiativeId?)
+    ├─── BoardAnalytics (totalCards, completedCards, weeklyTrends)
+    ├─── MembershipRequest (type: ORG_MEMBERSHIP | BOARD_ACCESS)
+    │
+    ▼
 ┌──────────────────┐
 │      List        │
 ├──────────────────┤
-│ id (PK)          │
-│ title            │
-│ order            │◄───── Sortable position
+│ id, title        │
+│ order (LexoRank) │◄───── String-based O(1) ordering
 │ boardId (FK)     │
-│ createdAt        │
-│ updatedAt        │
-└──────────────────┘
-         │ 1
+└────────┬─────────┘
          │
-         │ *
          ▼
 ┌──────────────────┐
 │      Card        │
 ├──────────────────┤
-│ id (PK)          │
-│ title            │
-│ order            │◄───── Sortable position
-│ description      │
-│ listId (FK)      │
-│ dueDate          │
-│ priority         │
-│ assigneeId (FK)  │──┐
-│ createdAt        │  │
-│ updatedAt        │  │
-└──────────────────┘  │
-         │ 1          │
-         │            ▼
-         │       ┌──────────────────┐
-         │       │      User        │
-         │       │  (Assignee)      │
-         │       └──────────────────┘
+│ id, title        │
+│ order (LexoRank) │
+│ description?     │
+│ dueDate?         │
+│ priority (LOW/   │
+│  MEDIUM/HIGH/    │
+│  URGENT)         │
+│ assigneeId? (FK) │──── User (Assignee)
+│ sprintId? (FK)   │──── Sprint
+│ epicId? (FK)     │──── Epic
+│ coverColor?      │
+│ coverImageUrl?   │
+│ storyPoints?     │
+│ estimatedMinutes?│
+└────────┬─────────┘
          │
-         │ *
-         ▼
-┌──────────────────┐
-│    CardLabel     │
-├──────────────────┤
-│ id (PK)          │
-│ cardId (FK)      │
-│ name             │
-│ color            │
-└──────────────────┘
+    ┌────┴─────────────────────────────────────┐
+    │        │         │         │         │    │
+    ▼        ▼         ▼         ▼         ▼    ▼
+Comment  Attachment Checklist  TimeLog  CardDep CustomFieldValue
+  │                    │
+  ├── replies          └── ChecklistItem
+  └── CommentReaction
 
-┌──────────────────┐
-│   AuditLog       │
-├──────────────────┤
-│ id (PK)          │
-│ organizationId(FK)│
-│ action           │◄───── CREATE, UPDATE, DELETE, MOVE
-│ entityId         │◄───── ID of affected entity
-│ entityType       │◄───── BOARD, LIST, CARD
-│ entityTitle      │
-│ userId (FK)      │
-│ userName         │
-│ userImage        │
-│ metadata (JSONB) │◄───── Additional data
-│ createdAt        │
-└──────────────────┘
-
-┌──────────────────┐
-│   Subscription   │
-├──────────────────┤
-│ id (PK)          │
-│ organizationId(FK)│
-│ stripeCustomerId │
-│ stripeSubscrId   │
-│ stripePriceId    │
-│ status           │
-│ currentPeriodEnd │
-│ createdAt        │
-│ updatedAt        │
-└──────────────────┘
+Additional org-scoped models: Notification, Initiative, SavedView,
+  CustomField, BoardTemplate, UserPreference, UserAnalytics,
+  ActivitySnapshot, ProcessedStripeEvent (Stripe idempotency)
 ```
 
 ### Database Schema (Prisma)
 
+> **The full production schema lives in `nexus/prisma/schema.prisma` (41 models, 13 enums).** Below is a summary of the core models and key differences from the original blueprint plan.
+
 ```prisma
-// schema.prisma
+// Key models from the actual production schema (nexus/prisma/schema.prisma)
+// Full schema has 41 models — only core models shown here for brevity.
 
-generator client {
-  provider = "prisma-client-js"
-}
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL"); directUrl = env("DIRECT_URL") }
 
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
+// ── RBAC ENUMS ──
+enum Role { OWNER ADMIN MEMBER GUEST }
+enum BoardRole { OWNER ADMIN MEMBER VIEWER }
+enum BoardPermission { BOARD_VIEW BOARD_EDIT_SETTINGS CARD_CREATE CARD_EDIT /* ...28 total */ }
+enum MembershipStatus { PENDING ACTIVE SUSPENDED }
+enum Priority { LOW MEDIUM HIGH URGENT }
+enum ACTION { CREATE UPDATE DELETE MEMBER_INVITED ACCESS_DENIED /* ...20 total */ }
+enum ENTITY_TYPE { BOARD LIST CARD ORGANIZATION BOARD_MEMBER /* ...9 total */ }
 
-// ============================================
-// ORGANIZATION & USER MODELS
-// ============================================
-
+// ── CORE MODELS ──
 model Organization {
-  id                   String   @id @default(uuid())
-  name                 String
-  slug                 String   @unique
-  imageUrl             String?
-  
-  // Stripe Integration
-  stripeCustomerId     String?  @unique @map("stripe_customer_id")
-  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
-  plan                 Plan     @default(FREE)
-  
-  // Relationships
-  users                OrganizationUser[]
-  boards               Board[]
-  auditLogs            AuditLog[]
-  subscription         Subscription?
-  
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-  
-  @@map("organizations")
+  // Billing lives directly on Organization (no separate Subscription model)
+  subscriptionPlan String @default("FREE")  // "FREE" or "PRO" (plain string, not enum)
+  stripeCustomerId String? @unique
+  stripeSubscriptionId String? @unique
+  region String @default("eu-west")          // Regional data residency
+  deletedAt DateTime?                        // Soft-delete support
+  aiCallsToday Int @default(0)               // AI rate limiting
+  // Relations: boards, members, auditLogs, webhooks, apiKeys, automations,
+  //   labels, epics, initiatives, notifications, savedViews, customFields,
+  //   boardShares, permissionSchemes, membershipRequests, templates
 }
-
-model User {
-  id             String   @id @default(uuid())
-  clerkUserId    String   @unique @map("clerk_user_id")
-  email          String   @unique
-  name           String
-  imageUrl       String?  @map("image_url")
-  
-  // Relationships
-  organizations  OrganizationUser[]
-  assignedCards  Card[]             @relation("CardAssignee")
-  auditLogs      AuditLog[]
-  
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  
-  @@map("users")
-}
-
-model OrganizationUser {
-  id             String       @id @default(uuid())
-  role           Role         @default(MEMBER)
-  
-  userId         String       @map("user_id")
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  organizationId String       @map("organization_id")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  createdAt      DateTime     @default(now()) @map("created_at")
-  
-  @@unique([userId, organizationId])
-  @@index([userId])
-  @@index([organizationId])
-  @@map("organization_users")
-}
-
-// ============================================
-// BOARD, LIST, CARD MODELS
-// ============================================
 
 model Board {
-  id             String   @id @default(uuid())
-  title          String
-  
-  // Unsplash Integration
-  imageId        String   @map("image_id")
-  imageThumbUrl  String   @map("image_thumb_url") @db.Text
-  imageFullUrl   String   @map("image_full_url") @db.Text
-  imageUserName  String   @map("image_user_name") @db.Text
-  imageLinkHTML  String   @map("image_link_html") @db.Text
-  
-  organizationId String   @map("organization_id")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  lists          List[]
-  
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  
-  @@index([organizationId])
-  @@map("boards")
-}
-
-model List {
-  id        String   @id @default(uuid())
-  title     String
-  order     String   @default("m")  // Lexorank: string-based ordering
-  
-  boardId   String   @map("board_id")
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  
-  cards     Card[]
-  
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
-  @@index([boardId])
-  @@index([boardId, order])  // Composite index for sorted queries
-  @@map("lists")
+  orgId String                              // Changed from organizationId
+  isPrivate Boolean @default(true)          // Boards private by default
+  permissionSchemeId String?                // Custom RBAC scheme
+  // Relations: lists, members (BoardMember[]), sprints, shares,
+  //   epics, automations, analytics, savedViews, customFields, membershipRequests
 }
 
 model Card {
-  id          String   @id @default(uuid())
-  title       String
-  order       String   @default("m")  // Lexorank: string-based ordering
-  description String?  @db.Text
-  dueDate     DateTime? @map("due_date")
-  priority    Priority @default(MEDIUM)
-  
-  listId      String   @map("list_id")
-  list        List     @relation(fields: [listId], references: [id], onDelete: Cascade)
-  
-  assigneeId  String?  @map("assignee_id")
-  assignee    User?    @relation("CardAssignee", fields: [assigneeId], references: [id])
-  
-  labels      CardLabel[]
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  @@index([listId])
-  @@index([listId, order])  // Composite index for sorted queries
-  @@index([assigneeId])
-  @@map("cards")
+  order String @default("m")               // LexoRank string ordering
+  assigneeId String?                       // FK → User
+  sprintId String?                         // FK → Sprint (Agile)
+  epicId String?                           // FK → Epic (Roadmap)
+  coverColor String?                       // Card cover customization
+  storyPoints Int?                         // Agile estimation
+  estimatedMinutes Int?                    // Time tracking
+  // Relations: comments, attachments, checklists, timeLogs,
+  //   labels (CardLabelAssignment[]), customFieldValues, dependencies
 }
 
-model CardLabel {
-  id     String @id @default(uuid())
-  name   String
-  color  String @default("#6B7280")
-  
-  cardId String @map("card_id")
-  card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  
-  @@index([cardId])
-  @@map("card_labels")
-}
+// ── RBAC MODELS (not in original blueprint) ──
+model BoardMember { boardId, userId, orgId, role: BoardRole, permissionSchemeId? }
+model PermissionScheme { orgId, name, isDefault, entries: PermissionSchemeEntry[] }
+model PermissionSchemeEntry { schemeId, role: BoardRole, permission: BoardPermission, granted }
+model MembershipRequest { orgId, userId, type: ORG_MEMBERSHIP|BOARD_ACCESS, status, boardId? }
 
-// ============================================
-// AUDIT & SUBSCRIPTION MODELS
-// ============================================
+// ── COLLABORATION MODELS ──
+model Comment { cardId, userId, userName, userImage, parentId? (threading), reactions[], mentions[] }
+model CommentReaction { commentId, userId, emoji }
+model Checklist { cardId, title, items: ChecklistItem[] }
 
+// ── AUDIT (forensic diffs — not just action labels) ──
 model AuditLog {
-  id             String     @id @default(uuid())
-  action         AuditAction
-  entityId       String     @map("entity_id")
-  entityType     EntityType @map("entity_type")
-  entityTitle    String     @map("entity_title")
-  
-  userId         String     @map("user_id")
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userName       String     @map("user_name")
-  userImage      String     @map("user_image")
-  
-  organizationId String     @map("organization_id")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  metadata       Json?      // Additional flexible data
-  
-  createdAt      DateTime   @default(now()) @map("created_at")
-  
-  @@index([organizationId])
-  @@index([entityId])
-  @@map("audit_logs")
+  // No FK to User — userName/userImage denormalized for immutability
+  previousValues Json?   // Before-state for UPDATE/DELETE
+  newValues Json?        // After-state for CREATE/UPDATE
+  ipAddress String?      // Request context for forensics
+  userAgent String?
 }
 
-model Subscription {
-  id                String   @id @default(uuid())
-  
-  organizationId    String   @unique @map("organization_id")
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  stripeCustomerId     String   @unique @map("stripe_customer_id")
-  stripeSubscriptionId String   @unique @map("stripe_subscription_id")
-  stripePriceId        String   @map("stripe_price_id")
-  status               String   // active, canceled, incomplete, trialing
-  currentPeriodEnd     DateTime @map("current_period_end")
-  
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
-  @@map("subscriptions")
-}
-
-// ============================================
-// ENUMS
-// ============================================
-
-enum Role {
-  OWNER
-  ADMIN
-  MEMBER
-  GUEST
-}
-
-enum Plan {
-  FREE
-  PRO
-  ENTERPRISE
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  MOVE
-}
-
-enum EntityType {
-  ORGANIZATION
-  BOARD
-  LIST
-  CARD
-}
+// ── ADDITIONAL MODELS ──
+// Sprint, Epic, Initiative, Notification, SavedView, CustomField,
+// CustomFieldValue, Automation, AutomationLog, Webhook, WebhookDelivery,
+// ApiKey, TimeLog, BoardShare, BoardAnalytics, UserAnalytics,
+// ActivitySnapshot, BoardTemplate, TemplateList, TemplateCard,
+// CardDependency, Attachment, UserPreference, ProcessedStripeEvent
 ```
 
 ### Database Indexes Strategy
