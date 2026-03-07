@@ -185,6 +185,24 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 > All screenshots are in the `Web-screenshort/` folder. The application fully supports **dark mode** (default) and **light mode**.
 
+### Brand Intro Animation (~12s cinematic sequence)
+
+- **0–1s** — 220-star field materialises from black, hex grid fades in
+- **1–2s** — 20 data-stream columns rain down with real tech stack names (Next.js, Prisma, Stripe…)
+- **2–3s** — 200 physics particles converge from all edges toward center
+- **~3s** — **NEXUS** logo explodes into view with white flash, dual shockwave rings, 14 light rays
+- **3–5s** — Particles settle into 3 counter-rotating orbit rings with glowing cyan/pink/violet dots
+- **5–7s** — Tagline + 4 live metrics (1,345 Tests · 30+ Technologies · Multi-Tenant · Real-time) fade up
+- **~6s** — 18 tech badges materialise at viewport edges
+- **~7s** — Second shockwave burst with 10 additional light rays
+- **~8s** — "Crafted by / Viraj Pankaj Jain" appears in animated gold shimmer with expanding underline
+
+**Visual effects:** Chromatic aberration glitch (cyan + pink split layers) · physics-based particle repulsion from mouse cursor · 3 counter-rotating orbit tracks · connected constellation lines · radial center glow · progress bar gradient · Orbitron glitch text · floating character bob · scan line · "Skip ›" button for recruiters in a hurry
+
+**Tech:** Triple-layered `<canvas>` (stars / particles+connections / shockwaves+rays) at 60 fps, CSS keyframe animations for UI elements, `useSyncExternalStore` for SSR-safe client-only rendering (zero hydration mismatch), `sessionStorage` one-shot gate.
+
+---
+
 ### Landing Page
 
 ![Landing Page](Web-screenshort/Landing%20Page.png)
