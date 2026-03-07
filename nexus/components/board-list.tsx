@@ -88,6 +88,14 @@ export function BoardList({ initialBoards }: BoardListProps = {}) {
   const [activeFilter, setActiveFilter] = useState<"All" | "Recent" | "Active">("All");
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const { theme, setTheme } = useTheme();
+  // `mounted` guards theme-conditional classNames from being evaluated during SSR.
+  // useTheme() reads localStorage on the client but has no value on the server, so
+  // applying theme-based classes during the server render produces a different string
+  // than the client re-render → React hydration mismatch. By only applying the
+  // active-state class after mount, the server and first client pass both render the
+  // buttons as "inactive", and the highlight appears after hydration without error.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showStorageFullDialog, setShowStorageFullDialog] = useState(false);
   const BOARD_LIMIT = 50; // FREE plan limit
@@ -462,7 +470,7 @@ export function BoardList({ initialBoards }: BoardListProps = {}) {
                   onClick={() => setTheme("light")}
                   className={cn(
                     "w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150",
-                    theme === "light"
+                    mounted && theme === "light"
                       ? "bg-amber-100 text-amber-600 shadow-sm dark:bg-amber-900/40 dark:text-amber-400"
                       : "text-muted-foreground hover:text-foreground"
                   )}
@@ -475,7 +483,7 @@ export function BoardList({ initialBoards }: BoardListProps = {}) {
                   onClick={() => setTheme("dark")}
                   className={cn(
                     "w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150",
-                    theme === "dark"
+                    mounted && theme === "dark"
                       ? "bg-indigo-100 text-indigo-600 shadow-sm dark:bg-indigo-900/40 dark:text-indigo-400"
                       : "text-muted-foreground hover:text-foreground"
                   )}
