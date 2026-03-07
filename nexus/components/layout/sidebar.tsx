@@ -58,10 +58,10 @@ export const Sidebar = () => {
   const boardLimit = 50;
   const [showStorageFullDialog, setShowStorageFullDialog] = useState(false);
 
-  // Fetch board count on mount and when navigating (boards may have been created/deleted).
-  // Using an async callback inside the effect avoids the react-hooks/set-state-in-effect lint
-  // rule, because the setState call happens asynchronously after the await, not synchronously
-  // in the effect body.
+  // Fetch board count once on mount — used for the storage usage meter.
+  // Re-fetching on every pathname change is wasteful (every navigation triggered
+  // a full /api/boards round-trip). The count is refreshed when the component
+  // remounts (e.g. org switch) which is sufficient for this UI hint.
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -77,7 +77,7 @@ export const Sidebar = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [pathname]);
+  }, []); // ← mount-only: no need to refetch on every navigation
 
   const storagePercent = boardLimit === Infinity ? 0 : Math.min(Math.round((boardCount / boardLimit) * 100), 100);
   const isStorageFull = boardCount >= boardLimit && boardLimit !== Infinity;

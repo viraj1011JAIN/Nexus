@@ -28,7 +28,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /** Shape returned by /api/boards */
-interface DashboardBoard {
+export interface DashboardBoard {
   id: string;
   title: string;
   updatedAt: string | Date;
@@ -70,11 +70,17 @@ function formatRelativeDate(date: string | Date | null | undefined): string {
   }
 }
 
-export function BoardList() {
+interface BoardListProps {
+  /** Server-fetched boards passed from the RSC parent — eliminates client-side loading state */
+  initialBoards?: DashboardBoard[];
+}
+
+export function BoardList({ initialBoards }: BoardListProps = {}) {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
-  const [boards, setBoards] = useState<DashboardBoard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [boards, setBoards] = useState<DashboardBoard[]>(initialBoards ?? []);
+  // Skip loading state when server provided initial data
+  const [loading, setLoading] = useState(initialBoards === undefined);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<UnsplashPhoto | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateSummary | null>(null);

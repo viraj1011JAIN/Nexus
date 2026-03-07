@@ -37,6 +37,8 @@ const syne = Syne({
   display: "swap",
   variable: "--font-syne",
   weight: ["400", "600", "700", "800"],
+  // Only used on the landing page — don't generate preload tags for every app route
+  preload: false,
 });
 
 const outfit = Outfit({
@@ -44,6 +46,8 @@ const outfit = Outfit({
   display: "swap",
   variable: "--font-outfit",
   weight: ["300", "400", "500", "600", "700"],
+  // Only used on the landing page — don't generate preload tags for every app route
+  preload: false,
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.vercel.app";
