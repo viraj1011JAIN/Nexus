@@ -187,6 +187,8 @@ The core stack (Clerk + Prisma + Stripe + shadcn) appears in many tutorials. Her
 
 ### Brand Intro Animation (~12s cinematic sequence)
 
+![NEXUS Brand Intro Animation](Web-screenshort/Brand%20.png)
+
 - **0–1s** — 220-star field materialises from black, hex grid fades in
 - **1–2s** — 20 data-stream columns rain down with real tech stack names (Next.js, Prisma, Stripe…)
 - **2–3s** — 200 physics particles converge from all edges toward center
