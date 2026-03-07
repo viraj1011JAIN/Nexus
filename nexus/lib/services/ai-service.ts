@@ -94,7 +94,12 @@ export async function runSuggestPriority(
   });
 
   const content = completion.choices[0]?.message?.content ?? "{}";
-  const result  = JSON.parse(content) as { priority: string; reasoning: string };
+  let result: { priority: string; reasoning: string };
+  try {
+    result = JSON.parse(content);
+  } catch {
+    return { priority: "MEDIUM" as const, reasoning: "Unable to parse AI response." };
+  }
 
   const validPriorities = ["URGENT", "HIGH", "MEDIUM", "LOW"] as const;
   const priority = validPriorities.includes(result.priority as (typeof validPriorities)[number])
@@ -164,7 +169,12 @@ export async function runSuggestChecklists(
   });
 
   const content = completion.choices[0]?.message?.content ?? "{}";
-  const result  = JSON.parse(content) as { items?: unknown };
+  let result: { items?: unknown };
+  try {
+    result = JSON.parse(content);
+  } catch {
+    return { items: [] };
+  }
   const items   = Array.isArray(result.items)
     ? (result.items as unknown[]).filter((i): i is string => typeof i === "string").slice(0, 8)
     : [];

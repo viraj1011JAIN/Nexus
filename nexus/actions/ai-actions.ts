@@ -45,7 +45,9 @@ async function checkRateLimit(orgId: string): Promise<{ ok: boolean; error?: str
 
   const now      = new Date();
   const resetAt  = org.aiCallsResetAt ? new Date(org.aiCallsResetAt) : null;
-  const needsReset = !resetAt || resetAt < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Use UTC midnight to ensure consistent daily resets regardless of server timezone
+  const todayUtcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const needsReset = !resetAt || resetAt < todayUtcMidnight;
 
   if (needsReset) {
     await db.organization.update({ where: { id: orgId }, data: { aiCallsToday: 0, aiCallsResetAt: now } });

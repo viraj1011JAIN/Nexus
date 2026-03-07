@@ -13,7 +13,7 @@ import "server-only";
 
 import { auth }   from "@clerk/nextjs/server";
 import { db }     from "@/lib/db";
-import { getTenantContext } from "@/lib/tenant-context";
+import { getTenantContext, requireRole, isDemoContext } from "@/lib/tenant-context";
 import { revalidatePath } from "next/cache";
 
 // ─── Export: JSON ─────────────────────────────────────────────────────────────
@@ -140,6 +140,8 @@ interface NexusExport     { __nexusExport: "v1"; board: NexusBoardImport }
 
 export async function importFromJSON(payload: unknown): Promise<{ data?: { boardId: string }; error?: string }> {
   const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
   const { orgId, internalUserId } = ctx;
 
   const exp = payload as NexusExport;
@@ -214,6 +216,8 @@ interface TrelloBoard { name: string; lists: TrelloList[]; cards: TrelloCard[] }
 
 export async function importFromTrello(payload: unknown): Promise<{ data?: { boardId: string }; error?: string }> {
   const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
   const { orgId, internalUserId } = ctx;
 
   const trello = payload as TrelloBoard;
@@ -309,6 +313,8 @@ export async function importFromJira(
   xmlString: string,
 ): Promise<{ data?: { boardId: string }; error?: string }> {
   const ctx = await getTenantContext();
+  await requireRole("MEMBER", ctx);
+  if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
   const { orgId, internalUserId } = ctx;
 
   if (typeof xmlString !== "string") {

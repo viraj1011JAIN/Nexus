@@ -36,7 +36,7 @@ export async function getSavedViews(boardId?: string) {
         orgId: ctx.orgId,
         ...(boardId ? { boardId } : {}),
         OR: [
-          { userId: ctx.userId },
+          { userId: ctx.internalUserId },
           { isShared: true },
         ],
       },
@@ -69,7 +69,7 @@ export async function createSavedView(
     const view = await db.savedView.create({
       data: {
         orgId: ctx.orgId,
-        userId: ctx.userId,
+        userId: ctx.internalUserId,
         name: validated.name,
         filters: validated.filters as Prisma.InputJsonValue,
         viewType: validated.viewType,
@@ -97,7 +97,7 @@ export async function updateSavedView(
     const validated = UpdateViewSchema.parse({ viewId, ...updates });
 
     const existing = await db.savedView.findFirst({
-      where: { id: validated.viewId, orgId: ctx.orgId, userId: ctx.userId },
+      where: { id: validated.viewId, orgId: ctx.orgId, userId: ctx.internalUserId },
     });
     if (!existing) return { error: "View not found." };
 
@@ -125,7 +125,7 @@ export async function deleteSavedView(viewId: string) {
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
     const existing = await db.savedView.findFirst({
-      where: { id: viewId, orgId: ctx.orgId, userId: ctx.userId },
+      where: { id: viewId, orgId: ctx.orgId, userId: ctx.internalUserId },
     });
     if (!existing) return { error: "View not found." };
 

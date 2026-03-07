@@ -159,6 +159,9 @@ export async function deleteInitiative(id: string) {
     await requireRole("ADMIN", ctx);
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
+    const existing = await db.initiative.findFirst({ where: { id, orgId: ctx.orgId } });
+    if (!existing) return { error: "Initiative not found." };
+
     await db.initiative.delete({ where: { id } });
     revalidatePath("/roadmap");
     return { data: true };
