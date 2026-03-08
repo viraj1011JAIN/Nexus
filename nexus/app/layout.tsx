@@ -100,9 +100,7 @@ export const metadata: Metadata = {
     // images intentionally omitted — auto-resolved from app/opengraph-image.tsx
   },
   verification: {
-    // Replace this placeholder with the string from Google Search Console
-    // (Settings → Ownership verification → HTML tag method)
-    google: "REPLACE_WITH_GOOGLE_SITE_VERIFICATION_STRING",
+    google: "a3uN2rJDprinXDfYIWnzwFlDcoy8XupYxGvwfI-U3_w",
   },
   appleWebApp: {
     capable: true,
