@@ -1,5 +1,5 @@
 ﻿/**
- * Next.js Edge Proxy (formerly middleware.ts) — Authentication & Security
+ * Next.js Middleware — Authentication & Security
  *
  * Responsibilities:
  *  1. Clerk authentication — protect all non-public routes
@@ -21,7 +21,6 @@
  *   /api/webhook/(.*)  Stripe / Clerk webhook receivers (verified by HMAC)
  *
  * Clerk v5/v6 API: clerkMiddleware + createRouteMatcher
- * Next.js 16+: file is "proxy.ts" (was "middleware.ts" in Next.js ≤15)
  */
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";

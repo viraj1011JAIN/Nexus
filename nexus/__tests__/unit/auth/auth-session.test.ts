@@ -198,7 +198,7 @@ import {
 import { createBoard } from "@/actions/create-board";
 
 // Import the middleware AFTER all mocks are set up so the module uses our stubs
-import middleware from "@/proxy";
+import middleware from "@/middleware";
 
 // ─── Typed mock helpers ────────────────────────────────────────────────────
 
