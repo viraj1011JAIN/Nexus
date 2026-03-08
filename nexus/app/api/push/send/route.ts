@@ -65,10 +65,21 @@ export async function POST(req: NextRequest) {
 
   const { userId: targetUserId, title, body: notifBody, url = "/", tag } = parsed.data;
 
-  // Fetch target subscriptions
+  // Fetch target subscriptions — scoped to the caller's org
+  const orgMembers = await db.organizationUser.findMany({
+    where: {
+      organizationId: orgId,
+      isActive: true,
+      status: "ACTIVE",
+      ...(targetUserId ? { userId: targetUserId } : {}),
+    },
+    select: { userId: true },
+  });
+  const memberIds = orgMembers.map((m) => m.userId);
+
   const users = await db.user.findMany({
     where: {
-      ...(targetUserId ? { id: targetUserId } : {}),
+      id: { in: memberIds },
       pushSubscription: { not: null },
     },
     select: { id: true, pushSubscription: true },

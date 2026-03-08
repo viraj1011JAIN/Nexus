@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -234,9 +233,15 @@ export async function POST(req: NextRequest) {
 
 /** DELETE /api/upload?id=<attachmentId> */
 export async function DELETE(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let ctx: Awaited<ReturnType<typeof getTenantContext>>;
+  try {
+    ctx = await getTenantContext();
+  } catch (err) {
+    if (err instanceof TenantError) {
+      const status = err.code === "UNAUTHENTICATED" ? 401 : 403;
+      return NextResponse.json({ error: err.message }, { status });
+    }
+    throw err;
   }
 
   const { searchParams } = new URL(req.url);
@@ -245,13 +250,21 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
-  const attachment = await db.attachment.findUnique({ where: { id } });
+  const attachment = await db.attachment.findUnique({
+    where: { id },
+    include: { card: { include: { list: { include: { board: { select: { orgId: true } } } } } } },
+  });
   if (!attachment) {
     return NextResponse.json({ error: "Attachment not found" }, { status: 404 });
   }
 
+  // Verify attachment belongs to caller's org
+  if (attachment.card.list.board.orgId !== ctx.orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Only the uploader can delete their own attachments
-  if (attachment.uploadedById !== userId) {
+  if (attachment.uploadedById !== ctx.userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

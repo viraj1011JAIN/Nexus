@@ -35,11 +35,14 @@ function extractCardIds(text: string): string[] {
 }
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.GITHUB_WEBHOOK_SECRET ?? "";
+  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: "GitHub integration not configured" }, { status: 503 });
+  }
   const rawBody = await req.text();
   const sig     = req.headers.get("x-hub-signature-256");
 
-  if (secret && !verifySignature(rawBody, sig, secret)) {
+  if (!verifySignature(rawBody, sig, secret)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -56,20 +59,27 @@ export async function POST(req: NextRequest) {
     await Promise.allSettled(
       commits.flatMap((commit) => {
         const ids = extractCardIds(commit.message);
-        return ids.map((cardId) =>
-          db.auditLog.create({
-            data: {
-              entityId:    cardId,
-              entityTitle: `GitHub commit: ${commit.message.slice(0, 80)}`,
-              entityType:  "CARD",
-              action:      "UPDATE",
-              orgId:       (payload.repository as { owner?: { login?: string } })?.owner?.login ?? "github",
-              userId:      "github-webhook",
-              userImage:   "",
-              userName:    "GitHub Webhook",
-            },
-          }).catch(() => null)
-        );
+        return ids.map(async (cardId) => {
+          try {
+            const card = await db.card.findUnique({
+              where: { id: cardId },
+              include: { list: { include: { board: { select: { orgId: true } } } } },
+            });
+            if (!card) return; // card doesn't exist — skip
+            await db.auditLog.create({
+              data: {
+                entityId:    cardId,
+                entityTitle: `GitHub commit: ${commit.message.slice(0, 80)}`,
+                entityType:  "CARD",
+                action:      "UPDATE",
+                orgId:       card.list.board.orgId,
+                userId:      "github-webhook",
+                userImage:   "",
+                userName:    "GitHub Webhook",
+              },
+            });
+          } catch { /* skip failed cards */ }
+        });
       })
     );
     return NextResponse.json({ ok: true, processed: commits.length });

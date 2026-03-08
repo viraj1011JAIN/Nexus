@@ -39,18 +39,35 @@ export async function POST(req: NextRequest) {
 
   // ── URL-encoded slash command ──────────────────────────────────────────────
   if (contentType.includes("application/x-www-form-urlencoded")) {
-    const secret    = process.env.SLACK_SIGNING_SECRET ?? "";
+    const secret    = process.env.SLACK_SIGNING_SECRET;
+    if (!secret) {
+      return NextResponse.json({ error: "Slack integration not configured" }, { status: 503 });
+    }
     const timestamp = req.headers.get("x-slack-request-timestamp") ?? "";
     const slackSig  = req.headers.get("x-slack-signature") ?? "";
 
-    if (secret && !verifySlackSignature(secret, timestamp, rawBody, slackSig)) {
+    if (!verifySlackSignature(secret, timestamp, rawBody, slackSig)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     const params  = new URLSearchParams(rawBody);
     const command = params.get("command");
     const text    = (params.get("text") ?? "").trim();
-    const orgId   = params.get("team_id") ?? "";   // Slack team_id mapped to orgId (configure in settings)
+    const teamId  = params.get("team_id") ?? "";
+
+    // Look up which Nexus org is linked to this Slack workspace.
+    // For now, verify the orgId exists in our DB to prevent data leakage.
+    const org = await db.organization.findUnique({
+      where: { id: teamId },
+      select: { id: true },
+    });
+    if (!org) {
+      return NextResponse.json({
+        response_type: "ephemeral",
+        text: "This Slack workspace is not linked to a Nexus organization.",
+      });
+    }
+    const orgId = org.id;
 
     if (command === "/nexus") {
       if (!text) {
