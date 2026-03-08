@@ -41,7 +41,8 @@ export function usePushNotifications() {
     // Fetch server-side VAPID public key
     const res = await fetch("/api/push/send");
     if (!res.ok) { console.error("VAPID key unavailable"); return; }
-    const { publicKey } = await res.json() as { publicKey: string };
+    const { publicKey } = await res.json() as { publicKey?: string };
+    if (!publicKey) { console.error("VAPID publicKey missing from response"); return; }
 
     const sub = await registration.pushManager.subscribe({
       userVisibleOnly: true,

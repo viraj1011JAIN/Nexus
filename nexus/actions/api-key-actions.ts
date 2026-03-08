@@ -66,7 +66,7 @@ export async function createApiKey(name: string, scopes: string[], expiresAt?: s
     const apiKey = await db.apiKey.create({
       data: {
         orgId: ctx.orgId,
-        userId: ctx.userId,
+        userId: ctx.internalUserId,
         name: validated.name,
         keyHash,
         keyPrefix,

@@ -30,7 +30,7 @@ export async function getNotifications() {
     await requireRole("MEMBER", ctx);
 
     const notifications = await db.notification.findMany({
-      where: { orgId: ctx.orgId, userId: ctx.userId },
+      where: { orgId: ctx.orgId, userId: ctx.internalUserId },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
@@ -48,7 +48,7 @@ export async function getUnreadNotificationCount() {
     await requireRole("MEMBER", ctx);
 
     const count = await db.notification.count({
-      where: { orgId: ctx.orgId, userId: ctx.userId, isRead: false },
+      where: { orgId: ctx.orgId, userId: ctx.internalUserId, isRead: false },
     });
 
     return { data: count };
@@ -63,7 +63,7 @@ export async function markNotificationRead(notificationId: string) {
     await requireRole("MEMBER", ctx);
 
     await db.notification.updateMany({
-      where: { id: notificationId, userId: ctx.userId, orgId: ctx.orgId },
+      where: { id: notificationId, userId: ctx.internalUserId, orgId: ctx.orgId },
       data: { isRead: true },
     });
 
@@ -81,7 +81,7 @@ export async function markAllNotificationsRead() {
     await requireRole("MEMBER", ctx);
 
     await db.notification.updateMany({
-      where: { userId: ctx.userId, orgId: ctx.orgId, isRead: false },
+      where: { userId: ctx.internalUserId, orgId: ctx.orgId, isRead: false },
       data: { isRead: true },
     });
 
@@ -99,7 +99,7 @@ export async function deleteNotification(notificationId: string) {
     await requireRole("MEMBER", ctx);
 
     await db.notification.deleteMany({
-      where: { id: notificationId, userId: ctx.userId, orgId: ctx.orgId },
+      where: { id: notificationId, userId: ctx.internalUserId, orgId: ctx.orgId },
     });
 
     return { data: true };

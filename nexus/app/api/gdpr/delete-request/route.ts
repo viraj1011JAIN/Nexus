@@ -61,10 +61,17 @@ export async function POST() {
     });
 
     // 3. Anonymise comment authorship — text is preserved for audit/work trail.
-    //    Filter by DB primary key (user.id), NOT the Clerk external ID (ctx.userId).
+    //    Comment.userId stores the Clerk external ID (written at create time),
+    //    so we must match on ctx.userId, not the internal DB user.id.
     await tx.comment.updateMany({
-      where: { userId: user.id },
-      data: { userId: "deleted" },
+      where: { userId: ctx.userId },
+      data: { userId: "deleted", userName: "Deleted User", userImage: null },
+    });
+
+    // 3b. Anonymise comment reactions
+    await tx.commentReaction.updateMany({
+      where: { userId: ctx.userId },
+      data: { userId: "deleted", userName: "Deleted User" },
     });
 
     // 4. Record the erasure for compliance inside the same transaction: if any
@@ -76,7 +83,7 @@ export async function POST() {
         entityId:    user.id,
         entityTitle: "GDPR erasure completed",
         orgId:       ctx.orgId,
-        userId:      user.id,
+        userId:      ctx.userId,
         userImage:   "",
         userName:    "Deleted User",
       },

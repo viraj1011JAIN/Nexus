@@ -67,7 +67,7 @@ export async function logTime(cardId: string, minutes: number, description?: str
     const timeLog = await db.timeLog.create({
       data: {
         cardId: validated.cardId,
-        userId: ctx.userId,
+        userId: ctx.internalUserId,
         minutes: validated.minutes,
         description: validated.description,
         loggedAt: validated.loggedAt ? new Date(validated.loggedAt) : new Date(),
@@ -89,7 +89,7 @@ export async function updateTimeLog(timeLogId: string, minutes: number, descript
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
     const existing = await db.timeLog.findFirst({
-      where: { id: timeLogId, userId: ctx.userId, orgId: ctx.orgId },
+      where: { id: timeLogId, userId: ctx.internalUserId, orgId: ctx.orgId },
     });
     if (!existing) return { error: "Time log not found." };
 
@@ -112,7 +112,7 @@ export async function deleteTimeLog(timeLogId: string) {
     if (isDemoContext(ctx)) return { error: "Not available in demo mode." };
 
     const existing = await db.timeLog.findFirst({
-      where: { id: timeLogId, userId: ctx.userId, orgId: ctx.orgId },
+      where: { id: timeLogId, userId: ctx.internalUserId, orgId: ctx.orgId },
     });
     if (!existing) return { error: "Time log not found." };
 

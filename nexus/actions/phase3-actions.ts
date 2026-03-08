@@ -386,7 +386,7 @@ export const createComment = createSafeAction(CreateCommentSchema, async (data) 
             entityType: "CARD",
             entityId: cardId,
             entityTitle: card.title,
-            actorId: userId,
+            actorId: ctx.internalUserId,
             actorName: mentionerName,
             actorImage: comment.userImage ?? undefined,
           }).catch(() => { /* notification failure is non-fatal */ });
