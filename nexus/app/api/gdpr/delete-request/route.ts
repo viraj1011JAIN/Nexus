@@ -79,7 +79,7 @@ export async function POST() {
     await tx.auditLog.create({
       data: {
         action:      "DELETE",
-        entityType:  "ORGANIZATION",
+        entityType:  "ORG_MEMBER",
         entityId:    user.id,
         entityTitle: "GDPR erasure completed",
         orgId:       ctx.orgId,
