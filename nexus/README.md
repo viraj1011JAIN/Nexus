@@ -2,9 +2,20 @@
 
 **Production-grade, multi-tenant project management platform.**
 
-Real-time Kanban boards, sprints, analytics, and team collaboration — a self-hostable Jira/Trello alternative.
+Real-time Kanban boards, sprints, analytics, and team collaboration — a self-hostable Jira/Trello alternative built with Next.js 16, TypeScript, and AI.
 
-**Live:** [nexus-cyan-two.vercel.app](https://nexus-cyan-two.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-nexus--cyan--two.vercel.app-7b2ff7?style=for-the-badge&logo=vercel&logoColor=white)](https://nexus-cyan-two.vercel.app/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
+
+---
+
+## Live Demo
+
+**Try it now:** [https://nexus-cyan-two.vercel.app/](https://nexus-cyan-two.vercel.app/)
+
+> Sign up with Google/GitHub or email to explore the full platform. Create boards, drag cards, invite members, and see real-time collaboration in action.
 
 ---
 
@@ -69,7 +80,7 @@ Real-time Kanban boards, sprints, analytics, and team collaboration — a self-h
 - **Security headers** — CSP, HSTS, X-Frame-Options, CORS
 - **Rate limiting** — distributed via Upstash Redis
 - **Membership approvals** — request-based board access
-- **Demo mode** — sandboxed demo org with limits
+- **Demo mode** — [try it live](https://nexus-cyan-two.vercel.app/) with sandboxed limits
 
 ### PWA & UX
 - **Progressive Web App** — installable, offline shell, push notifications
@@ -152,6 +163,12 @@ See [`.env.example`](.env.example) for the full list with descriptions. Key vari
 - `OPENAI_API_KEY` — AI features
 - `RESEND_API_KEY` — Transactional emails
 - `NEXT_PUBLIC_APP_URL` — App base URL
+
+## Deployment
+
+Deployed on [Vercel](https://vercel.com). Live at **[https://nexus-cyan-two.vercel.app/](https://nexus-cyan-two.vercel.app/)**.
+
+Set `NEXT_PUBLIC_APP_URL=https://nexus-cyan-two.vercel.app` in Vercel environment variables for correct SEO metadata, sitemap, and canonical URLs.
 
 ## Author
 

@@ -155,7 +155,7 @@ export async function GET(request: Request) {
               userEmail: user.identifier,
               userName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.identifier,
               stats: weekStats,
-              appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app",
+              appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus-cyan-two.vercel.app",
             }).catch(() => null); // never let email failure break the cron
           }
         } catch {
@@ -183,8 +183,8 @@ export async function GET(request: Request) {
               b.lists.some((l) => l.cards.some((c) => c.id === card.id))
             );
             const cardUrl = parentBoard
-              ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app"}/board/${parentBoard.id}`
-              : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app"}/dashboard`;
+              ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus-cyan-two.vercel.app"}/board/${parentBoard.id}`
+              : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus-cyan-two.vercel.app"}/dashboard`;
 
             await sendDueDateReminderEmail({
               userEmail: card.assignee.email,

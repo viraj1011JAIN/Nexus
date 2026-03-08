@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.app";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus-cyan-two.vercel.app";
       const blocks = [
         { type: "section", text: { type: "mrkdwn", text: `*Search results for "${text}":*` } },
         ...cards.map((c) => ({

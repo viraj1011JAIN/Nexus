@@ -50,7 +50,7 @@ const outfit = Outfit({
   preload: false,
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://nexus-cyan-two.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -87,7 +87,7 @@ export const metadata: Metadata = {
     siteName: "NEXUS",
     title: "NEXUS — Enterprise Project Management",
     description:
-      "Real-time Kanban boards, sprints, analytics, and multi-tenant team collaboration. The self-hostable Jira/Trello alternative built with Next.js 15 + AI.",
+      "Real-time Kanban boards, sprints, analytics, and multi-tenant team collaboration. The self-hostable Jira/Trello alternative built with Next.js 16 + AI.",
     // images intentionally omitted — auto-resolved from app/opengraph-image.tsx
   },
   twitter: {
