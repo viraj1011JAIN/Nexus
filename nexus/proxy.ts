@@ -1,5 +1,5 @@
 ﻿/**
- * Next.js Middleware — Authentication & Security
+ * Next.js Edge Proxy — Authentication & Security
  *
  * Responsibilities:
  *  1. Clerk authentication — protect all non-public routes
