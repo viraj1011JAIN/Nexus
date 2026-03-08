@@ -11,6 +11,23 @@
  * Rule: never import context-dependent components here.
  * Use raw HTML + inline styles only.
  */
+
+/** Error messages that indicate a sign-out transition, not a real crash. */
+const SIGNOUT_PATTERNS = [
+  "unexpected response",
+  "failed to fetch",
+  "chunkloaderror",
+  "loading chunk",
+  "next_not_found",
+  "clerk",
+  "load failed",
+];
+
+function isSignoutError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return SIGNOUT_PATTERNS.some((p) => lower.includes(p));
+}
+
 export default function GlobalError({
   error,
   reset,
@@ -23,6 +40,14 @@ export default function GlobalError({
   // (useMemoCache) would fail with a null dispatcher during /_global-error
   // prerendering. RC 1.0.0 respects this function-scoped directive.
   "use no memo";
+
+  // Sign-out transition errors: silently redirect to landing page
+  if (isSignoutError(error.message)) {
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
+    }
+    return <html lang="en"><body /></html>;
+  }
 
   return (
     <html lang="en">

@@ -28,16 +28,14 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { getShardHealthMap, getShardCount } from "@/lib/shard-router";
+import { verifyCronSecret } from "@/lib/verify-cron-secret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace(/^Bearer\s+/i, "");
-
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) {
+  // ── Auth (timing-safe) ────────────────────────────────────────────────────────
+  if (!verifyCronSecret(req.headers.get("authorization"))) {
     return NextResponse.json(
       { error: "Unauthorized — Bearer <CRON_SECRET> required" },
       { status: 401 },

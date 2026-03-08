@@ -131,7 +131,11 @@ export function BoardList({ initialBoards }: BoardListProps = {}) {
   }, [fetchBoards]);
 
   useEffect(() => {
-    fetchBoards();
+    // Only fetch on mount if server didn't provide initial data.
+    // When initialBoards is present, skip the redundant /api/boards round trip.
+    if (!initialBoards || initialBoards.length === 0) {
+      fetchBoards();
+    }
 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       setRealtimeStatus("disconnected");
@@ -163,6 +167,7 @@ export function BoardList({ initialBoards }: BoardListProps = {}) {
       // (which would happen if a realtime event arrived just before sign-out).
       if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialBoards is a server-provided prop that never changes after mount
   }, [fetchBoards, debouncedFetchBoards]);
 
   const handleCreateBoard = async (e: React.FormEvent) => {

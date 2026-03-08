@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { seedBuiltInTemplates } from "@/actions/template-actions";
+import { verifyCronSecret } from "@/lib/verify-cron-secret";
 
 export async function POST(request: NextRequest) {
   // Guard: CRON_SECRET must be configured
@@ -23,9 +24,8 @@ export async function POST(request: NextRequest) {
     return new NextResponse("Service Unavailable", { status: 503 });
   }
 
-  // Protect with the same cron secret used for cron jobs
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  // Protect with the same cron secret used for cron jobs (timing-safe)
+  if (!verifyCronSecret(request.headers.get("authorization"))) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

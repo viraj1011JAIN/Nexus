@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { systemDb as db } from "@/lib/db";
 import { sendWeeklyDigestEmail, sendDueDateReminderEmail } from "@/lib/email";
 import { clerkClient } from "@clerk/nextjs/server";
+import { verifyCronSecret } from "@/lib/verify-cron-secret";
 
 // NOTE: systemDb is used here intentionally — cron jobs access all organizations
 // without a user session. They run under a shared CRON_SECRET and must bypass
@@ -9,9 +10,8 @@ import { clerkClient } from "@clerk/nextjs/server";
 
 export async function GET(request: Request) {
   try {
-    // Verify cron secret for security
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    // Verify cron secret for security (timing-safe to prevent enumeration)
+    if (!verifyCronSecret(request.headers.get("authorization"))) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 

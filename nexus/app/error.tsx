@@ -1,10 +1,28 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, Home, RotateCcw } from "lucide-react";
 import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
+
+/** Error messages that indicate a sign-out transition, not a real crash. */
+const SIGNOUT_PATTERNS = [
+  "unexpected response",
+  "failed to fetch",
+  "chunkloaderror",
+  "loading chunk",
+  "next_not_found",
+  "clerk",
+  "load failed",
+  "networkerror",
+  "aborted",
+] as const;
+
+function isSignoutError(error: Error): boolean {
+  const msg = error.message.toLowerCase();
+  return SIGNOUT_PATTERNS.some((p) => msg.includes(p));
+}
 
 export default function Error({
   error,
@@ -14,11 +32,23 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Report to Sentry — digest ties the Sentry event back to Next.js server logs
+    // Sign-out transition errors: silently redirect to landing page
+    // instead of showing a scary 500 page.
+    if (isSignoutError(error)) {
+      window.location.replace("/");
+      return;
+    }
+
+    // Real errors: report to Sentry
     Sentry.captureException(error, {
       extra: { digest: error.digest },
     });
   }, [error]);
+
+  // If this is a signout error, render nothing while the redirect happens
+  if (isSignoutError(error)) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-slate-100 flex items-center justify-center p-4">

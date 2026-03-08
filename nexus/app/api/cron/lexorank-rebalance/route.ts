@@ -26,14 +26,14 @@
 import { NextResponse } from "next/server";
 import { systemDb as db } from "@/lib/db";
 import { rebalanceOrders } from "@/lib/lexorank";
+import { verifyCronSecret } from "@/lib/verify-cron-secret";
 
 /** Threshold: rebalance any list where a card's order string is this long or longer. */
 const ORDER_LENGTH_THRESHOLD = 20;
 
 export async function GET(request: Request) {
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // ── Auth (timing-safe) ───────────────────────────────────────────────────────
+  if (!verifyCronSecret(request.headers.get("authorization"))) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

@@ -1,5 +1,6 @@
 // Polyfill Web APIs that Next.js 16 server internals need but jsdom lacks.
 // This runs via setupFiles (before test framework and module loading).
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS polyfill file runs before ESM module loading
 const { TextEncoder, TextDecoder } = require('util');
 
 if (typeof globalThis.TextEncoder === 'undefined') {
@@ -38,6 +39,7 @@ if (typeof globalThis.Request === 'undefined') {
 }
 
 if (typeof globalThis.ReadableStream === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS polyfill file runs before ESM module loading
   const { ReadableStream, TransformStream } = require('stream/web');
   Object.assign(globalThis, { ReadableStream, TransformStream });
 }

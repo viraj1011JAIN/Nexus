@@ -3,21 +3,60 @@
 import { useEffect } from "react";
 
 /**
- * Catches the "An unexpected response was received from the server" runtime
- * error that Next.js App Router throws when an RSC navigation fetch fails.
+ * Catches runtime errors that occur during Clerk sign-out.
  *
- * Root cause: Clerk sign-out invalidates the session cookie, then triggers a
- * soft navigation (RSC fetch).  The server responds differently (redirects,
- * changed layout, etc.) and the RSC stream parser can't decode it → unhandled
- * error bubbles to the console as a Runtime Error.
+ * Root cause: sign-out invalidates the session cookie mid-navigation.
+ * Next.js RSC fetches, chunk loads, and router state then fail because the
+ * server returns a redirect or different layout. The RSC stream parser,
+ * chunk loader, or fetch itself throws — showing a scary error overlay
+ * or triggering the error.tsx boundary.
  *
- * Fix: listen for unhandled promise rejections containing the known error
- * message and silently hard-redirect to the landing page instead.  A hard
- * navigation (window.location) fetches the full HTML document — no RSC
- * parsing, no mismatch, no error visible to the user.
+ * Fix: intercept BOTH synchronous errors (window.onerror) and unhandled
+ * promise rejections that match known sign-out error patterns, suppress
+ * them, and hard-redirect to the landing page. A hard navigation
+ * (window.location) fetches full HTML — no RSC parsing, no mismatch.
  */
+
+/** Known error message fragments that occur during sign-out transitions. */
+const SIGNOUT_ERROR_PATTERNS = [
+  // Next.js RSC stream parser failures
+  "unexpected response",
+  "failed to fetch rsc payload",
+  "failed to fetch",
+  // Chunk loading failures (session-gated chunks)
+  "chunkloaderror",
+  "loading chunk",
+  "loading css chunk",
+  // Next.js router state mismatches
+  "next_not_found",
+  "invariant: attempted to hard navigate",
+  "cannot read properties of null",
+  "cannot read properties of undefined",
+  // Network errors during session teardown
+  "networkerror",
+  "load failed",
+  "aborted",
+  // Clerk-specific
+  "clerk",
+] as const;
+
+function isSignoutError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return SIGNOUT_ERROR_PATTERNS.some((pattern) => lower.includes(pattern));
+}
+
+/** Debounce flag — prevent multiple redirects from stacking. */
+let redirecting = false;
+
+function safeRedirect() {
+  if (redirecting) return;
+  redirecting = true;
+  window.location.replace("/");
+}
+
 export function NavigationErrorGuard() {
   useEffect(() => {
+    // ── Unhandled promise rejections (async errors) ──────────────────────
     function handleRejection(event: PromiseRejectionEvent) {
       const msg =
         typeof event.reason === "string"
@@ -26,17 +65,29 @@ export function NavigationErrorGuard() {
             ? event.reason.message
             : "";
 
-      if (msg.includes("unexpected response")) {
-        // Prevent the error from appearing in the console / error overlay
+      if (isSignoutError(msg)) {
         event.preventDefault();
-        // Hard navigate — full page load avoids RSC mismatch entirely
-        window.location.replace("/");
+        safeRedirect();
+      }
+    }
+
+    // ── Synchronous runtime errors ──────────────────────────────────────
+    function handleError(event: ErrorEvent) {
+      const msg = event.message || (event.error instanceof Error ? event.error.message : "");
+      if (isSignoutError(msg)) {
+        event.preventDefault();
+        safeRedirect();
       }
     }
 
     window.addEventListener("unhandledrejection", handleRejection);
-    return () =>
+    window.addEventListener("error", handleError);
+
+    return () => {
       window.removeEventListener("unhandledrejection", handleRejection);
+      window.removeEventListener("error", handleError);
+      redirecting = false;
+    };
   }, []);
 
   return null;

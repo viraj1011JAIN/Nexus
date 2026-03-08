@@ -278,7 +278,7 @@ export default function SignUpContent() {
 
               <SignUp
                 signInUrl="/sign-in"
-                fallbackRedirectUrl="/"
+                fallbackRedirectUrl="/select-org"
                 appearance={{
                   elements: {
                     rootBox: "w-full",

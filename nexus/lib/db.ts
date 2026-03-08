@@ -78,9 +78,11 @@ if (process.env.NODE_ENV !== "production") globalThis.systemPrisma = systemDb;
  *     instead for guaranteed enforcement in transaction-mode pools.
  */
 export async function setCurrentOrgId(orgId: string, userId: string = ''): Promise<void> {
-  await db.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, false)`;
   if (userId) {
-    await db.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, false)`;
+    // Single round trip for both session vars
+    await db.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, false), set_config('app.current_user_id', ${userId}, false)`;
+  } else {
+    await db.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, false)`;
   }
 }
 

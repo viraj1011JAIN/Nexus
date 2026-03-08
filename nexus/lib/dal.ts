@@ -73,22 +73,28 @@ class TenantDAL {
           },
         }),
 
-      /** Fetches board by ID and asserts it belongs to this org AND user is a member. */
+      /** Fetches board by ID and asserts it belongs to this org AND user is a member.
+       *  Single query — membership filter is baked into the WHERE clause to avoid
+       *  a sequential round-trip to BoardMember.
+       */
       findUnique: async (
         boardId: string,
         args?: Omit<Prisma.BoardFindUniqueArgs, "where">
       ) => {
-        const board = await db.board.findUnique({
-          ...(args as Prisma.BoardFindUniqueArgs),
-          where: { id: boardId },
+        // Use findFirst instead of findUnique so we can combine orgId +
+        // membership check in one query (findUnique only accepts unique fields).
+        const board = await db.board.findFirst({
+          ...(args as Prisma.BoardFindFirstArgs),
+          where: {
+            id: boardId,
+            orgId,
+            members: { some: { userId } },
+          },
         });
-        self.assertBelongsToOrg(
-          board ? { organizationId: board.orgId } : null,
-          "Board"
-        );
-        // Verify board membership (strict isolation)
-        await self.verifyBoardMembership(boardId);
-        return board!;
+        if (!board) {
+          throw new TenantError("NOT_FOUND", "Board not found");
+        }
+        return board;
       },
 
       /** Creates a board — orgId injected server-side, never from input. */

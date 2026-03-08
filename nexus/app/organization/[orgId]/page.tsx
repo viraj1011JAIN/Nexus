@@ -37,7 +37,11 @@ export default function OrganizationPage({
   const { orgId } = use(params);
   const router = useRouter();
   const { boards, cards, createBoard, deleteBoard, getTotalCardCount } = useDemoData();
-  const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  // Derive initial active board from state instead of using setState in an effect.
+  // The React Compiler flags synchronous setState inside useEffect as a cascading render.
+  const [activeBoardId, setActiveBoardId] = useState<string | null>(
+    () => boards.length > 0 ? boards[0].id : null
+  );
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
   const boardInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,12 +55,11 @@ export default function OrganizationPage({
     }
   }, [orgId, router]);
 
-  // Set first board as active when boards load
-  useEffect(() => {
-    if (!activeBoardId && boards.length > 0) {
-      setActiveBoardId(boards[0].id);
-    }
-  }, [boards, activeBoardId]);
+  // When boards are added and nothing is selected yet, pick the first one.
+  // Uses a derived check — only calls setState when truly needed (no cascading render).
+  if (!activeBoardId && boards.length > 0) {
+    setActiveBoardId(boards[0].id);
+  }
 
   if (orgId !== DEMO_ORG_ID) return null;
 
